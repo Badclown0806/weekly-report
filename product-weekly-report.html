@@ -347,16 +347,9 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 </div>
 
-<!-- Weekly Progress -->
-<div class="sc" id="progressSection">
-<h2>本周进展回顾</h2>
-<div class="cblk"><h4 onclick="tgClps(this)">关键数据洞察</h4>
-<div class="ctxt show" id="insightContent"></div></div>
-</div>
-
 <!-- 产品动态日志（合并评论统计 + 产品备注） -->
 <div class="sc" id="activityLogSection">
-<h2>产品动态日志</h2>
+<h2 onclick="toggleActivitySection()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none">产品动态日志 <span style="font-size:11px;font-weight:400;color:#64748b" id="activityExpandHint">(点击收起)</span></h2>
 <div class="cblk"><div class="ctxt show" id="activityLogPanel">
 <div class="np-search"><input type="text" id="activityLogSearch" placeholder="搜索SKU / 店铺 / 内容..." oninput="filterActivityLog()"></div>
 <div class="np-info" id="activityLogInfo"></div>
@@ -366,6 +359,12 @@ tr:hover td:first-child{background:#f1f5f9}
 </div></div></div>
 </div>
 
+
+<!-- Weekly Progress -->
+<div class="sc" id="progressSection">
+<h2 onclick="toggleProgressSection()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none">本周进展回顾 <span style="font-size:11px;font-weight:400;color:#64748b" id="progressExpandHint">(点击收起)</span></h2>
+<div id="insightContent"></div>
+</div>
 
 <!-- Data Update Info -->
 <div class="sc" id="dataUpdateSection" style="display:none;padding:12px 16px;margin-bottom:10px">
@@ -454,7 +453,7 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 
 
-<script src="data.js?v=202606061239"></script>
+<script src="data.js?v=202606061317"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -1017,7 +1016,7 @@ function renderShopGrid(){
   if(products.length > 0){
     products.forEach(function(p){
       if(!selectedShops.has(p.shop)) return;
-      if(!productOwnerMatch(p.sku, p.shop)) return;
+      if(p.sku !== '无匹配ID费用' && !productOwnerMatch(p.sku, p.shop)) return;
       var matched = null;
       for(var i=0;i<ownerKeys.length;i++){
         var ok = ownerKeys[i];
@@ -1063,7 +1062,7 @@ function renderShopGrid(){
     if(prevProducts.length > 0){
       prevProducts.forEach(function(p){
         if(!selectedShops.has(p.shop)) return;
-        if(!productOwnerMatch(p.sku, p.shop)) return;
+        if(p.sku !== '无匹配ID费用' && !productOwnerMatch(p.sku, p.shop)) return;
         var matched = null;
         for(var i=0;i<ownerKeys.length;i++){
           var ok = ownerKeys[i];
@@ -1645,137 +1644,140 @@ function generateInsights(){
   var pd = prevWeek ? WEEK_DATA[prevWeek] : null;
   var curLabel = WEEK_LABELS[curWeek];
 
-  // ── Shop-level aggregation ──
-  var shopKeys = [];
-  var shopM = {};
-  SHOPS.forEach(function(s){
-    shopKeys.push(s);
-    shopM[s] = {profit:0, margin:0, gsv:0, qty:0, name:s};
-  });
-  
-  var totalProfit = 0, totalGsv = 0, totalQty = 0;
-  shopKeys.forEach(function(s){
-    var sw = (d && d.shops && d.shops[s]) ? d.shops[s] : null;
-    var profit = sw && typeof sw.profit==='number' ? sw.profit : (getMetricVal(s, curWeek, 'profit', 'profit')||0);
-    var margin = sw && typeof sw.margin==='number' ? sw.margin : (getMetricVal(s, curWeek, 'margin', 'margin')||0);
-    var gsv = sw && typeof sw.gsv==='number' ? sw.gsv : (getMetricVal(s, curWeek, 'gsv', 'gsv')||0);
-    var qty = sw && typeof sw.qty==='number' ? sw.qty : (getMetricVal(s, curWeek, 'qty', 'qty')||0);
-    shopM[s].profit = profit; shopM[s].margin = margin; shopM[s].gsv = gsv; shopM[s].qty = qty;
-    totalProfit += profit; totalGsv += gsv; totalQty += qty;
-  });
-
-  var overallMargin = totalGsv > 0 ? totalProfit / totalGsv * 100 : 0;
-
-  // ── Previous week comparison ──
-  var prevTotalProfit = 0, prevTotalGsv = 0;
-  if(pd){
-    shopKeys.forEach(function(s){
-      var sw = pd && pd.shops && pd.shops[s] ? pd.shops[s] : null;
-      prevTotalProfit += sw && typeof sw.profit==='number' ? sw.profit : (getMetricVal(s, prevWeek, 'profit', 'profit')||0);
-      prevTotalGsv += sw && typeof sw.gsv==='number' ? sw.gsv : (getMetricVal(s, prevWeek, 'gsv', 'gsv')||0);
-    });
-  }
-  var wowProfit = prevTotalProfit !== 0 ? (totalProfit - prevTotalProfit) / Math.abs(prevTotalProfit) * 100 : 0;
-  var wowGsv = prevTotalGsv !== 0 ? (totalGsv - prevTotalGsv) / Math.abs(prevTotalGsv) * 100 : 0;
-
-  // ── Rankings (shop-level) ──
-  var rankBy = function(key, desc){
-    var list = shopKeys.slice();
-    list.sort(function(a,b){ return (desc?-1:1) * ((shopM[b][key]||0) - (shopM[a][key]||0)); });
-    return list;
-  };
-  var topProfitShop = rankBy('profit',true)[0];
-  var topMarginShop = rankBy('margin',true)[0];
-  var lowMarginShop = rankBy('margin',false)[0];
-  var highGsvShop = rankBy('gsv',true)[0];
-
-  // ── Section 2: Product-level stats, filtered by owner/shop ──
-  var products = d && d.allProducts ? d.allProducts.slice() : [];
-  if(selectedOwners && OWNERS && selectedOwners.size > 0 && OWNERS.length > 1){
+  // ── Build product list (exclude 无匹配ID费用) ──
+  var products = d && d.allProducts ? d.allProducts.slice().filter(function(p){ return p.sku !== '无匹配ID费用'; }) : [];
+  // Apply owner filter
+  if(selectedOwners && selectedOwners.size < OWNERS.length){
     products = products.filter(function(p){
-      var owner = (SKU_OWNER && SKU_OWNER[p.sku]) || '';
+      var owner = (SKU_OWNER && SKU_OWNER[p.sku+'|'+p.shop]) || (SKU_OWNER && SKU_OWNER[p.sku]) || '';
       return selectedOwners.has(owner);
     });
   }
-  if(selectedShops && SHOPS && selectedShops.size > 0 && selectedShops.size < SHOPS.length){
+  // Apply shop filter
+  if(selectedShops && selectedShops.size < SHOPS.length){
     products = products.filter(function(p){ return selectedShops.has(p.shop); });
   }
-  var totalSkus = products.length;
-  var lossSkus = 0;
-  products.forEach(function(p){ if(p.profit < 0) lossSkus++; });
-  var lossPct = totalSkus > 0 ? Math.round(lossSkus/totalSkus*100) : 0;
-  var lowBenchmarkCount = 0;
-  products.forEach(function(p){
-    if(typeof p.margin==='number' && p.margin < 15) lowBenchmarkCount++;
-  });
 
-  // ── Return rate from products ──
-  var rrSum = 0, rrCount = 0;
+  var h = '';
+  h += '<div style="line-height:1.8;font-size:13px;color:#334155">';
+
+  if(products.length === 0){
+    h += '<p style="color:#94a3b8">当前筛选条件下暂无可分析的产品数据</p>';
+    h += '</div>';
+    return h;
+  }
+
+  // ━━━━━ section 1: 按负责人 ━━━━━
+  h += '<div style="margin-bottom:18px">';
+  h += '<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #3b5cf6">按负责人</div>';
+
+  var ownerAgg = {}; // {owner: {profit, gsv, count, lossSkus, lossProfit}}
   products.forEach(function(p){
-    if(typeof p.return_rate==='number' && p.return_rate > 0){
-      rrSum += p.return_rate; rrCount++;
+    var owner = (SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku] || '未分配');
+    if(!ownerAgg[owner]) ownerAgg[owner] = {profit:0, gsv:0, count:0, lossSkus:0, lossProfit:0};
+    ownerAgg[owner].profit += (p.profit||0);
+    ownerAgg[owner].gsv += (p.gsv||0);
+    ownerAgg[owner].count += 1;
+    if((p.profit||0) < 0){
+      ownerAgg[owner].lossSkus += 1;
+      ownerAgg[owner].lossProfit += (p.profit||0);
     }
   });
-  var avgReturnRate = rrCount > 0 ? rrSum / rrCount : 0;
 
-  // ── High-inventory shops ──
-  var highInvShops = [];
-  shopKeys.forEach(function(s){
-    if(shopM[s].gsv > 0 && totalGsv > 0 && shopM[s].gsv / totalGsv > 0.2)
-      highInvShops.push(s);
+  var ownerList = Object.keys(ownerAgg).sort(function(a,b){ return ownerAgg[b].profit - ownerAgg[a].profit; });
+  ownerList.forEach(function(o){
+    var a = ownerAgg[o];
+    var margin = a.gsv > 0 ? (a.profit / a.gsv * 100) : 0;
+    var marginClr = margin >= 15 ? '#16a34a' : (margin >= 5 ? '#d97706' : '#dc2626');
+    h += '<div style="margin-bottom:6px;padding:6px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid '+marginClr+'">';
+    h += '<b>'+escHtml(o)+'</b>：'+a.count+'个SKU，利润 <b style="color:'+(a.profit>=0?'#16a34a':'#dc2626')+'">'+fmtK(a.profit)+'</b>，毛利率 <b style="color:'+marginClr+'">'+margin.toFixed(1)+'%</b>';
+    if(a.lossSkus > 0){
+      h += '，<span style="color:#dc2626">亏损SKU '+a.lossSkus+'个（共'+fmtK(a.lossProfit)+'）</span>';
+    }
+    h += '</div>';
+  });
+  h += '</div>';
+
+  // ━━━━━ section 2: 按商品ID（异常SKU） ━━━━━
+  h += '<div style="margin-bottom:18px">';
+  h += '<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f59e0b">按商品ID（异常SKU）</div>';
+
+  // Loss SKUs
+  var lossProducts = products.filter(function(p){ return (p.profit||0) < 0; });
+  lossProducts.sort(function(a,b){ return (a.profit||0) - (b.profit||0); });
+  var topLoss = lossProducts.slice(0, 5);
+
+  // Low margin SKUs (margin < 5%)
+  var lowMargin = products.filter(function(p){ return typeof p.margin==='number' && p.margin < 5 && p.margin > -100; });
+  lowMargin.sort(function(a,b){ return (a.margin||0) - (b.margin||0); });
+  var topLowMargin = lowMargin.slice(0, 5);
+
+  // High return rate
+  var highReturn = products.filter(function(p){ return typeof p.return_rate==='number' && p.return_rate > 10; });
+  highReturn.sort(function(a,b){ return (b.return_rate||0) - (a.return_rate||0); });
+  var topHighReturn = highReturn.slice(0, 5);
+
+  if(topLoss.length > 0){
+    h += '<div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px">亏损最严重 TOP5</div>';
+    topLoss.forEach(function(p){
+      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> 利润 <span style="color:#dc2626">'+fmtK(p.profit)+'</span>，利润率 '+(Number(p.margin)||0).toFixed(1)+'%</div>';
+    });
+  }
+
+  if(topLowMargin.length > 0){
+    h += '<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:4px;margin-top:8px">低利润率（<5%）TOP5</div>';
+    topLowMargin.forEach(function(p){
+      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> GSV '+fmtK(p.gsv)+'，利润率 '+(Number(p.margin)||0).toFixed(1)+'%</div>';
+    });
+  }
+
+  if(topHighReturn.length > 0){
+    h += '<div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:4px;margin-top:8px">高退货率（>10%）</div>';
+    topHighReturn.forEach(function(p){
+      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> 退货率 <span style="color:#7c3aed">'+(Number(p.return_rate)||0).toFixed(1)+'%</span></div>';
+    });
+  }
+
+  if(topLoss.length === 0 && topLowMargin.length === 0 && topHighReturn.length === 0){
+    h += '<div style="color:#94a3b8;font-size:12px">本周无异常SKU</div>';
+  }
+  h += '</div>';
+
+  // ━━━━━ section 3: 按店铺 ━━━━━
+  h += '<div style="margin-bottom:8px">';
+  h += '<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #10b981">按店铺</div>';
+
+  var shopAgg = {};
+  products.forEach(function(p){
+    if(!shopAgg[p.shop]) shopAgg[p.shop] = {profit:0, gsv:0, count:0, lossSkus:0};
+    shopAgg[p.shop].profit += (p.profit||0);
+    shopAgg[p.shop].gsv += (p.gsv||0);
+    shopAgg[p.shop].count += 1;
+    if((p.profit||0) < 0) shopAgg[p.shop].lossSkus += 1;
   });
 
-  // ── Build narrative (4-section framework) ──
-  var h = '';
-  h += '<div style="line-height:1.9;font-size:13px;color:#334155">';
-  h += '<div style="font-size:15px;font-weight:700;margin-bottom:14px;color:#0f172a">' + escHtml(curLabel) + ' 关键数据洞察</div>';
+  // Also include 无匹配ID费用 in shop totals
+  var allProdsRaw = d && d.allProducts ? d.allProducts : [];
+  allProdsRaw.forEach(function(p){
+    if(p.sku === '无匹配ID费用' && selectedShops.has(p.shop)){
+      if(!shopAgg[p.shop]) shopAgg[p.shop] = {profit:0, gsv:0, count:0, lossSkus:0};
+      shopAgg[p.shop].profit += (p.profit||0);
+      shopAgg[p.shop].gsv += (p.gsv||0);
+    }
+  });
 
-  // ▸ 1. 店铺盈利分化
-  h += '<div style="margin-bottom:16px">';
-  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">店铺盈利分化</div>';
-  if(topMarginShop && shopM[topMarginShop]){
-    var bestProfitShare = totalProfit > 0 ? (shopM[topMarginShop].profit / totalProfit * 100).toFixed(1) : '0';
-    h += '<div style="margin-bottom:3px">- 标杆店铺：<b>' + escHtml(topMarginShop) + '</b> 毛利率<b> ' + shopM[topMarginShop].margin.toFixed(1) + '% </b>居首，毛利贡献占整体<b> ' + bestProfitShare + '%</b></div>';
-  }
-  if(lowMarginShop && shopM[lowMarginShop] && shopM[lowMarginShop].margin < overallMargin){
-    h += '<div style="margin-bottom:3px">- 拖累店铺：<b>' + escHtml(lowMarginShop) + '</b> 毛利率仅<b> ' + shopM[lowMarginShop].margin.toFixed(1) + '%</b>，拖累整体</div>';
-  }
-  var marginChangeWord = wowProfit >= 0 ? '增长' : '下滑';
-  h += '<div style="margin-bottom:3px">- 整体毛利环比<b> ' + marginChangeWord + ' ' + Math.abs(wowProfit).toFixed(1) + '%</b>，总毛利 ¥' + fmtK(totalProfit) + '</div>';
-  h += '</div>';
-
-  // ▸ 2. 单品亏损现状
-  h += '<div style="margin-bottom:16px">';
-  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">单品亏损现状</div>';
-  h += '<div style="margin-bottom:3px">- 共<b> ' + totalSkus + ' </b>个SKU，亏损SKU占比约<b> ' + lossPct + '%</b></div>';
-  if(lowBenchmarkCount > 0){
-    h += '<div style="margin-bottom:3px">- 核心矛盾：单品毛利率异动，<b> ' + lowBenchmarkCount + ' </b>个SKU毛利率低于行业基准</div>';
-  } else {
-    h += '<div style="margin-bottom:3px">- 核心矛盾：单品毛利率在当前范围内整体可控</div>';
-  }
-  h += '</div>';
-
-  // ▸ 3. 毛利下滑诱因猜想
-  h += '<div style="margin-bottom:16px">';
-  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">毛利下滑诱因猜想</div>';
-  var causes = [];
-  if(wowProfit < -5) causes.push('利润环比收窄 ' + Math.abs(wowProfit).toFixed(1) + '%，可能存在促销清仓或竞价降价');
-  if(avgReturnRate > 5) causes.push('退货率偏高（' + avgReturnRate.toFixed(1) + '%），需排查品控或listing描述准确性');
-  if(wowGsv > 3 && wowProfit < -5) causes.push('GSV环比增长但利润下滑，呈现"增收不增利"特征，建议核查扣费项目或物流成本变化');
-  if(!causes.length) causes.push('本周各项指标波动在正常范围内，未检测到显著异常诱因');
-  causes.forEach(function(c){ h += '<div style="margin-bottom:3px">- 可能原因：' + c + '</div>'; });
-  h += '<div style="margin-bottom:3px;color:#64748b;font-size:11px">- 需核查：退货率（当前<b> ' + avgReturnRate.toFixed(1) + '%</b>）、扣费比例</div>';
-  h += '</div>';
-
-  // ▸ 4. 重点风险预警
-  h += '<div style="margin-bottom:16px">';
-  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">重点风险预警</div>';
-  if(highInvShops.length > 0){
-    var invLines = highInvShops.map(function(s){ return escHtml(s) + ' 库存货值 ¥' + fmtK(shopM[s].gsv); }).join('、');
-    h += '<div style="margin-bottom:3px">- ' + invLines + '</div>';
-  }
-  h += '<div style="margin-bottom:3px">- 存在「高库存-低周转-低利润」三角风险</div>';
-  h += '<div style="margin-bottom:3px">- 优化方向：清理滞销SKU、控制广告投放ACOS</div>';
+  var shopList = Object.keys(shopAgg).sort(function(a,b){ return shopAgg[b].profit - shopAgg[a].profit; });
+  shopList.forEach(function(s){
+    var a = shopAgg[s];
+    var margin = a.gsv > 0 ? (a.profit / a.gsv * 100) : 0;
+    var marginClr = margin >= 15 ? '#16a34a' : (margin >= 5 ? '#d97706' : '#dc2626');
+    h += '<div style="margin-bottom:6px;padding:6px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid '+marginClr+'">';
+    h += '<b>'+escHtml(s)+'</b>：'+a.count+'个SKU，利润 <b style="color:'+(a.profit>=0?'#16a34a':'#dc2626')+'">'+fmtK(a.profit)+'</b>，毛利率 <b style="color:'+marginClr+'">'+margin.toFixed(1)+'%</b>';
+    if(a.lossSkus > 0){
+      h += '，<span style="color:#dc2626">亏损SKU '+a.lossSkus+'个</span>';
+    }
+    h += '</div>';
+  });
   h += '</div>';
 
   h += '</div>';
@@ -1783,6 +1785,27 @@ function generateInsights(){
 }
 
 // ========== MERGED ACTIVITY LOG (Comments + Notes) ==========
+
+// ========== SECTION COLLAPSE FUNCTIONS ==========
+var progressExpanded = true;
+var activityExpanded = true;
+
+function toggleProgressSection(){
+  progressExpanded = !progressExpanded;
+  var insightContent = document.getElementById('insightContent');
+  var hint = document.getElementById('progressExpandHint');
+  if(insightContent) insightContent.style.display = progressExpanded ? 'block' : 'none';
+  if(hint) hint.textContent = progressExpanded ? '(点击收起)' : '(点击展开)';
+}
+
+function toggleActivitySection(){
+  activityExpanded = !activityExpanded;
+  var activityPanel = document.getElementById('activityLogPanel');
+  var hint = document.getElementById('activityExpandHint');
+  if(activityPanel) activityPanel.style.display = activityExpanded ? 'block' : 'none';
+  if(hint) hint.textContent = activityExpanded ? '(点击收起)' : '(点击展开)';
+}
+
 function renderActivityLog(){
   var tbody = document.querySelector('#activityLogTable tbody');
   var infoEl = document.getElementById('activityLogInfo');
