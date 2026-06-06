@@ -273,6 +273,12 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <!-- Diagnostic removed -->
 </head>
 <body>
+<!-- Loading overlay -->
+<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="width:40px;height:40px;border:4px solid #e2e8f0;border-top:4px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px"></div>
+  <div style="color:#64748b;font-size:14px">加载数据中...</div>
+</div>
+<style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
 <div class="wrap">
 <div class="hd">
 <div><h1>产品周分析报告</h1></div>
@@ -471,17 +477,40 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 </div>
 
 
-<script src="data.js?v=202606061558"></script>
 <script>
 console.log('Data-driven report loading...');
 
-// Version display
-(function(){
-  var scripts = document.getElementsByTagName('script');
-  for(var i=0;i<scripts.length;i++){
-    var m = scripts[i].src.match(/data\.js\?v=(\d+)/);
-    if(m){ var el = document.getElementById('buildVer'); if(el) el.textContent = m[1]; var vn = document.getElementById('verNum'); if(vn) vn.textContent = m[1]; break; }
-  }
+// Dynamic async loading of data.js
+(function loadDataJs() {
+  var script = document.createElement('script');
+  var dataJsSrc = 'data.js?v=202606061558';
+  var verMatch = dataJsSrc.match(/v=(\d+)/);
+  var ver = verMatch ? verMatch[1] : '';
+  script.src = dataJsSrc;
+  script.async = true;
+
+  script.onload = function() {
+    console.log('data.js loaded asynchronously');
+    // Hide loading overlay
+    var overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+    // Show version
+    var el = document.getElementById('buildVer'); if(el) el.textContent = ver;
+    var vn = document.getElementById('verNum'); if(vn) vn.textContent = ver;
+    // Continue initialization
+    initFromDataJs();
+  };
+
+  script.onerror = function() {
+    console.error('Failed to load data.js');
+    var overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.innerHTML = '<div style="color:#dc2626;font-size:14px;text-align:center;padding:20px"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
+    }
+    document.body.style.display = 'block';
+  };
+
+  document.head.appendChild(script);
 })();
 
 // ── Error handler ──
@@ -499,7 +528,7 @@ window.onerror = function(msg, url, line, col, error) {
 var WEEKS, WEEKS_ISO, WEEK_LABELS;
 var SHOP_WEEKLY, WEEK_DATA, TRAFFIC_WEEKLY, PERSON_TARGETS;
 var SKU_IMG, SKU_FIRST_DATE, SKU_OWNER, SHOP_OWNERS, SKU_WB_ID;
-var PRODUCT_NOTES, NEW_PRODUCT_CREATED;
+var PRODUCT_NOTES;
 
 // ── State variables (global scope) ──
 var curWeek, selectedShops, OWNERS, selectedOwners;
@@ -508,8 +537,8 @@ var SHOPS, COLORS, WB_ID_OWNER;
 selectedMonths = new Set(['5']);
 sortState = {key: '', dir: 'desc'};
 
-// ── Initialize from data.js (loaded via <script> tag above, no fetch/XHR needed) ──
-(function initFromDataJs() {
+// ── Initialize from data.js (called after async loading completes) ──
+function initFromDataJs() {
     if (typeof DATA === 'undefined') {
         console.error('DATA not loaded! Ensure data.js is in the same directory.');
         document.body.innerHTML = '<div style="padding:40px;font-family:monospace;color:#b45309;background:#fffbeb;margin:20px;border-radius:8px;border:1px solid #fde68a;"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
@@ -530,7 +559,6 @@ sortState = {key: '', dir: 'desc'};
     SHOP_OWNERS = DATA.SHOP_OWNERS;
     SKU_WB_ID = DATA.SKU_WB_ID;
     PRODUCT_NOTES = DATA.PRODUCT_NOTES;
-    NEW_PRODUCT_CREATED = DATA.NEW_PRODUCT_CREATED;
 
     // ── Derived data ──
     SHOPS = Object.keys(SHOP_WEEKLY);
@@ -644,7 +672,7 @@ sortState = {key: '', dir: 'desc'};
 
     // ── Bootstrap ──
     bootstrap();
-})();
+}
 
 function getWeekYear(w){
   var idx = WEEKS.indexOf(w);
@@ -1491,7 +1519,7 @@ function showImageLightbox(src) {
   lb.style.display = 'flex';
 }
 
-// PRODUCT_NOTES, NEW_PRODUCT_CREATED already assigned from DATA above
+// 新品由 generateInsights 内从 SKU_FIRST_DATE 动态推导，不再依赖 NEW_PRODUCT_CREATED
 
 // ========== SORTING ==========
 // sortState initialized above with state variables
@@ -1860,21 +1888,55 @@ function generateInsights(){
     if(q >= 105) tierAll105++;
   });
 
-  // 新品：NEW_PRODUCT_CREATED 中的产品
+  // 新品：从 SKU_FIRST_DATE 推导当前周首次上架的 SKU
   var newProdSet = {};
   var newSkusInWeek = 0, newTier175 = 0, newTier84 = 0, newTier56 = 0;
   var totalNewSkus = 0;
-  if(NEW_PRODUCT_CREATED && NEW_PRODUCT_CREATED.length){
-    NEW_PRODUCT_CREATED.forEach(function(n){ newProdSet[n[0]] = true; totalNewSkus++; });
-    products.forEach(function(p){
-      if(newProdSet[p.sku]){
-        var q = (p.qty || 0);
-        if(q > 0){ newSkusInWeek++; }
-        if(q >= 175) newTier175++;
-        if(q >= 84) newTier84++;
-        if(q >= 56) newTier56++;
+  var curIdx = WEEKS.indexOf(curWeek);
+  if(curIdx >= 0 && WEEKS_ISO[curIdx]){
+    var isoStr = WEEKS_ISO[curIdx];  // e.g. "2025-W30"
+    var parts = isoStr.split('-');
+    if(parts.length === 2 && parts[0] && parts[1]){
+      var isoYear = parseInt(parts[0], 10);
+      var isoWeek = parseInt(parts[1].substring(1), 10); // remove 'W'
+      // ISO week-based date computation:
+      // 1. Jan 4th is always in ISO week 1
+      // 2. Find the Monday of that week
+      // 3. Add (weekNumber - 1) * 7 days to get the target Monday
+      var jan4 = new Date(isoYear, 0, 4);
+      var jan4Day = jan4.getDay(); // 0=Sun, 1=Mon...6=Sat
+      var jan4Monday = new Date(jan4);
+      jan4Monday.setDate(jan4.getDate() - ((jan4Day + 6) % 7)); // previous Monday
+      var weekMonday = new Date(jan4Monday);
+      weekMonday.setDate(jan4Monday.getDate() + (isoWeek - 1) * 7);
+      weekMonday.setHours(0, 0, 0, 0);
+      var weekSunday = new Date(weekMonday);
+      weekSunday.setDate(weekMonday.getDate() + 6);
+      weekSunday.setHours(23, 59, 59, 999);
+      for(var skuKey in SKU_FIRST_DATE){
+        var fd = SKU_FIRST_DATE[skuKey];
+        if(!fd || typeof fd !== 'string') continue;
+        var fdParts = fd.split('-');
+        if(fdParts.length < 3) continue;
+        var fdDate = new Date(parseInt(fdParts[0], 10), parseInt(fdParts[1], 10) - 1, parseInt(fdParts[2], 10));
+        fdDate.setHours(0, 0, 0, 0);
+        if(fdDate >= weekMonday && fdDate <= weekSunday){
+          newProdSet[skuKey] = true;
+          totalNewSkus++;
+        }
       }
-    });
+      if(totalNewSkus > 0){
+        products.forEach(function(p){
+          if(newProdSet[p.sku]){
+            var q = (p.qty || 0);
+            if(q > 0){ newSkusInWeek++; }
+            if(q >= 175) newTier175++;
+            if(q >= 84) newTier84++;
+            if(q >= 56) newTier56++;
+          }
+        });
+      }
+    }
   }
 
   // Z-NZTF1 / G-NZTF1 分层统计（全部产品阈值 350/175/105）

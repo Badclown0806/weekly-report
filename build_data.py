@@ -614,7 +614,7 @@ def main():
         "SHOP_OWNERS": shop_owners,
         "SKU_WB_ID": sku_wb_id,
         "PRODUCT_NOTES": {},
-        "NEW_PRODUCT_CREATED": {},
+        "NEW_PRODUCT_CREATED": [],
     }
 
     # ── 写入 data.js ──
