@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>产品周分析报告</title>
+<script>
+// ========== Supabase REST API (fetch直接调用，不依赖第三方CDN) ==========
+(function(){
+  var supabaseUrl = 'https://aibcxctyrlqdtosijimw.supabase.co';
+  var supabaseKey = 'sb_publishable_EN3Fkg1dpKPmGUqAUTeZPg_niMB6B2h';
+  window.__supabaseUrl = supabaseUrl;
+  window.__supabaseKey = supabaseKey;
+  window.__supabaseReady = null; // null=检测中, true=可用, false=不可用
+
+  console.log('[评论服务] 正在检测 Supabase REST API...');
+  fetch(supabaseUrl + '/rest/v1/product_comments?select=count', {
+    headers: { 'apikey': supabaseKey }
+  }).then(function(r) {
+    if (r.ok) {
+      console.log('[评论服务] 连接成功 (HTTP ' + r.status + ')');
+      window.__supabaseReady = true;
+      setTimeout(function(){ subscribeComments(); }, 500);
+    } else {
+      console.error('[评论服务] 连接失败 (HTTP ' + r.status + ')');
+      window.__supabaseReady = false;
+    }
+  }).catch(function(e) {
+    console.error('[评论服务] 网络错误:', e.message);
+    window.__supabaseReady = false;
+  });
+
+  // 10秒超时兜底
+  setTimeout(function() {
+    if (window.__supabaseReady === null) {
+      console.warn('[评论服务] 检测超时（10秒），标记为不可用');
+      window.__supabaseReady = false;
+    }
+  }, 10000);
+})();
+
+// REST API 通用调用函数
+function supabaseApi(path, options) {
+  options = options || {};
+  var headers = {
+    'apikey': window.__supabaseKey,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+  for (var k in (options.headers || {})) headers[k] = options.headers[k];
+  return fetch(window.__supabaseUrl + '/rest/v1/' + path, {
+    method: options.method || 'GET',
+    headers: headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
+    // 204 No Content 返回空
+    if (r.status === 204) return null;
+    var ct = r.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') !== -1) return r.json();
+    return r.text();
+  });
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f6fa;color:#1e293b;font-size:13px}
+.wrap{max-width:1280px;margin:0 auto;padding:16px 20px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.hd h1{font-size:22px;font-weight:700;color:#0f172a}
+.hd .mt{font-size:12px;color:#64748b;margin-top:2px}
+.btn{padding:6px 12px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer}
+.btn-up{border:1px solid #3b5cf6;background:#fff;color:#3b5cf6}
+.btn-sv{background:#3b5cf6;color:#fff;margin-left:8px}
+.frow{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.frow .lb{font-size:12px;color:#64748b;font-weight:500;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{padding:4px 10px;border-radius:14px;border:1px solid #cbd5e1;background:#fff;font-size:12px;cursor:pointer;color:#475569;transition:all .15s}
+.tag.on{background:#3b5cf6;color:#fff;border-color:#3b5cf6}
+.tag:hover:not(.on){border-color:#3b5cf6;color:#3b5cf6}
+.clr{font-size:11px;color:#94a3b8;cursor:pointer;text-decoration:underline;margin-left:8px;user-select:none}
+.sc{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid #e2e8f0}
+.sc h2{font-size:15px;font-weight:600;margin-bottom:12px;color:#0f172a}
+
+/* Charts */
+.chwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.chwrap .sc{padding:16px;margin-bottom:0}
+.chwrap canvas{width:100%;height:280px}
+
+/* Shop Grid */
+.grd{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.gitem{background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;text-align:center}
+.gitem h4{font-size:13px;font-weight:600;margin-bottom:8px;color:#334155}
+.gitem .v{font-size:20px;font-weight:700;margin-bottom:4px}
+.gitem .sub{font-size:11px;color:#64748b}
+.gitem.red .v{color:#ef4444}
+.gitem.green .v{color:#10b981}
+
+/* Table */
+.tbwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+th{background:#f1f5f9;font-weight:600;color:#475569;position:sticky;top:0;z-index:1}
+td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:2}
+th:first-child{background:#f1f5f9;z-index:3}
+tr:hover td{background:#f8fafc}
+tr:hover td:first-child{background:#f1f5f9}
+.tb-img{width:36px;height:36px;border-radius:4px;object-fit:contain;vertical-align:middle;margin-right:6px;cursor:pointer}.img-float{display:none;position:fixed;z-index:9999;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);padding:4px;pointer-events:none}.img-float img{width:200px;height:200px;object-fit:contain;display:block}.th-sort{cursor:pointer;user-select:none;position:relative;padding-right:16px}.th-sort.asc:after{content:'▲';position:absolute;right:4px;font-size:10px;color:#3b5cf6}.th-sort.desc:after{content:'▼';position:absolute;right:4px;font-size:10px;color:#3b5cf6}
+.tb-link{color:#3b5cf6;text-decoration:none;font-size:11px}
+.tb-link:hover{text-decoration:underline}
+.neg{color:#ef4444}
+.pos{color:#10b981}
+
+/* Collapse */
+.cblk{margin-bottom:8px}
+.cblk h4{font-size:13px;font-weight:600;padding:10px 14px;background:#f1f5f9;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.cblk h4.on{background:#e0e7ff;color:#3b5cf6}
+.cblk h4:after{content:'+';font-size:16px;transition:transform .2s}
+.cblk h4.on:after{content:'−';transform:rotate(180deg)}
+.ctxt{display:none;padding:12px 14px;font-size:12px;color:#475569;line-height:1.8}
+.ctxt.show{display:block}
+.ctxt ul{padding-left:18px}
+
+/* Month Selector */
+.msel{padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff;color:#334155;cursor:pointer}
+.msel:focus{outline:none;border-color:#3b5cf6}
+
+/* Target Board */
+.tgt-board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px}
+.tgt-item{background:#f0f4ff;border-radius:10px;padding:12px 14px;border:1px solid #dae2fc}
+.tgt-item .tlbl{font-size:11px;color:#64748b;margin-bottom:2px}
+.tgt-item .tval{font-size:18px;font-weight:700;color:#1e40af;margin-bottom:4px}
+.tgt-item .ttgt{font-size:11px;color:#94a3b8}
+.tgt-bar-wrap{height:6px;background:#e2e8f0;border-radius:3px;margin-top:6px;overflow:hidden}
+.tgt-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.tgt-bar-fill.ok{background:#10b981}
+.tgt-bar-fill.warn{background:#f59e0b}
+.tgt-bar-fill.low{background:#ef4444}
+
+/* Progress Section */
+.prog-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.prog-item{background:#f8fafc;border-radius:8px;padding:10px 12px;border:1px solid #e2e8f0}
+.prog-item .ptitle{font-size:11px;color:#64748b;margin-bottom:4px}
+.prog-item .pval{font-size:14px;font-weight:600;color:#334155}
+
+/* Product Notes */
+.note-expand{background:none;border:none;color:#3b5cf6;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.note-expand:hover{color:#1d4ed8}
+.note-row{display:none}
+.note-row.show{display:table-row}
+.note-row td{padding:4px 8px;background:#fffbeb}
+.note-row input{border:1px solid #d4d4d8;border-radius:4px;padding:4px 8px;font-size:12px;width:100%;min-width:200px}
+.note-row .btn-sv-sm{background:#3b5cf6;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;margin-left:6px;white-space:nowrap}
+.note-row .btn-sv-sm:hover{background:#2563eb}
+
+/* Tooltip for charts */
+.chart-tooltip{position:absolute;background:rgba(15,23,42,0.92);color:#fff;font-size:11px;padding:8px 12px;border-radius:6px;pointer-events:none;z-index:100;max-width:260px;line-height:1.6;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+
+
+/* Comment Stats Table */
+.cmt-tbl-wrap{overflow-x:auto;margin-bottom:8px}
+.cmt-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.cmt-tbl th,.cmt-tbl td{padding:5px 8px;text-align:left;border-bottom:1px solid #e2e8f0}
+.cmt-tbl th{background:#f1f5f9;font-weight:600;color:#475569}
+.cmt-tbl tr:hover td{background:#f8fafc}
+.cmt-tbl .cmt-sku-link{color:#3b5cf6;cursor:pointer;font-weight:500}
+.cmt-tbl .cmt-sku-link:hover{text-decoration:underline}
+
+/* Notes block */
+.notes-block{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:10px}
+.notes-block h5{font-size:12px;font-weight:600;color:#92400e;margin-bottom:6px}
+.notes-item{font-size:11px;color:#78350f;padding:2px 0}
+.notes-empty{font-size:11px;color:#a8a29e;font-style:italic}
+
+/* Notes Panel */
+.np-wrap{}
+.np-search{margin-bottom:8px}
+.np-search input{width:100%;max-width:400px;padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none;transition:border-color .2s}
+.np-search input:focus{border-color:#3b5cf6}
+.np-info{font-size:11px;color:#94a3b8;margin-bottom:6px}
+
+.tr-link{color:#3b5cf6;text-decoration:none;cursor:pointer}
+.tr-link:hover{text-decoration:underline}
+
+
+/* Author Selector */
+.cp-author-row{display:flex;align-items:center;gap:8px;padding:4px 18px 6px}
+.cp-author-row .cp-author-lbl{font-size:11px;color:#64748b;white-space:nowrap}
+.cp-author-row select{flex:1;max-width:140px;border:1px solid #d4d4d8;border-radius:6px;padding:4px 8px;font-size:12px;color:#334155;background:#fff;outline:none}
+.cp-author-row select:focus{border-color:#3b5cf6}
+.cp-item .cp-author{font-size:12px;font-weight:600;color:#3b5cf6;margin-bottom:2px}
+
+/* Comment Panel */
+.cp-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000;display:none;align-items:center;justify-content:center}
+.cp-overlay.show{display:flex}
+.cp-panel{background:#fff;border-radius:12px;width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden}
+.cp-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.cp-header .cp-title{font-size:14px;font-weight:600;color:#0f172a}
+.cp-header .cp-sub{font-size:11px;color:#64748b;margin-left:8px}
+.cp-close{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;padding:0 4px;line-height:1}
+.cp-close:hover{color:#475569}
+.cp-list{flex:1;overflow-y:auto;padding:12px 18px;min-height:120px;max-height:340px}
+.cp-item{padding:10px 0;border-bottom:1px solid #f1f5f9}
+.cp-item:last-child{border-bottom:none}
+.cp-item .cp-text{font-size:13px;color:#334155;line-height:1.6;word-break:break-all}
+.cp-item .cp-time{font-size:11px;color:#94a3b8;margin-top:4px}
+.cp-empty{text-align:center;padding:30px 0;color:#94a3b8;font-size:13px}
+.cp-loading{text-align:center;padding:30px 0;color:#64748b;font-size:13px}
+.cp-error{text-align:center;padding:30px 0;color:#ef4444;font-size:13px}
+.cp-input-area{display:flex;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;background:#fafbfc}
+.cp-input-area textarea{flex:1;border:1px solid #d4d4d8;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;resize:none;min-height:38px;max-height:80px;outline:none;line-height:1.5}
+.cp-input-area textarea:focus{border-color:#3b5cf6;box-shadow:0 0 0 2px rgba(59,92,246,0.12)}
+.cp-input-area .btn-sv{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;background:#3b5cf6;color:#fff;white-space:nowrap;align-self:flex-end}
+.cp-input-area .btn-sv:hover{background:#2563eb}
+.cp-input-area .btn-sv:disabled{background:#94a3b8;cursor:not-allowed}
+.cp-send-error{font-size:11px;color:#ef4444;padding:4px 18px 0;display:none}
+.prod-row{cursor:pointer}
+.prod-row:hover td{background:#f0f4ff!important}
+
+/* Comment Attachments */
+.cp-attach-zone{display:flex;flex-wrap:wrap;gap:6px;padding:6px 18px 2px;min-height:0}
+.cp-attach-thumb{position:relative;width:56px;height:56px;border-radius:6px;border:1px solid #e2e8f0;overflow:hidden;cursor:pointer;flex-shrink:0;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8}
+.cp-attach-thumb img{width:100%;height:100%;object-fit:cover}
+.cp-attach-thumb .cp-attach-rm{position:absolute;top:0;right:0;background:rgba(0,0,0,0.55);color:#fff;border:none;font-size:11px;line-height:1;padding:1px 4px;cursor:pointer;border-radius:0 0 0 6px}
+.cp-attach-thumb .cp-attach-rm:hover{background:#ef4444}
+.cp-attach-thumb .cp-file-icon{font-size:20px}
+.cp-attach-preview{position:fixed;z-index:10001;background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.28);padding:8px;display:none;max-width:420px;max-height:420px}
+.cp-attach-preview img{max-width:400px;max-height:400px;object-fit:contain;display:block}
+.cp-drop-hint{position:absolute;inset:0;background:rgba(59,92,246,0.08);border:2px dashed #3b5cf6;border-radius:8px;display:none;z-index:10;pointer-events:none}
+.cp-input-wrap{position:relative;flex:1;display:flex;flex-direction:column}
+.cp-input-wrap textarea{flex:1}
+
+
+/* Month tags */
+#monthTags .tag { cursor: pointer; user-select: none; }
+
+/* ========== Comment To-do Float Panel ========== */
+#todoPanel{position:fixed;left:8px;top:140px;width:278px;max-height:calc(100vh - 160px);background:rgba(255,255,255,0.96);border-radius:10px;box-shadow:0 3px 18px rgba(0,0,0,0.13);z-index:998;overflow:hidden;font-size:12px;transition:width 0.25s}
+#todoPanel.minimized #todoBody,#todoPanel.minimized #todoHeader .todo-count{display:none}
+#todoPanel.minimized{width:auto}
+#todoHeader{padding:9px 12px;background:#f59e0b;color:#fff;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+#todoHeader .todo-mini-btn{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 4px;line-height:1;opacity:0.85}
+#todoHeader .todo-mini-btn:hover{opacity:1}
+#todoBody{padding:0;overflow-y:auto;max-height:calc(100vh - 190px)}
+#todoPending,#todoDone{padding:0}
+.todo-section-title{font-size:10px;color:#94a3b8;padding:6px 12px 3px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+.todo-item{display:flex;align-items:flex-start;padding:6px 10px;border-bottom:1px solid #f1f5f9;font-size:11px;cursor:default}
+.todo-item:hover{background:#f8fafc}
+.todo-item input[type=checkbox]{margin-right:7px;margin-top:3px;flex-shrink:0;cursor:pointer;accent-color:#f59e0b}
+.todo-item.done{opacity:0.55;text-decoration:line-through}
+.todo-item .todo-left{flex:1;min-width:0;overflow:hidden}
+.todo-item .todo-sku{color:#3b82f6;font-weight:500;white-space:nowrap}
+.todo-item .todo-summary{color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo-item .todo-meta{color:#94a3b8;font-size:10px;margin-top:1px}
+.todo-empty{text-align:center;color:#94a3b8;padding:14px 0;font-size:11px}
+</style>
+
+<!-- Diagnostic removed -->
+</head>
+<body>
+<div class="wrap">
+<div class="hd">
+<div><h1>产品周分析报告</h1></div>
+</div>
+
+<!-- Row 1: Week + Month selector -->
+<div class="frow">
+<span class="lb">周选择</span>
+<select class="msel" id="weekSel" onchange="onWeekChange()"></select>
+<span class="lb" style="margin-left:24px">目标月份</span>
+<div class="tags" id="monthTags"></div>
+</div>
+
+<!-- Row 2: Shop filter -->
+<div class="frow">
+<span class="lb">店铺筛选</span>
+<div class="tags" id="shopTags"></div>
+<span class="clr" onclick="clearShopFilter()">清除</span>
+</div>
+
+<!-- Row 3: Owner filter -->
+<div class="frow">
+<span class="lb">负责人筛选</span>
+<div class="tags" id="ownerTags"></div>
+<span class="clr" onclick="clearOwnerFilter()">清除</span>
+</div>
+
+<!-- Target Board -->
+<div class="sc" id="targetBoard" style="padding:14px 20px">
+<h2>月度目标完成情况</h2>
+<div class="tgt-board" id="tgtGrid"></div>
+</div>
+
+<!-- Charts -->
+<div class="chwrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
+<div class="sc" style="padding:14px;margin-bottom:0"><h2>利润 趋势 (最近6周)</h2><div style="position:relative"><canvas id="profitChart"></canvas><div class="chart-tooltip" id="profitTooltip"></div></div></div>
+<div class="sc" style="padding:14px;margin-bottom:0"><h2>毛利率 趋势 (最近6周)</h2><div style="position:relative"><canvas id="marginChart"></canvas><div class="chart-tooltip" id="marginTooltip"></div></div></div>
+<div class="sc" style="padding:14px;margin-bottom:0"><h2>GSV 趋势 (最近6周)</h2><div style="position:relative"><canvas id="gsvChart"></canvas><div class="chart-tooltip" id="gsvTooltip"></div></div></div>
+</div>
+<div class="chwrap" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
+<div class="sc" style="padding:14px;margin-bottom:0"><h2>销量 趋势 (最近6周)</h2><div style="position:relative"><canvas id="salesChart"></canvas><div class="chart-tooltip" id="salesTooltip"></div></div></div>
+<div class="sc" style="padding:14px;margin-bottom:0"><h2>送达退货率 趋势 (最近6周)</h2><div style="position:relative"><canvas id="returnChart"></canvas><div class="chart-tooltip" id="returnTooltip"></div></div></div>
+</div>
+
+<!-- Shop Summary Grid -->
+<div class="sc"><h2>店铺汇总</h2><div class="grd" id="shopGrid"></div></div>
+
+<!-- Product Table -->
+<div class="sc" id="prodSection">
+<h2 onclick="toggleProdSection()" style="cursor:pointer;display:flex;align-items:center;gap:8px">
+  产品维度 <span style="font-size:11px;font-weight:400;color:#64748b" id="prodExpandHint">(点击展开)</span>
+</h2>
+<div id="prodContent" style="display:none">
+<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px">
+<span style="font-size:11px;color:#64748b">点击率/加购率/转化率数据来源：运营日数据 (按SKU+周聚合)</span>
+<span style="font-size:11px;color:#94a3b8" id="newProdNote"></span>
+</div>
+<div style="margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+<span class="tag on" id="tabAll" onclick="switchProdTab('all')">全部产品</span>
+<span class="tag" id="tabProfit" onclick="switchProdTab('profit')">盈利TOP10</span>
+<span class="tag" id="tabLoss" onclick="switchProdTab('loss')">亏损TOP10</span>
+<span class="tag" id="tabProfitAll" onclick="switchProdTab('profitAll')">盈利榜单</span>
+<span class="tag" id="tabLossAll" onclick="switchProdTab('lossAll')">亏损榜单</span>
+<span class="tag" id="tabNewProd" onclick="switchProdTab('newProd')">新品列表</span>
+<input type="text" id="skuSearch" placeholder="搜索SKU..." style="margin-left:8px;padding:4px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;width:140px;outline:none" oninput="renderProdTable()">
+</div>
+<div class="tbwrap"><table id="prodTable">
+<thead><tr>
+<th class="th-sort" onclick="sortTable('img')">图片</th>
+<th class="th-sort" onclick="sortTable('sku')">SKU</th>
+<th class="th-sort" onclick="sortTable('wbId')">WB商品ID</th>
+<th class="th-sort" onclick="sortTable('shop')">店铺</th>
+<th class="th-sort" onclick="sortTable('cat')">类目</th>
+<th class="th-sort" onclick="sortTable('gsv')">GSV</th>
+<th class="th-sort" onclick="sortTable('profit')">利润</th>
+<th class="th-sort" onclick="sortTable('margin')">利润率</th>
+<th class="th-sort" onclick="sortTable('return')">送达退货率</th>
+<th class="th-sort" onclick="sortTable('qty')">销量</th>
+<th class="th-sort" onclick="sortTable('days')">上架天数</th>
+<th class="th-sort" onclick="sortTable('clickRate')">点击率</th>
+<th class="th-sort" onclick="sortTable('cartRate')">加购率</th>
+<th class="th-sort" onclick="sortTable('convRate')">转化率</th>
+<th>评论(+)</th>
+</tr></thead>
+<tbody></tbody>
+</table></div>
+<div style="margin-top:8px;font-size:11px;color:#94a3b8" id="tableInfo"></div>
+</div>
+</div>
+
+<!-- Weekly Progress -->
+<div class="sc" id="progressSection">
+<h2>本周进展回顾</h2>
+<div class="cblk"><h4 onclick="tgClps(this)">关键数据洞察</h4>
+<div class="ctxt show" id="insightContent"></div></div>
+</div>
+
+<!-- 产品动态日志（合并评论统计 + 产品备注） -->
+<div class="sc" id="activityLogSection">
+<h2>产品动态日志</h2>
+<div class="cblk"><div class="ctxt show" id="activityLogPanel">
+<div class="np-search"><input type="text" id="activityLogSearch" placeholder="搜索SKU / 店铺 / 内容..." oninput="filterActivityLog()"></div>
+<div class="np-info" id="activityLogInfo"></div>
+<table id="activityLogTable" class="prod-tbl"><thead><tr>
+<th style="width:150px">SKU</th><th style="width:85px">店铺</th><th style="width:60px">类型</th><th>内容</th><th style="width:90px">时间</th><th style="width:75px">参与人员</th><th style="width:72px">操作</th>
+</tr></thead><tbody></tbody></table>
+</div></div></div>
+</div>
+
+
+<!-- Data Update Info -->
+<div class="sc" id="dataUpdateSection" style="display:none;padding:12px 16px;margin-bottom:10px">
+<h2 onclick="tgClps(this)" style="cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0;display:flex;justify-content:space-between;align-items:center;user-select:none;padding:6px 10px;background:#f1f5f9;border-radius:6px">数据更新说明 <span style="font-size:10px;font-weight:400;color:#64748b">(点击展开)</span></h2>
+<div class="ctxt show" style="font-size:11px;color:#475569;line-height:1.6;padding:8px 10px">
+
+<div style="margin-bottom:8px;padding:6px 10px;background:#f0fdf4;border-radius:4px;border:1px solid #bbf7d0;font-size:11px">最新数据更新：<strong>2026-06-05</strong> &nbsp;|&nbsp; 数据来源：运营日数据 + 产品列表 + LX利润表 + 年规进度</div>
+
+<div class="cblk"><h4 onclick="tgClps(this)" style="font-size:11px;padding:6px 10px">更新数据方法</h4>
+<div class="ctxt show"><ol style="padding-left:16px;margin-bottom:8px;font-size:11px">
+<li>将最新Excel文件放入 <code style="background:#f1f5f9;padding:2px 6px;border-radius:3px">D:\周汇报文件\</code> 目录，确保文件名一致：
+<ul style="padding-left:18px;margin-top:2px">
+<li><strong>运营日数据.xlsx</strong> — 日粒度运营数据（SKU维度流量+转化+退货）</li>
+<li><strong>产品列表.xlsx</strong> — 产品基础信息+GSV+利润+库存</li>
+<li><strong>LX利润表.xlsx</strong> — 店铺利润表 + 分周SKU明细</li>
+<li><strong>2026WB年规进度.xlsx</strong> — 年度规划进度</li>
+</ul></li>
+<li>运行 <code style="background:#f1f5f9;padding:2px 6px;border-radius:3px">python build_data.py</code> 生成最新 data.js</li>
+<li>刷新本页面即可看到最新数据</li>
+</ol></div></div>
+
+<div class="cblk"><h4 onclick="tgClps(this)" style="font-size:11px;padding:6px 10px">数据源映射关系</h4>
+<div class="ctxt show"><table style="font-size:11px;margin-top:2px">
+<thead><tr><th style="text-align:left">数据文件</th><th style="text-align:left">对应页面模块</th><th style="text-align:left">关键字段</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">运营日数据.xlsx</td><td style="text-align:left">产品表格（点击率/加购率/转化率/退货率）+ 趋势图表</td><td style="text-align:left">SKU, 广告点击率(Col 26), 加购转化(Col 11), 转化率(Col 19), 财报退货率(Col 22), 销量(Col 12)</td></tr>
+<tr><td style="text-align:left">产品列表.xlsx</td><td style="text-align:left">产品表格（GSV/利润/库存）+ 产品图片+负责人</td><td style="text-align:left">SKU(Col 1), 主图(Col 9), 店铺(Col 10), 负责人(Col 13)</td></tr>
+<tr><td style="text-align:left">LX利润表.xlsx</td><td style="text-align:left">店铺汇总卡片 + 趋势图 + 利润率</td><td style="text-align:left">店铺(Col 2), 毛利率(Col 4), GSV(Col 6), 送达退货率(Col 21)</td></tr>
+<tr><td style="text-align:left">2026WB年规进度.xlsx</td><td style="text-align:left">目标看板</td><td style="text-align:left">年度目标, 当前进度</td></tr>
+</tbody></table></div></div>
+
+</div>
+</div>
+
+<!-- Comment Panel -->
+<div class="cp-overlay" id="cpOverlay">
+<div class="cp-panel">
+<div class="cp-header">
+<div><span class="cp-title" id="cpTitle">产品评论</span><span class="cp-sub" id="cpSub"></span> <span style="font-size:10px;color:#22c55e;font-weight:normal;letter-spacing:0.3px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#22c55e;margin-right:3px;vertical-align:middle"></span>实时同步</span></div>
+<button class="cp-close" onclick="closeCommentPanel()">&times;</button>
+</div>
+<div class="cp-img-wrap" id="cpImgWrap" style="display:none;text-align:center;padding:8px 0;border-bottom:1px solid #e2e8f0;margin-bottom:4px"><img id="cpImg" src="" style="max-width:120px;max-height:120px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain" onerror="this.parentElement.style.display='none'"></div>
+<div class="cp-list" id="cpList"></div>
+<div class="cp-attach-zone" id="cpAttachZone"></div>
+<div class="cp-send-error" id="cpSendError"></div>
+<div class="cp-author-row">
+<span class="cp-author-lbl">作者</span>
+<select id="cpAuthor">
+<option value="">匿名</option>
+<option value="陈敏华">陈敏华</option>
+<option value="江凯伦">江凯伦</option>
+<option value="毛立新">毛立新</option>
+<option value="张梦瑶">张梦瑶</option>
+<option value="包家豪">包家豪</option>
+<option value="李亚平">李亚平</option>
+<option value="张川">张川</option>
+<option value="邓晓洁">邓晓洁</option>
+</select>
+</div>
+<div class="cp-input-area" id="cpInputArea" style="position:relative">
+<div class="cp-drop-hint" id="cpDropHint">释放以添加附件</div>
+<div class="cp-input-wrap">
+<textarea id="cpInput" placeholder="输入评论...（Enter 发送，Shift+Enter 换行，Ctrl+V 粘贴图片）" rows="1"></textarea>
+</div>
+<button class="btn-sv" id="cpSendBtn" onclick="sendComment()">发送</button>
+</div>
+</div>
+</div>
+<!-- Attachment Preview Popup -->
+<div class="cp-attach-preview" id="cpAttachPreview"></div>
+</div>
+
+<!-- Activity Comment Detail Modal -->
+<div class="ac-overlay" id="acOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:10001;justify-content:center;align-items:center">
+<div class="ac-panel" style="background:#fff;border-radius:12px;width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+  <div class="ac-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0">
+    <div>
+      <span class="ac-title" id="acTitle" style="font-size:14px;font-weight:600;color:#0f172a"></span>
+      <span class="ac-sub" id="acSub" style="font-size:11px;color:#94a3b8;margin-left:8px"></span>
+    </div>
+    <button class="ac-close" onclick="closeActivityCommentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;line-height:1">&times;</button>
+  </div>
+  <div class="ac-list" id="acList" style="flex:1;overflow-y:auto;padding:10px 18px"></div>
+  <div class="ac-footer" style="padding:10px 18px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:right">按时间倒序排列</div>
+</div>
+</div>
+
+
+<script src="data.js"></script>
+<script>
+console.log('Data-driven report loading...');
+
+// ── Error handler ──
+window.onerror = function(msg, url, line, col, error) {
+    var errMsg = 'JS Error: Line ' + line + ' Col ' + col + ' - ' + msg;
+    document.title = errMsg.substring(0, 200);
+    if (document.body) {
+        document.body.innerHTML = '<div style="padding:40px;font-family:monospace;color:#dc2626;background:#fef2f2;margin:20px;border-radius:8px;border:1px solid #fecaca;"><strong>脚本错误</strong><br><br>' + errMsg + '<br><br><small>请刷新页面后重试</small></div>';
+    }
+    console.error('Global error:', msg, 'Line:', line, 'Col:', col, error);
+    return false;
+};
+
+// ── Data variables (populated from data.js via <script> tag) ──
+var WEEKS, WEEKS_ISO, WEEK_LABELS;
+var SHOP_WEEKLY, WEEK_DATA, TRAFFIC_WEEKLY, PERSON_TARGETS;
+var SKU_IMG, SKU_FIRST_DATE, SKU_OWNER, SHOP_OWNERS, SKU_WB_ID;
+var PRODUCT_NOTES, NEW_PRODUCT_CREATED;
+
+// ── State variables (global scope) ──
+var curWeek, selectedShops, OWNERS, selectedOwners;
+var curProdTab, prodExpanded, allProducts, selectedMonths, sortState;
+var SHOPS, COLORS, WB_ID_OWNER;
+selectedMonths = new Set(['5']);
+sortState = {key: '', dir: 'desc'};
+
+// ── Initialize from data.js (loaded via <script> tag above, no fetch/XHR needed) ──
+(function initFromDataJs() {
+    if (typeof DATA === 'undefined') {
+        console.error('DATA not loaded! Ensure data.js is in the same directory.');
+        document.body.innerHTML = '<div style="padding:40px;font-family:monospace;color:#b45309;background:#fffbeb;margin:20px;border-radius:8px;border:1px solid #fde68a;"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
+        return;
+    }
+    console.log('data.js loaded, ' + Object.keys(DATA).length + ' fields');
+
+    WEEKS = DATA.WEEKS;
+    WEEKS_ISO = DATA.WEEKS_ISO;
+    WEEK_LABELS = DATA.WEEK_LABELS;
+    SHOP_WEEKLY = DATA.SHOP_WEEKLY;
+    WEEK_DATA = DATA.WEEK_DATA;
+    TRAFFIC_WEEKLY = DATA.TRAFFIC_WEEKLY;
+    PERSON_TARGETS = DATA.PERSON_TARGETS;
+    SKU_IMG = DATA.SKU_IMG;
+    SKU_FIRST_DATE = DATA.SKU_FIRST_DATE;
+    SKU_OWNER = DATA.SKU_OWNER;
+    SHOP_OWNERS = DATA.SHOP_OWNERS;
+    SKU_WB_ID = DATA.SKU_WB_ID;
+    PRODUCT_NOTES = DATA.PRODUCT_NOTES;
+    NEW_PRODUCT_CREATED = DATA.NEW_PRODUCT_CREATED;
+
+    // ── Derived data ──
+    SHOPS = Object.keys(SHOP_WEEKLY);
+    // Per-metric color palettes with distinct shades for each shop
+    PROFIT_COLORS  = ['#1e3a5f','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#3730a3','#4f46e5','#6366f1','#818cf8','#a5b4fc','#312e81','#4338ca','#5b21b6','#6d28d9','#7c3aed','#8b5cf6','#1e40af','#3b5998','#4a6fa5','#5b8cc9','#6ea8fe','#2c3e6b','#344e86','#1a365d'];
+    MARGIN_COLORS  = ['#064e3b','#065f46','#047857','#059669','#10b981','#34d399','#6ee7b7','#a7f3d0','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#14532d','#166534','#65a30d','#84cc16','#a3e635','#0d9488','#14b8a6','#2dd4bf','#5eead4','#134e4a','#115e59','#0f766e'];
+    GSV_COLORS     = ['#7c2d12','#9a3412','#c2410c','#ea580c','#f97316','#fb923c','#fdba74','#fed7aa','#b45309','#d97706','#f59e0b','#fbbf24','#fcd34d','#78350f','#92400e','#ca8a04','#eab308','#facc15','#a16207','#854d0e','#d4a017','#e6b422','#8b6914','#c49a2a','#e8c547'];
+    SALES_COLORS   = ['#7f1d1d','#991b1b','#b91c1c','#dc2626','#ef4444','#f87171','#fca5a5','#fecaca','#9b2c2c','#c53030','#e53e3e','#fc8181','#feb2b2','#e11d48','#f43f5e','#fb7185','#fda4af','#be123c','#9f1239','#881337','#d64045','#ff6b6b','#c1121f','#780000','#a4161a'];
+    RETURN_COLORS  = ['#3b0764','#4c1d95','#5b21b6','#6d28d9','#7c3aed','#8b5cf6','#a78bfa','#c4b5fd','#581c87','#6b21a8','#7e22ce','#9333ea','#a855f7','#c084fc','#d8b4fe','#4a044e','#86198f','#a21caf','#c026d3','#d946ef','#e879f9','#f0abfc','#701a75','#8b5cf6','#9d4edd'];
+    // Legacy COLOR for backward compatibility (chart tooltips use index)
+    COLORS = PROFIT_COLORS;
+
+    // Shop-based unified colors: each shop gets a fixed color across all 5 metrics
+    SHOP_COLORS = {};
+    (function(){
+      var shops = Object.keys(SHOP_WEEKLY || {}).sort();
+      var palette = [
+        '#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45',
+        '#fabed4','#469990','#dcbeff','#9a6324','#fffac8','#800000','#aaffc3','#808000',
+        '#ffd8b1','#000075','#a9a9a9','#e6beff','#00ffff','#ff1493'
+      ];
+      shops.forEach(function(sh, i){ SHOP_COLORS[sh] = palette[i % palette.length]; });
+    })();
+    // Metric → line style: [dash pattern, label]
+    METRIC_STYLES = {
+      'profit':      [[], '利润'],
+      'margin':      [[], '利润率'],
+      'gsv':         [[], 'GSV'],
+      'qty':         [[], '销量'],
+      'return_rate': [[], '退货率']
+    };
+
+    WB_ID_OWNER = {};
+    for (var sku in SKU_OWNER) {
+        var wbId = SKU_WB_ID[sku];
+        if (wbId) {
+            if (!WB_ID_OWNER[wbId]) WB_ID_OWNER[wbId] = new Set();
+            WB_ID_OWNER[wbId].add(SKU_OWNER[sku]);
+        }
+    }
+
+    // ── Per-shop-owner weekly aggregation (for trend split) ──
+    SHOP_OWNER_WEEKLY = {}; // {shop: {owner: {week: {profit, gsv, margin, qty, return_rate}}}}
+    SHOPS.forEach(function(shop){
+      var owners = SHOP_OWNERS[shop];
+      if(!owners) return;
+      var ownerList = Object.keys(owners);
+      SHOP_OWNER_WEEKLY[shop] = {};
+      ownerList.forEach(function(o){ SHOP_OWNER_WEEKLY[shop][o] = {}; });
+      for(var w in WEEK_DATA){
+        var wd = WEEK_DATA[w];
+        if(!wd || !wd.allProducts) continue;
+        ownerList.forEach(function(o){
+          var totalGsv=0, totalProfit=0, totalQty=0, totalReturn=0, retCount=0;
+          wd.allProducts.forEach(function(p){
+            if(p.shop !== shop) return;
+            var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+            if(own !== o) return;
+            if(typeof p.gsv==='number') totalGsv += p.gsv;
+            if(typeof p.profit==='number') totalProfit += p.profit;
+            if(typeof p.qty==='number') totalQty += p.qty;
+            if(typeof p.return_rate==='number' && p.return_rate > 0){ totalReturn += p.return_rate; retCount++; }
+          });
+          if(totalGsv !== 0 || totalProfit !== 0 || totalQty !== 0){
+            SHOP_OWNER_WEEKLY[shop][o][w] = {
+              gsv: totalGsv, profit: totalProfit, margin: totalGsv>0?totalProfit/totalGsv*100:0,
+              qty: totalQty, return_rate: retCount>0?totalReturn/retCount:0
+            };
+          }
+        });
+      }
+    });
+
+    // ── Owner-sub colors for multi-owner shops (brighter/darker variants) ──
+    SHOP_OWNER_COLORS = {};
+    SHOPS.forEach(function(shop){
+      var owners = SHOP_OWNERS[shop];
+      if(!owners || Object.keys(owners).length <= 1) return;
+      var base = SHOP_COLORS[shop] || '#888';
+      var baseH = parseHex(base);
+      var list = Object.keys(owners).sort();
+      SHOP_OWNER_COLORS[shop] = {};
+      list.forEach(function(o, i){
+        var factor = i===0 ? 1.0 : (list.length===2?1.6:(1.3+i*0.3));
+        SHOP_OWNER_COLORS[shop][o] = lightenHex(baseH, factor);
+      });
+    });
+
+    function parseHex(h){ return {r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)}; }
+    function lightenHex(c, f){ var r=Math.min(255,Math.round(c.r*f)); var g=Math.min(255,Math.round(c.g*f)); var b=Math.min(255,Math.round(c.b*f)); return '#'+hx(r)+hx(g)+hx(b); }
+    function hx(v){ return ('0'+v.toString(16)).slice(-2); }
+    function pad(n){ return n<10?'0'+n:''+n; }
+
+    // ── State (init) ──
+    curWeek = WEEKS[WEEKS.length - 1];
+    // Find latest week with WEEK_DATA
+    for (var _i = WEEKS.length - 1; _i >= 0; _i--) {
+        if (WEEK_DATA[WEEKS[_i]]) {
+            curWeek = WEEKS[_i];
+            break;
+        }
+    }
+    selectedShops = new Set(SHOPS);
+    OWNERS = ["包家豪", "张梦瑶", "毛立新", "江凯伦", "陈敏华"];
+    selectedOwners = new Set(OWNERS);
+    curProdTab = 'all';
+    prodExpanded = true;
+    allProducts = null;
+
+    console.log('Initializing with curWeek=' + curWeek + ', SHOPS=' + SHOPS.length);
+
+    // ── Bootstrap ──
+    bootstrap();
+})();
+
+function getWeekYear(w){
+  var idx = WEEKS.indexOf(w);
+  return idx >= 0 ? WEEKS_ISO[idx] : w;
+}
+function getWeekDisplay(w){
+  var idx = WEEKS.indexOf(w);
+  return idx >= 0 ? WEEK_LABELS[idx] : w;
+}
+function getDaysOnSale(sku){
+  // 首次可售库存日期(起) → 至今(止)
+  if(!sku || !SKU_FIRST_DATE[sku]) return '-';
+  var firstParts = SKU_FIRST_DATE[sku].split('-');
+  if(firstParts.length < 3) return '-';
+  var firstYear = parseInt(firstParts[0]);
+  var firstMonth = parseInt(firstParts[1]);
+  var firstDay = parseInt(firstParts[2]);
+  var firstDate = new Date(firstYear, firstMonth-1, firstDay);
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var diff = Math.floor((today - firstDate) / (1000*60*60*24));
+  return diff >= 0 ? diff : 0;
+}
+function renderWeekSelect(){
+  var sel = document.getElementById('weekSel');
+  sel.innerHTML = WEEKS.map(function(w){
+    var idx = WEEKS.indexOf(w);
+    return '<option value="'+w+'"'+(w===curWeek?' selected':'')+'>'+WEEK_LABELS[idx]+'</option>';
+  }).join('');
+}
+
+function onWeekChange(){
+  var weekSelEl = document.getElementById('weekSel');
+  if (!weekSelEl) return;
+  curWeek = weekSelEl.value;
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+}
+
+// ========== SHOP TAGS ==========
+function renderShopTags(){
+  var container = document.getElementById('shopTags');
+  container.innerHTML = SHOPS.map(function(s){
+    return '<span class="tag '+(selectedShops.has(s)?'on':'')+'" onclick="tglS(\''+s+'\')">'+s+'</span>';
+  }).join('');
+}
+
+function tglS(s){
+  var wasSelected = selectedShops.has(s);
+  if(wasSelected) selectedShops.delete(s); else selectedShops.add(s);
+  renderShopTags();
+  
+  // Select shop -> auto-select its owners
+  if(!wasSelected){
+    var so = SHOP_OWNERS[s] || {};
+    for(var o in so){
+      if(!selectedOwners.has(o)) selectedOwners.add(o);
+    }
+  }
+  
+  renderOwnerTags();
+  renderMonthTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+}
+
+function clearShopFilter(){
+  selectedShops = new Set(SHOPS);
+  renderShopTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+}
+
+// ========== OWNER TAGS ==========
+function renderOwnerTags(){
+  var container = document.getElementById('ownerTags');
+  container.innerHTML = OWNERS.map(function(o){
+    return '<span class="tag '+(selectedOwners.has(o)?'on':'')+'" onclick="tglO(\''+o+'\')">'+o+'</span>';
+  }).join('');
+}
+
+function tglO(o){
+  var wasSelected = selectedOwners.has(o);
+  if(wasSelected) selectedOwners.delete(o); else selectedOwners.add(o);
+  renderOwnerTags();
+  
+  // Select owner -> auto-select all shops under this owner
+  if(!wasSelected){
+    SHOPS.forEach(function(s){
+      var so = SHOP_OWNERS[s] || {};
+      if(so[o]) selectedShops.add(s);
+    });
+  } else {
+    // Deselect owner -> deselect shops that no longer have any selected owner
+    SHOPS.forEach(function(s){
+      var so = SHOP_OWNERS[s] || {};
+      if(so[o]){
+        var hasOtherOwner = Object.keys(so).some(function(ow){ return ow !== o && selectedOwners.has(ow); });
+        if(!hasOtherOwner) selectedShops.delete(s);
+      }
+    });
+  }
+  
+  renderShopTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+}
+
+function clearOwnerFilter(){
+  selectedOwners = new Set(OWNERS);
+  selectedShops = new Set(SHOPS);
+  renderOwnerTags();
+  renderShopTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+}
+
+// Get active shops considering owner filter
+// Returns shop names for single-owner shops, "shop|owner" for multi-owner shops with partial selection
+function getActiveShopsByOwner(){
+  var activeShops = SHOPS.filter(function(s){ return selectedShops.has(s); });
+  if(selectedOwners.size < OWNERS.length){
+    activeShops = activeShops.filter(function(s){
+      var shopOwners = SHOP_OWNERS[s] || {};
+      for(var o in shopOwners){
+        if(selectedOwners.has(o)) return true;
+      }
+      return false;
+    });
+  }
+  return activeShops;
+}
+
+// Returns shop-owner pairs for trend splitting.
+// Multi-owner shops with partial owner filter → split into "shop|owner" entries.
+// Single-owner or all-owners-selected → return shop name as-is.
+function getActiveShopOwnerKeys(){
+  var keys = [];
+  SHOPS.forEach(function(s){
+    if(!selectedShops.has(s)) return;
+    var owners = SHOP_OWNERS[s];
+    if(!owners){ keys.push(s); return; }
+    var oList = Object.keys(owners);
+    if(oList.length <= 1 || selectedOwners.size >= OWNERS.length){
+      keys.push(s);
+    } else {
+      oList.forEach(function(o){
+        if(selectedOwners.has(o)) keys.push(s + '|' + o);
+      });
+    }
+  });
+  return keys;
+}
+
+// Display label for a shop-owner key
+function shopOwnerLabel(key){
+  if(key.indexOf('|') < 0) return key;
+  return key.replace('|','-');
+}
+
+// Color for a shop-owner key
+function shopOwnerColor(key){
+  if(key.indexOf('|') < 0) return SHOP_COLORS[key] || '#888';
+  var parts = key.split('|');
+  if(SHOP_OWNER_COLORS[parts[0]] && SHOP_OWNER_COLORS[parts[0]][parts[1]])
+    return SHOP_OWNER_COLORS[parts[0]][parts[1]];
+  return SHOP_COLORS[parts[0]] || '#888';
+}
+
+// Check if a product belongs to selected owners
+function productOwnerMatch(sku, shop){
+  if(selectedOwners.size >= OWNERS.length) return true; // all selected
+  
+  // Primary: SKU-level owner mapping (product-to-owner direct)
+  var skuOwner = SKU_OWNER[sku + '|' + shop] || SKU_OWNER[sku];
+  if(skuOwner) return selectedOwners.has(skuOwner);
+  
+  // Fallback: Shop-level owner check (for products without SKU-level mapping)
+  var shopOwners = SHOP_OWNERS[shop] || {};
+  for(var o in shopOwners){
+    if(selectedOwners.has(o)) return true;
+  }
+  
+  return true; // unknown owner, show anyway
+}
+
+// Determine target person from owner filter
+function getTargetPersons(){
+  var persons = [];
+  for(var i = 0; i < OWNERS.length; i++){
+    if(selectedOwners.has(OWNERS[i])) persons.push(OWNERS[i]);
+  }
+  return persons;
+}
+
+
+// ========== TARGET BOARD ==========
+// selectedMonths initialized above with state variables
+function renderMonthTags(){
+  var container = document.getElementById('monthTags');
+  var months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+  container.innerHTML = months.map(function(m){
+    return '<span class="tag '+(selectedMonths.has(m)?'on':'')+'" onclick="tglM(\''+m+'\')">'+m+'月</span>';
+  }).join('');
+}
+function tglM(m){
+  if(selectedMonths.has(m)) selectedMonths.delete(m); else selectedMonths.add(m);
+  renderMonthTags();
+  renderTargetBoard();
+}
+function getSelectedMonths(){
+  var months = Array.from(selectedMonths);
+  if(months.length === 0) months.push('5');
+  return months;
+}
+
+function renderTargetBoard(){
+  var tgtGrid = document.getElementById('tgtGrid');
+  if (!tgtGrid) return;
+  var months = getSelectedMonths();
+  var persons = getTargetPersons();
+  
+  if(persons.length === 0) {
+    tgtGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
+    return;
+  }
+  
+  // Aggregate data across all selected persons and months
+  var agg = {gsv_done:0, gsv_target:0, gmv_done:0, gmv_target:0, sales_done:0, sales_target:0, profit_done:0, profit_target:0};
+  var profitRate = 0;
+  var hasData = false;
+  
+  if(persons.length === 1){
+    for(var mi=0; mi<months.length; mi++){
+      var m = months[mi];
+      var t = PERSON_TARGETS[persons[0]] ? PERSON_TARGETS[persons[0]][m] : null;
+      if(!t) continue;
+      hasData = true;
+      agg.gsv_done += t.gsv_done || 0;
+      agg.gsv_target += t.gsv_target || 0;
+      agg.gmv_done += t.gmv_done || 0;
+      agg.gmv_target += t.gmv_target || 0;
+      agg.sales_done += t.sales_done || 0;
+      agg.sales_target += t.sales_target || 0;
+      agg.profit_done += t.profit_done || 0;
+      agg.profit_target += t.profit_target || 0;
+    }
+    // profit_rate is pre-computed per month, but for multi-month we recalculate
+    profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
+  } else {
+    for(var pi=0; pi<persons.length; pi++){
+      for(var mi=0; mi<months.length; mi++){
+        var m = months[mi];
+        var pt = PERSON_TARGETS[persons[pi]] ? PERSON_TARGETS[persons[pi]][m] : null;
+        if(!pt) continue;
+        hasData = true;
+        agg.gsv_done += pt.gsv_done || 0;
+        agg.gsv_target += pt.gsv_target || 0;
+        agg.gmv_done += pt.gmv_done || 0;
+        agg.gmv_target += pt.gmv_target || 0;
+        agg.sales_done += pt.sales_done || 0;
+        agg.sales_target += pt.sales_target || 0;
+        agg.profit_done += pt.profit_done || 0;
+        agg.profit_target += pt.profit_target || 0;
+      }
+    }
+    profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
+  }
+  
+  if(!hasData){
+    tgtGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无选中月份的数据</div>';
+    return;
+  }
+  
+  var items = [
+    {lbl: 'GSV(G)', val: agg.gsv_done, tgt: agg.gsv_target, fmt: 'money'},
+    {lbl: 'GMV(G)', val: agg.gmv_done, tgt: agg.gmv_target, fmt: 'money'},
+    {lbl: '销量', val: agg.sales_done, tgt: agg.sales_target, fmt: 'num'},
+    {lbl: '利润率', val: profitRate, tgt: 10, fmt: 'pct2'},
+    {lbl: '利润(G)', val: agg.profit_done, tgt: agg.profit_target, fmt: 'money2'}
+  ];
+  
+  var monthLabel = months.length === 1 ? months[0]+'月' : months.join(',')+'月（合计）';
+  
+  tgtGrid.innerHTML = items.map(function(item){
+    var isMoney = item.fmt === 'money' || item.fmt === 'money2';
+    var pct = item.tgt > 0 ? (item.val / item.tgt * 100) : 0;
+    var cls = pct >= 100 ? 'ok' : (pct >= 70 ? 'warn' : 'low');
+    var valStr = isMoney ? fmtK(item.val) : (item.fmt === 'pct2' ? Number(item.val).toFixed(2)+'%' : Number(item.val).toLocaleString());
+    var tgtStr = isMoney ? ('目标 '+fmtK(item.tgt)) : ('目标 '+item.tgt.toLocaleString());
+    if(item.fmt === 'pct2') tgtStr = '目标 ≥10%';
+    var pctStr = item.fmt !== 'pct2' ? '<span style="font-size:11px;color:#64748b"> '+pct.toFixed(2)+'%</span>' : '';
+    return '<div class="tgt-item">'+
+      '<div class="tlbl">'+item.lbl+' <span style="font-size:10px;color:#94a3b8">'+monthLabel+'</span></div>'+
+      '<div class="tval">'+valStr+pctStr+'</div>'+
+      '<div class="ttgt">'+tgtStr+'</div>'+
+      (item.fmt !== 'pct2' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill '+cls+'" style="width:'+Math.min(100,pct)+'%"></div></div>' : '')+
+    '</div>';
+  }).join('');
+}
+
+function onMonthChange(){
+  renderTargetBoard();
+}
+// onMonthChange kept for backward compatibility, now using renderMonthTags+tglM
+
+// ========== SHOP GRID ==========
+function getPrevWeek(w){
+  var idx = WEEKS.indexOf(w);
+  return idx > 0 ? WEEKS[idx-1] : null;
+}
+
+// Check if a shop has any data in the dashboard
+function hasShopData(shop){
+  // Check SHOP_WEEKLY
+  if(SHOP_WEEKLY[shop]) return true;
+  // Check WEEK_DATA for any week
+  for(var wk in WEEK_DATA){
+    var d = WEEK_DATA[wk];
+    if(d.shops && d.shops[shop]) return true;
+    if(d.allProducts) for(var i=0;i<d.allProducts.length;i++){if(d.allProducts[i].shop===shop) return true;}
+    if(d.top10Profit) for(var i=0;i<d.top10Profit.length;i++){if(d.top10Profit[i].shop===shop) return true;}
+  }
+  return false;
+}
+
+// Get product list for a week (fallback: top10Profit if allProducts missing)
+function getWeekProducts(wk){
+  var d = WEEK_DATA[wk];
+  if(d && d.allProducts && d.allProducts.length > 0) return d.allProducts;
+  if(d && d.top10Profit && d.top10Profit.length > 0) return d.top10Profit;
+  return [];
+}
+
+function renderShopGrid(){
+  var shopGrid = document.getElementById('shopGrid');
+  if (!shopGrid) return;
+  var d = WEEK_DATA[curWeek];
+  var products = getWeekProducts(curWeek);
+
+  if(products.length === 0 && (!d || !d.shops)){
+    shopGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px">暂无数据</div>';
+    return;
+  }
+
+  // Build ownerKeys: for each active shop, add "shop|owner" keys
+  // Multi-owner shops always split by owner; single-owner shops use shop key
+  var ownerKeys = [];
+  SHOPS.forEach(function(s){
+    if(!selectedShops.has(s)) return;
+    var owners = SHOP_OWNERS[s] || {};
+    var oList = Object.keys(owners).filter(function(o){ return selectedOwners.has(o); });
+    if(oList.length === 0) return;
+    if(oList.length <= 1){
+      ownerKeys.push({key:s, label:s, shop:s, owner:null});
+    } else {
+      oList.forEach(function(o){
+        ownerKeys.push({key:s+'|'+o, label:s+'-'+o, shop:s, owner:o});
+      });
+    }
+  });
+
+  // Compute owner-level totals
+  var ownerTotals = {};
+  ownerKeys.forEach(function(ok){ ownerTotals[ok.key] = {gsv:0, profit:0, orders:0}; });
+
+  if(products.length > 0){
+    products.forEach(function(p){
+      if(!selectedShops.has(p.shop)) return;
+      if(!productOwnerMatch(p.sku, p.shop)) return;
+      var matched = null;
+      for(var i=0;i<ownerKeys.length;i++){
+        var ok = ownerKeys[i];
+        if(ok.shop !== p.shop) continue;
+        if(!ok.owner){ matched = ok; break; }
+        else {
+          var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+          if(own === ok.owner){ matched = ok; break; }
+        }
+      }
+      if(matched){
+        ownerTotals[matched.key].gsv += (p.gsv || 0);
+        ownerTotals[matched.key].profit += (p.profit || 0);
+        ownerTotals[matched.key].orders += (p.qty || 0);
+      }
+    });
+  } else if(d && d.shops) {
+    ownerKeys.forEach(function(ok){
+      if(ok.owner && SHOP_OWNER_WEEKLY[ok.shop] && SHOP_OWNER_WEEKLY[ok.shop][ok.owner]){
+        var sw = SHOP_OWNER_WEEKLY[ok.shop][ok.owner][curWeek];
+        if(sw){ ownerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0}; }
+      } else if(!ok.owner && d.shops[ok.shop]){
+        ownerTotals[ok.key] = {gsv: d.shops[ok.shop].gsv || 0, profit: d.shops[ok.shop].profit || 0, orders: 0};
+      }
+    });
+  }
+
+  var totalGsv = 0, totalProfit = 0, totalOrders = 0;
+  ownerKeys.forEach(function(ok){
+    totalGsv += ownerTotals[ok.key].gsv;
+    totalProfit += ownerTotals[ok.key].profit;
+    totalOrders += ownerTotals[ok.key].orders;
+  });
+  var totalMargin = totalGsv > 0 ? (totalProfit / totalGsv * 100) : 0;
+
+  var prevWeek = getPrevWeek(curWeek);
+  var pd = prevWeek ? WEEK_DATA[prevWeek] : null;
+
+  var prevOwnerTotals = {};
+  ownerKeys.forEach(function(ok){ prevOwnerTotals[ok.key] = {gsv:0, profit:0, orders:0}; });
+  if(prevWeek){
+    var prevProducts = getWeekProducts(prevWeek);
+    if(prevProducts.length > 0){
+      prevProducts.forEach(function(p){
+        if(!selectedShops.has(p.shop)) return;
+        if(!productOwnerMatch(p.sku, p.shop)) return;
+        var matched = null;
+        for(var i=0;i<ownerKeys.length;i++){
+          var ok = ownerKeys[i];
+          if(ok.shop !== p.shop) continue;
+          if(!ok.owner){ matched = ok; break; }
+          else {
+            var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+            if(own === ok.owner){ matched = ok; break; }
+          }
+        }
+        if(matched){
+          prevOwnerTotals[matched.key].gsv += (p.gsv || 0);
+          prevOwnerTotals[matched.key].profit += (p.profit || 0);
+          prevOwnerTotals[matched.key].orders += (p.qty || 0);
+        }
+      });
+    } else if(pd && pd.shops) {
+      ownerKeys.forEach(function(ok){
+        if(ok.owner && SHOP_OWNER_WEEKLY[ok.shop] && SHOP_OWNER_WEEKLY[ok.shop][ok.owner]){
+          var sw = SHOP_OWNER_WEEKLY[ok.shop][ok.owner][prevWeek];
+          if(sw){ prevOwnerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0}; }
+        } else if(!ok.owner && pd.shops[ok.shop]){
+          prevOwnerTotals[ok.key] = {gsv: pd.shops[ok.shop].gsv || 0, profit: pd.shops[ok.shop].profit || 0, orders: 0};
+        }
+      });
+    }
+  }
+
+  var items = [
+    {lbl:'总GSV', val:fmtK(totalGsv), sub:''},
+    {lbl:'总利润', val:fmtK(totalProfit), sub:'', cls: totalProfit>=0?'green':'red'},
+    {lbl:'总毛利率', val:Number(totalMargin).toFixed(2)+'%', sub:''},
+    {lbl:'总订单量', val:totalOrders.toLocaleString(), sub:''}
+  ];
+
+  var html = items.map(function(item){
+    return '<div class="gitem'+(item.cls?' '+item.cls:'')+'"><h4>'+item.lbl+'</h4>'+
+      '<div class="v">'+item.val+'</div><div class="sub">'+item.sub+'</div></div>';
+  }).join('');
+
+  html += '<div style="grid-column:1/-1;margin-top:12px;display:flex;flex-wrap:wrap;gap:10px">';
+  ownerKeys.forEach(function(ok){
+    var st = ownerTotals[ok.key];
+    var hasData = st.gsv !== 0 || st.profit !== 0;
+    var prevSt = prevOwnerTotals[ok.key];
+    var prevGsv = prevSt.gsv, prevProfit = prevSt.profit, prevOrders = prevSt.orders;
+    var prevMargin = prevGsv > 0 ? (prevProfit / prevGsv * 100) : 0;
+    var curMargin = hasData && st.gsv > 0 ? (st.profit / st.gsv * 100) : 0;
+
+    var gsvPct = prevGsv > 0 ? ((st.gsv - prevGsv) / prevGsv * 100) : null;
+    var profitPct = prevProfit !== 0 ? ((st.profit - prevProfit) / Math.abs(prevProfit) * 100) : null;
+    var marginPct = prevMargin !== 0 ? (curMargin - prevMargin) : null;
+    var ordersPct = prevOrders > 0 ? ((st.orders - prevOrders) / prevOrders * 100) : null;
+
+    function fmtPct(v){ return v === null ? '-' : ((v>=0?'↑':'↓')+' '+Math.abs(v).toFixed(2)+'%'); }
+    function fmtPp(v){ return v === null ? '-' : ((v>=0?'↑':'↓')+' '+Math.abs(v).toFixed(2)+'pp'); }
+
+    html += '<div style="flex:1;min-width:220px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">'+
+      '<div style="font-weight:600;font-size:11px;color:#475569;margin-bottom:2px">'+escHtml(ok.label)+'</div>'+
+      '<table style="width:100%;font-size:11px;border-collapse:collapse">'+
+        '<tr style="color:#94a3b8"><th style="text-align:left;font-weight:400;padding:1px 4px">指标</th><th style="text-align:right;font-weight:400;padding:1px 4px">本周</th><th style="text-align:right;font-weight:400;padding:1px 4px">上周</th><th style="text-align:right;font-weight:400;padding:1px 4px">环比</th></tr>'+
+        '<tr><td style="padding:1px 4px">GSV</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?fmtK(st.gsv):'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevGsv>0?fmtK(prevGsv):'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(gsvPct===null? '#94a3b8':(gsvPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(gsvPct)+'</td></tr>'+
+        '<tr><td style="padding:1px 4px">毛利率</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?curMargin.toFixed(2)+'%':'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevMargin!==0?prevMargin.toFixed(2)+'%':'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(marginPct===null? '#94a3b8':(marginPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPp(marginPct)+'</td></tr>'+
+        '<tr><td style="padding:1px 4px">利润</td><td style="text-align:right;font-weight:600;padding:1px 4px;color:'+(hasData?(st.profit>=0?'#16a34a':'#dc2626'):'#94a3b8')+'">'+(hasData?fmtK(st.profit):'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevProfit!==0?fmtK(prevProfit):'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(profitPct===null? '#94a3b8':(profitPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(profitPct)+'</td></tr>'+
+        '<tr><td style="padding:1px 4px">订单量</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?st.orders.toLocaleString():'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevOrders>0?prevOrders.toLocaleString():'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(ordersPct===null? '#94a3b8':(ordersPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(ordersPct)+'</td></tr>'+
+      '</table>'+
+    '</div>';
+  });
+  html += '</div>';
+
+  shopGrid.innerHTML = html;
+}
+
+// ========== PRODUCT SECTION COLLAPSE ==========
+function toggleProdSection(){
+  prodExpanded = !prodExpanded;
+  var prodContent = document.getElementById('prodContent');
+  var prodExpandHint = document.getElementById('prodExpandHint');
+  if (prodContent) prodContent.style.display = prodExpanded ? 'block' : 'none';
+  if (prodExpandHint) prodExpandHint.textContent = prodExpanded ? '(点击收起)' : '(点击展开)';
+  if(prodExpanded){
+    var prodTable = document.getElementById('prodTable');
+    if(prodTable && !prodTable.getElementsByTagName('tbody')[0].innerHTML){
+      renderProdTable();
+    }
+  }
+}
+
+function switchProdTab(tab){
+  curProdTab = tab;
+  // Map tab names to element IDs
+  var tabMap = {'all':'tabAll','profit':'tabProfit','loss':'tabLoss','profitAll':'tabProfitAll','lossAll':'tabLossAll','newProd':'tabNewProd'};
+  Object.keys(tabMap).forEach(function(k){
+    var el = document.getElementById(tabMap[k]);
+    if(el) el.className = (k === tab) ? 'tag on' : 'tag';
+  });
+  renderProdTable();
+}
+
+// ========== PRODUCT TABLE ==========
+function isNewProduct(sku){
+  var days = getDaysOnSale(sku);
+  return typeof days === 'number' && days <= 45;
+}
+
+function renderProdTable(){
+  var prodTable = document.getElementById('prodTable');
+  var info = document.getElementById('tableInfo');
+  var newNote = document.getElementById('newProdNote');
+  if (!prodTable || !info) return;
+  var d = WEEK_DATA[curWeek];
+  var tbody = prodTable.getElementsByTagName('tbody')[0];
+
+  var products = getWeekProducts(curWeek);
+
+  if(products.length === 0){
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#94a3b8">'+curWeek+'暂无产品维度明细数据</td></tr>';
+    info.textContent = '该周产品数据暂未收录';
+    newNote.textContent = '';
+    return;
+  }
+
+  // If using top10Profit fallback, add a note
+  var usingTop10 = !(d && d.allProducts && d.allProducts.length > 0);
+
+  // Filter by shop, exclude "无匹配ID费用"
+  products = products.filter(function(p){
+    return selectedShops.has(p.shop) && productOwnerMatch(p.sku, p.shop) && p.sku !== '无匹配ID费用';
+  });
+
+  if(products.length === 0){
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#94a3b8">暂无符合筛选条件的产品</td></tr>';
+    info.textContent = '';
+    newNote.textContent = '';
+    return;
+  }
+
+  // SKU search filter
+  var skuSearchEl = document.getElementById('skuSearch');
+  var skuQuery = (skuSearchEl ? (skuSearchEl.value || '') : '').trim().toLowerCase();
+  if(skuQuery){
+    products = products.filter(function(p){ return p.sku.toLowerCase().indexOf(skuQuery) !== -1; });
+    if(products.length === 0){
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#94a3b8">未找到匹配 "'+escHtml(skuQuery)+'" 的SKU</td></tr>';
+      info.textContent = '';
+      newNote.textContent = '';
+      return;
+    }
+  }
+
+  // Filter by tab
+  if(curProdTab === 'profit'){
+    products = products.filter(function(p){ return p.profit > 0; });
+    products.sort(function(a,b){ return b.profit - a.profit; });
+    products = products.slice(0, 10);
+  } else if(curProdTab === 'loss'){
+    products = products.filter(function(p){ return p.profit < 0; });
+    products.sort(function(a,b){ return a.profit - b.profit; });
+    products = products.slice(0, 10);
+  } else if(curProdTab === 'profitAll'){
+    products = products.filter(function(p){ return p.profit > 0; });
+    products.sort(function(a,b){ return b.profit - a.profit; });
+  } else if(curProdTab === 'lossAll'){
+    products = products.filter(function(p){ return p.profit < 0; });
+    products.sort(function(a,b){ return a.profit - b.profit; });
+  } else if(curProdTab === 'newProd'){
+    var newProducts = products.filter(function(p){ return isNewProduct(p.sku); });
+    if(newProducts.length === 0){
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:20px;color:#94a3b8">'+curWeek+'暂无新品数据</td></tr>';
+      info.textContent = '新品判定：上架天数≤45天（首次可售库存日期起算）';
+      newNote.textContent = '';
+      return;
+    }
+    products = newProducts;
+    products.sort(function(a,b){ return (b.qty||0) - (a.qty||0); });
+  }
+
+  // Apply user sort if active
+  if(sortState.key){
+    products.sort(function(a,b){
+      var va = getSortValue(a, sortState.key);
+      var vb = getSortValue(b, sortState.key);
+      if(sortState.dir === 'asc') return va - vb;
+      return vb - va;
+    });
+    updateSortHeaders();
+  }
+
+  tbody.innerHTML = products.map(function(p, idx){
+    var marginCls = p.margin < 0 ? 'neg' : (p.margin > 15 ? 'pos' : '');
+    var imgUrl = SKU_IMG[p.sku] || '';
+    var imgHtml = imgUrl ? '<img class="tb-img" src="'+imgUrl+'" onerror="this.style.display=\'none\'" title="'+escHtml(p.sku)+'">' : '';
+
+    var noteText = PRODUCT_NOTES[p.sku] || '';
+    var wbId = SKU_WB_ID[p.sku] || SKU_WB_ID[p.sku + '|' + p.shop] || '-';
+    var daysOnSale = getDaysOnSale(p.sku);
+
+    // Traffic data aggregation placeholder
+    var trafficData = (TRAFFIC_WEEKLY[curWeek] && TRAFFIC_WEEKLY[curWeek][p.sku]) ? TRAFFIC_WEEKLY[curWeek][p.sku] : null; /* '-' = 该SKU在当前周无流量数据(通常为近期上架新品) */
+    var clickHtml = trafficData && trafficData[0] !== null ? (Number(trafficData[0])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var cartHtml = trafficData && trafficData[1] !== null ? (Number(trafficData[1])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var convHtml = trafficData && trafficData[2] !== null ? (Number(trafficData[2])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
+
+    return '<tr class="prod-row" onclick="openCommentPanel(\''+p.sku.replace(/'/g,"\\'")+'\',\''+p.shop.replace(/'/g,"\\'")+'\')">'+
+      '<td>'+imgHtml+'</td>'+
+      '<td><strong>'+escHtml(p.sku)+'</strong></td>'+
+      '<td><span style="color:#64748b;font-size:11px">'+escHtml(wbId)+'</span></td>'+
+      '<td>'+escHtml(p.shop)+'</td>'+
+      '<td>'+(p.cat||'-')+'</td>'+
+      '<td>'+fmtK(p.gsv)+'</td>'+
+      '<td class="'+(p.profit<0?'neg':'')+'">'+fmtK(p.profit)+'</td>'+
+      '<td class="'+marginCls+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
+      '<td>'+(Number(p.return_rate)||0).toFixed(2)+'%</td>'+
+      '<td>'+(p.qty||0).toLocaleString()+'</td>'+
+      '<td style="color:'+(typeof daysOnSale === 'number' && daysOnSale <= 45 ? '#10b981' : '#64748b')+'">'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'</td>'+
+      '<td>'+clickHtml+'</td><td>'+cartHtml+'</td><td>'+convHtml+'</td>'+
+      '<td style="cursor:pointer;padding:7px 12px;text-align:center" onclick="event.stopPropagation();openCommentPanel(\''+p.sku.replace(/\'/g,"\\\'")+'\',\''+p.shop.replace(/\'/g,"\\\'")+'\')"><span style="font-size:16px;font-weight:600;color:#3b5cf6;display:inline-block;min-width:24px;line-height:1.4">'+(noteText?'&#9998;':'+')+'</span></td>'+
+    '</tr>'+
+    '<tr class="note-row" id="note-'+p.sku.replace(/[^a-zA-Z0-9]/g,'_')+'">'+
+      '<td colspan="15" style="text-align:left">'+
+        '<input type="text" id="noteInp-'+p.sku.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="输入备注..." value="'+escHtml(noteText)+'" style="width:calc(100% - 80px);max-width:400px">'+
+        '<button class="btn-sv-sm" onclick="saveNote(\''+p.sku+'\')">保存</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+
+  var tabLabel = {'all':'全部产品','profit':'盈利TOP10','loss':'亏损TOP10','profitAll':'盈利榜单(利润>0)','lossAll':'亏损榜单(利润<0)','newProd':'新品列表'}[curProdTab];
+  info.textContent = '共 '+products.length+' 个产品 | '+tabLabel+' | 点击表头可排序' + (usingTop10 ? ' | 注：当前周仅含TOP10利润产品数据' : '');
+  if(curProdTab === 'newProd'){
+    newNote.textContent = '新品判定：上架天数≤45天（首次可售库存日期起算）';
+  } else {
+    newNote.textContent = '';
+  }
+}
+
+function toggleNoteRow(sku, shop){
+  if(!sku) return;
+  var row = document.getElementById('note-'+sku.replace(/[^a-zA-Z0-9]/g,'_'));
+  if(row) row.classList.toggle('show');
+}
+
+function saveNote(sku){
+  if(!sku) return;
+  var inp = document.getElementById('noteInp-'+sku.replace(/[^a-zA-Z0-9]/g,'_'));
+  if(!inp) return;
+  PRODUCT_NOTES[sku] = inp.value;
+  renderProdTable();
+  renderProgress();
+}
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ========== IMAGE FLOAT PREVIEW ==========
+function initImgFloat(){
+  var floatDiv = document.createElement('div');
+  floatDiv.className = 'img-float';
+  floatDiv.id = 'imgFloat';
+  floatDiv.innerHTML = '<img src="" alt="">';
+  document.body.appendChild(floatDiv);
+  
+  document.addEventListener('mouseover', function(e){
+    var img = e.target.closest('.tb-img');
+    if(!img) return;
+    var float = document.getElementById('imgFloat');
+    var bigImg = float.querySelector('img');
+    bigImg.src = img.src;
+    float.style.display = 'block';
+    
+    var rect = img.getBoundingClientRect();
+    float.style.left = (rect.right + 14) + 'px';
+    float.style.top = (rect.top - 30) + 'px';
+    
+    // Keep within viewport
+    var fRect = float.getBoundingClientRect();
+    if(fRect.right > window.innerWidth) float.style.left = (rect.left - 220) + 'px';
+    if(fRect.bottom > window.innerHeight) float.style.top = Math.max(0, window.innerHeight - fRect.height - 10) + 'px';
+  });
+  
+  document.addEventListener('mouseout', function(e){
+    var img = e.target.closest('.tb-img');
+    if(!img) return;
+    document.getElementById('imgFloat').style.display = 'none';
+  });
+}
+
+// PRODUCT_NOTES, NEW_PRODUCT_CREATED already assigned from DATA above
+
+// ========== SORTING ==========
+// sortState initialized above with state variables
+
+function getSortValue(p, key){
+  switch(key){
+    case 'gsv': return p.gsv || 0;
+    case 'profit': return p.profit || 0;
+    case 'margin': return p.margin || 0;
+    case 'return': return p.return_rate || 0;
+    case 'qty': return p.qty || 0;
+    case 'days': var ds = getDaysOnSale(p.sku); return typeof ds === 'number' ? ds : 99999;
+    case 'clickRate': { var td = (TRAFFIC_WEEKLY[curWeek] && TRAFFIC_WEEKLY[curWeek][p.sku]) ? TRAFFIC_WEEKLY[curWeek][p.sku] : null; return td && td[0] !== null ? td[0] : -9999; }
+    case 'cartRate': { var td = (TRAFFIC_WEEKLY[curWeek] && TRAFFIC_WEEKLY[curWeek][p.sku]) ? TRAFFIC_WEEKLY[curWeek][p.sku] : null; return td && td[1] !== null ? td[1] : -9999; }
+    case 'convRate': { var td = (TRAFFIC_WEEKLY[curWeek] && TRAFFIC_WEEKLY[curWeek][p.sku]) ? TRAFFIC_WEEKLY[curWeek][p.sku] : null; return td && td[2] !== null ? td[2] : -9999; }
+    case 'sku': return p.sku || '';
+    case 'shop': return p.shop || '';
+    case 'cat': return p.cat || '';
+    case 'wbId': return SKU_WB_ID[p.sku] || SKU_WB_ID[p.sku + '|' + p.shop] || '';
+    case 'img': return 0;
+    default: return 0;
+  }
+}
+
+function sortTable(key){
+  if(sortState.key === key){
+    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortState.key = key;
+    sortState.dir = 'desc';
+  }
+  renderProdTable();
+}
+
+function updateSortHeaders(){
+  var headers = document.querySelectorAll('#prodTable th.th-sort');
+  for(var i=0; i<headers.length; i++){
+    headers[i].classList.remove('asc','desc');
+  }
+  var map = {'gsv':'gsv','profit':'profit','margin':'margin','return':'return','qty':'qty','days':'days','clickRate':'clickRate','cartRate':'cartRate','convRate':'convRate','sku':'sku','shop':'shop','cat':'cat','wbId':'wbId','img':'img'};
+  var targetIdx = -1;
+  var keys = Object.keys(map);
+  for(var i=0; i<keys.length; i++){
+    if(map[keys[i]] === sortState.key){ targetIdx = i; break; }
+  }
+  if(targetIdx >= 0 && targetIdx < headers.length){
+    headers[targetIdx].classList.add(sortState.dir);
+  }
+}
+
+// ========== CHARTS ==========
+function drawCharts(){
+  // GSV uses SHOP_WEEKLY directly (has gsv field); others fall back to WEEK_DATA aggregation
+  drawMetricChart('profitChart', 'profitTooltip', '__profit', 'profit', function(v){ return fmtK(v); }, 0, 'profit');
+  drawMetricChart('marginChart', 'marginTooltip', '__margin', 'margin', function(v){ return v.toFixed(2)+'%'; }, 0, 'margin');
+  drawMetricChart('gsvChart', 'gsvTooltip', 'gsv', 'gsv', function(v){ return fmtK(v); }, 0, 'gsv');
+  drawMetricChart('salesChart', 'salesTooltip', '__qty', 'qty', function(v){ return (v||0).toLocaleString(); }, 0, 'qty');
+  drawMetricChart('returnChart', 'returnTooltip', '__return_rate', 'return_rate', function(v){ return v.toFixed(2)+'%'; }, 0, 'return_rate');
+}
+
+function getDisplayWeeks(){
+  var allWeeks = WEEKS;
+  var curIdx = allWeeks.indexOf(curWeek);
+  if(curIdx < 0) curIdx = allWeeks.length - 1;
+  var startIdx = Math.max(0, curIdx - 5);
+  return allWeeks.slice(startIdx, startIdx + 6);
+}
+
+// Generic metric trend chart
+function drawMetricChart(canvasId, tooltipId, metricKey, dataKey, fmtFn, defaultVal, styleKey){
+  var canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  var tooltip = document.getElementById(tooltipId);
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var W = Math.max(rect.width, 300);
+  var H = 220;
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+  var dashPattern = (METRIC_STYLES[styleKey] && METRIC_STYLES[styleKey][0]) || [];
+  
+  var pad = {top:24, right:30, bottom:36, left:62};
+  var pw = W - pad.left - pad.right;
+  var ph = H - pad.top - pad.bottom;
+  
+  var weeks = getDisplayWeeks();
+  var activeShops = getActiveShopOwnerKeys().filter(function(s){
+    for(var wi = 0; wi < weeks.length; wi++){
+      var w = weeks[wi];
+      var val = getMetricVal(s, w, metricKey, dataKey);
+      if(typeof val === 'number' && (val > 0 || val < 0)) return true;
+    }
+    return false;
+  });
+  
+  var shopIndex = {};
+  activeShops.forEach(function(s, i){ shopIndex[s] = i; });
+  
+  var allVals = [];
+  weeks.forEach(function(w){
+    activeShops.forEach(function(s){
+      var val = getMetricVal(s, w, metricKey, dataKey);
+      if(typeof val === 'number') allVals.push(val);
+    });
+  });
+  var vmax = Math.max.apply(null, allVals) || 1;
+  var vmin = Math.min.apply(null, allVals) || 0;
+  if(vmin > 0) vmin = 0;
+  if(vmax === vmin){ vmax = vmin + 1; }
+  
+  // Y-axis
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#e8ecf1'; ctx.lineWidth = 1;
+  for(var i=0; i<=4; i++){
+    var y = pad.top + ph * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W-pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#8c9bb5'; ctx.font = '10px -apple-system,sans-serif'; ctx.textAlign = 'right';
+    var val = vmax - (vmax - vmin) * i / 4;
+    ctx.fillText(fmtFn(val), pad.left-5, y+4);
+  }
+  
+  // X-axis
+  weeks.forEach(function(w, i){
+    var x = pad.left + pw * i / (weeks.length-1 || 1);
+    ctx.fillStyle = '#64748b'; ctx.font = '9px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(WEEK_LABELS[w] || w, x, pad.top+ph+18);
+    ctx.beginPath(); ctx.moveTo(x, pad.top+ph); ctx.lineTo(x, pad.top+ph+4); ctx.strokeStyle='#c8d2e0'; ctx.setLineDash([]); ctx.stroke();
+  });
+  
+  var chartData = [];
+  
+  // Lines
+  activeShops.forEach(function(shop, idx){
+    var pts = [];
+    weeks.forEach(function(w, i){
+      var x = pad.left + pw * i / (weeks.length-1 || 1);
+      var val = getMetricVal(shop, w, metricKey, dataKey);
+      var y = pad.top + ph - (val - vmin) / Math.max(vmax - vmin, 1) * ph;
+      pts.push({x:x, y:y, val:val, week:w});
+    });
+    chartData.push({shop:shop, pts:pts});
+    
+    if(pts.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(var i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.setLineDash(dashPattern);
+    ctx.strokeStyle = shopOwnerColor(shop);
+    ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.stroke();
+  });
+  
+  // Dots
+  activeShops.forEach(function(shop, idx){
+    var pts = chartData.find(function(d){ return d.shop === shop; }).pts;
+    pts.forEach(function(p){
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.5, 0, Math.PI*2);
+      ctx.fillStyle = shopOwnerColor(shop);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.8, 0, Math.PI*2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    });
+  });
+  
+  // Tooltip
+  canvas.onmousemove = function(e){
+    var mx = e.offsetX, my = e.offsetY;
+    var found = null, minDist = 22;
+    for(var i=0; i<chartData.length; i++){
+      var pts = chartData[i].pts;
+      for(var j=0; j<pts.length; j++){
+        var dx = mx - pts[j].x, dy = my - pts[j].y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < minDist){ minDist = dist; found = {idx:i, shop: chartData[i].shop, pt: pts[j]}; }
+      }
+    }
+    if(found){
+      var html = '<strong>'+found.pt.week+'</strong><br>';
+      chartData.forEach(function(d, di){
+        var pt = d.pts.find(function(p){ return p.week === found.pt.week; });
+        if(pt) html += '<span style="color:'+shopOwnerColor(d.shop)+'">'+shopOwnerLabel(d.shop)+': </span>'+fmtFn(pt.val)+'<br>';
+      });
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      var tx = found.pt.x + 14, ty = found.pt.y - 10;
+      if(tx + 200 > W) tx = found.pt.x - 200;
+      if(ty < 0) ty = 10;
+      tooltip.style.left = tx + 'px';
+      tooltip.style.top = ty + 'px';
+    } else {
+      tooltip.style.display = 'none';
+    }
+  };
+  canvas.onmouseleave = function(){ tooltip.style.display = 'none'; };
+}
+
+function getMetricVal(shopKey, week, metricKey, dataKey){
+  // shopKey may be "shop" or "shop|owner"
+  var shop = shopKey, owner = null;
+  if(shopKey.indexOf('|') >= 0){
+    var parts = shopKey.split('|');
+    shop = parts[0]; owner = parts[1];
+  }
+
+  // ── Owner-filtered: use SHOP_OWNER_WEEKLY ──
+  if(owner && SHOP_OWNER_WEEKLY[shop] && SHOP_OWNER_WEEKLY[shop][owner] && SHOP_OWNER_WEEKLY[shop][owner][week]){
+    var ow = SHOP_OWNER_WEEKLY[shop][owner][week];
+    if(typeof ow[dataKey] === 'number') return ow[dataKey];
+    return 0;
+  }
+
+  // ── Shop-level: SHOP_WEEKLY ──
+  if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][week] && typeof SHOP_WEEKLY[shop][week][metricKey] === 'number'){
+    return SHOP_WEEKLY[shop][week][metricKey];
+  }
+  if(WEEK_DATA[week]){
+    var wd = WEEK_DATA[week];
+    if(wd.shops && wd.shops[shop] && typeof wd.shops[shop][dataKey] === 'number'){
+      return wd.shops[shop][dataKey];
+    }
+    if(wd.allProducts){
+      var total = 0, count = 0;
+      for(var pi = 0; pi < wd.allProducts.length; pi++){
+        var p = wd.allProducts[pi];
+        if(p.shop !== shop) continue;
+        // Owner filter
+        if(owner){
+          var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+          if(own !== owner) continue;
+        }
+        if(typeof p[dataKey] === 'number' && (dataKey !== 'return_rate' || p[dataKey] > 0)){
+          total += p[dataKey];
+          count++;
+        }
+      }
+      if(count > 0){
+        return dataKey === 'return_rate' ? (total / count) : total;
+      }
+      // For return_rate, try only SKUs with actual returns (>0)
+      if(dataKey === 'return_rate'){
+        var rrTotal = 0, rrCount = 0;
+        for(var pj = 0; pj < wd.allProducts.length; pj++){
+          var p2 = wd.allProducts[pj];
+          if(p2.shop !== shop) continue;
+          if(owner){
+            var own2 = SKU_OWNER[p2.sku+'|'+p2.shop] || SKU_OWNER[p2.sku];
+            if(own2 !== owner) continue;
+          }
+          if(typeof p2[dataKey] === 'number' && p2[dataKey] > 0){
+            rrTotal += p2[dataKey]; rrCount++;
+          }
+        }
+        if(rrCount > 0) return rrTotal / rrCount;
+        return 0;
+      }
+    }
+  }
+  return 0;
+}
+
+// ========== WEEKLY PROGRESS ==========
+function renderProgress(){
+  var insightContent = document.getElementById('insightContent');
+  if (!insightContent) return;
+  var d = WEEK_DATA[curWeek];
+  if(!d || !d.shops){
+    insightContent.innerHTML = '<p style="color:#94a3b8">暂无'+curWeek+'数据</p>';
+    return;
+  }
+  
+  // Generate narrative insights
+  var insights = generateInsights();
+  insightContent.innerHTML = insights || '<p style="color:#94a3b8">本周数据正常，未检测到异常指标</p>';
+
+  // Render merged activity log
+  renderActivityLog();
+}
+
+
+// ========== NARRATIVE INSIGHTS GENERATOR ==========
+function generateInsights(){
+  var d = WEEK_DATA[curWeek];
+  var prevWeek = getPrevWeek(curWeek);
+  var pd = prevWeek ? WEEK_DATA[prevWeek] : null;
+  var curLabel = WEEK_LABELS[curWeek];
+
+  // ── Shop-level aggregation ──
+  var shopKeys = [];
+  var shopM = {};
+  SHOPS.forEach(function(s){
+    shopKeys.push(s);
+    shopM[s] = {profit:0, margin:0, gsv:0, qty:0, name:s};
+  });
+  
+  var totalProfit = 0, totalGsv = 0, totalQty = 0;
+  shopKeys.forEach(function(s){
+    var sw = (d && d.shops && d.shops[s]) ? d.shops[s] : null;
+    var profit = sw && typeof sw.profit==='number' ? sw.profit : (getMetricVal(s, curWeek, 'profit', 'profit')||0);
+    var margin = sw && typeof sw.margin==='number' ? sw.margin : (getMetricVal(s, curWeek, 'margin', 'margin')||0);
+    var gsv = sw && typeof sw.gsv==='number' ? sw.gsv : (getMetricVal(s, curWeek, 'gsv', 'gsv')||0);
+    var qty = sw && typeof sw.qty==='number' ? sw.qty : (getMetricVal(s, curWeek, 'qty', 'qty')||0);
+    shopM[s].profit = profit; shopM[s].margin = margin; shopM[s].gsv = gsv; shopM[s].qty = qty;
+    totalProfit += profit; totalGsv += gsv; totalQty += qty;
+  });
+
+  var overallMargin = totalGsv > 0 ? totalProfit / totalGsv * 100 : 0;
+
+  // ── Previous week comparison ──
+  var prevTotalProfit = 0, prevTotalGsv = 0;
+  if(pd){
+    shopKeys.forEach(function(s){
+      var sw = pd && pd.shops && pd.shops[s] ? pd.shops[s] : null;
+      prevTotalProfit += sw && typeof sw.profit==='number' ? sw.profit : (getMetricVal(s, prevWeek, 'profit', 'profit')||0);
+      prevTotalGsv += sw && typeof sw.gsv==='number' ? sw.gsv : (getMetricVal(s, prevWeek, 'gsv', 'gsv')||0);
+    });
+  }
+  var wowProfit = prevTotalProfit !== 0 ? (totalProfit - prevTotalProfit) / Math.abs(prevTotalProfit) * 100 : 0;
+  var wowGsv = prevTotalGsv !== 0 ? (totalGsv - prevTotalGsv) / Math.abs(prevTotalGsv) * 100 : 0;
+
+  // ── Rankings (shop-level) ──
+  var rankBy = function(key, desc){
+    var list = shopKeys.slice();
+    list.sort(function(a,b){ return (desc?-1:1) * ((shopM[b][key]||0) - (shopM[a][key]||0)); });
+    return list;
+  };
+  var topProfitShop = rankBy('profit',true)[0];
+  var topMarginShop = rankBy('margin',true)[0];
+  var lowMarginShop = rankBy('margin',false)[0];
+  var highGsvShop = rankBy('gsv',true)[0];
+
+  // ── Section 2: Product-level stats, filtered by owner/shop ──
+  var products = d && d.allProducts ? d.allProducts.slice() : [];
+  if(selectedOwners && OWNERS && selectedOwners.size > 0 && OWNERS.length > 1){
+    products = products.filter(function(p){
+      var owner = (SKU_OWNER && SKU_OWNER[p.sku]) || '';
+      return selectedOwners.has(owner);
+    });
+  }
+  if(selectedShops && SHOPS && selectedShops.size > 0 && selectedShops.size < SHOPS.length){
+    products = products.filter(function(p){ return selectedShops.has(p.shop); });
+  }
+  var totalSkus = products.length;
+  var lossSkus = 0;
+  products.forEach(function(p){ if(p.profit < 0) lossSkus++; });
+  var lossPct = totalSkus > 0 ? Math.round(lossSkus/totalSkus*100) : 0;
+  var lowBenchmarkCount = 0;
+  products.forEach(function(p){
+    if(typeof p.margin==='number' && p.margin < 15) lowBenchmarkCount++;
+  });
+
+  // ── Return rate from products ──
+  var rrSum = 0, rrCount = 0;
+  products.forEach(function(p){
+    if(typeof p.return_rate==='number' && p.return_rate > 0){
+      rrSum += p.return_rate; rrCount++;
+    }
+  });
+  var avgReturnRate = rrCount > 0 ? rrSum / rrCount : 0;
+
+  // ── High-inventory shops ──
+  var highInvShops = [];
+  shopKeys.forEach(function(s){
+    if(shopM[s].gsv > 0 && totalGsv > 0 && shopM[s].gsv / totalGsv > 0.2)
+      highInvShops.push(s);
+  });
+
+  // ── Build narrative (4-section framework) ──
+  var h = '';
+  h += '<div style="line-height:1.9;font-size:13px;color:#334155">';
+  h += '<div style="font-size:15px;font-weight:700;margin-bottom:14px;color:#0f172a">' + escHtml(curLabel) + ' 关键数据洞察</div>';
+
+  // ▸ 1. 店铺盈利分化
+  h += '<div style="margin-bottom:16px">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">店铺盈利分化</div>';
+  if(topMarginShop && shopM[topMarginShop]){
+    var bestProfitShare = totalProfit > 0 ? (shopM[topMarginShop].profit / totalProfit * 100).toFixed(1) : '0';
+    h += '<div style="margin-bottom:3px">- 标杆店铺：<b>' + escHtml(topMarginShop) + '</b> 毛利率<b> ' + shopM[topMarginShop].margin.toFixed(1) + '% </b>居首，毛利贡献占整体<b> ' + bestProfitShare + '%</b></div>';
+  }
+  if(lowMarginShop && shopM[lowMarginShop] && shopM[lowMarginShop].margin < overallMargin){
+    h += '<div style="margin-bottom:3px">- 拖累店铺：<b>' + escHtml(lowMarginShop) + '</b> 毛利率仅<b> ' + shopM[lowMarginShop].margin.toFixed(1) + '%</b>，拖累整体</div>';
+  }
+  var marginChangeWord = wowProfit >= 0 ? '增长' : '下滑';
+  h += '<div style="margin-bottom:3px">- 整体毛利环比<b> ' + marginChangeWord + ' ' + Math.abs(wowProfit).toFixed(1) + '%</b>，总毛利 ¥' + fmtK(totalProfit) + '</div>';
+  h += '</div>';
+
+  // ▸ 2. 单品亏损现状
+  h += '<div style="margin-bottom:16px">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">单品亏损现状</div>';
+  h += '<div style="margin-bottom:3px">- 共<b> ' + totalSkus + ' </b>个SKU，亏损SKU占比约<b> ' + lossPct + '%</b></div>';
+  if(lowBenchmarkCount > 0){
+    h += '<div style="margin-bottom:3px">- 核心矛盾：单品毛利率异动，<b> ' + lowBenchmarkCount + ' </b>个SKU毛利率低于行业基准</div>';
+  } else {
+    h += '<div style="margin-bottom:3px">- 核心矛盾：单品毛利率在当前范围内整体可控</div>';
+  }
+  h += '</div>';
+
+  // ▸ 3. 毛利下滑诱因猜想
+  h += '<div style="margin-bottom:16px">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">毛利下滑诱因猜想</div>';
+  var causes = [];
+  if(wowProfit < -5) causes.push('利润环比收窄 ' + Math.abs(wowProfit).toFixed(1) + '%，可能存在促销清仓或竞价降价');
+  if(avgReturnRate > 5) causes.push('退货率偏高（' + avgReturnRate.toFixed(1) + '%），需排查品控或listing描述准确性');
+  if(wowGsv > 3 && wowProfit < -5) causes.push('GSV环比增长但利润下滑，呈现"增收不增利"特征，建议核查扣费项目或物流成本变化');
+  if(!causes.length) causes.push('本周各项指标波动在正常范围内，未检测到显著异常诱因');
+  causes.forEach(function(c){ h += '<div style="margin-bottom:3px">- 可能原因：' + c + '</div>'; });
+  h += '<div style="margin-bottom:3px;color:#64748b;font-size:11px">- 需核查：退货率（当前<b> ' + avgReturnRate.toFixed(1) + '%</b>）、扣费比例</div>';
+  h += '</div>';
+
+  // ▸ 4. 重点风险预警
+  h += '<div style="margin-bottom:16px">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px">重点风险预警</div>';
+  if(highInvShops.length > 0){
+    var invLines = highInvShops.map(function(s){ return escHtml(s) + ' 库存货值 ¥' + fmtK(shopM[s].gsv); }).join('、');
+    h += '<div style="margin-bottom:3px">- ' + invLines + '</div>';
+  }
+  h += '<div style="margin-bottom:3px">- 存在「高库存-低周转-低利润」三角风险</div>';
+  h += '<div style="margin-bottom:3px">- 优化方向：清理滞销SKU、控制广告投放ACOS</div>';
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+// ========== MERGED ACTIVITY LOG (Comments + Notes) ==========
+function renderActivityLog(){
+  var tbody = document.querySelector('#activityLogTable tbody');
+  var infoEl = document.getElementById('activityLogInfo');
+  if(!tbody) return;
+
+  var rows = [];
+
+  // ── Product notes ──
+  for(var sku in PRODUCT_NOTES){
+    var note = PRODUCT_NOTES[sku];
+    if(!note) continue;
+    var shopFound = '';
+    for(var w in WEEK_DATA){
+      var wProds = getWeekProducts(w);
+      for(var i=0; i<wProds.length; i++){
+        if(wProds[i].sku === sku){ shopFound = wProds[i].shop; break; }
+      }
+      if(shopFound) break;
+    }
+    if(!shopFound) shopFound = '-';
+    rows.push({sku:sku, shop:shopFound, type:'备注', content:note, time:'-', authors:'-'});
+  }
+
+  // ── Comment stats (async) ──
+  if(window.__supabaseReady === true && typeof supabaseApi === 'function'){
+    supabaseApi('product_comments?select=*&order=created_at.desc&limit=1000')
+      .then(function(comments){
+        var allRows = rows.slice(); // copy notes
+        if(comments && comments.length > 0){
+          var pad = function(n){ return n < 10 ? '0'+n : n; };
+          comments.forEach(function(c){
+            var sku = c.sku || '(未指定)';
+            var timeStr = '';
+            if(c.created_at){
+              var dt = new Date(c.created_at);
+              timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
+            }
+            allRows.push({
+              sku: sku,
+              shop: c.shop || '-',
+              type: '评论',
+              content: c.content || '',
+              time: timeStr,
+              authors: c.author || '-'
+            });
+          });
+        }
+        window.__rawComments = comments;
+        allRows.sort(function(a,b){ return a.sku.localeCompare(b.sku); });
+        window.__activityLogRows = allRows;
+        infoEl.textContent = '共 ' + allRows.length + ' 条记录';
+        renderActivityLogTable(allRows);
+      }).catch(function(){
+        window.__rawComments = null;
+        rows.sort(function(a,b){ return a.sku.localeCompare(b.sku); });
+        window.__activityLogRows = rows;
+        infoEl.textContent = '共 ' + rows.length + ' 条记录（评论未连接）';
+        renderActivityLogTable(rows);
+      });
+  } else if(window.__supabaseReady === false) {
+    window.__rawComments = null;    
+    rows.sort(function(a,b){ return a.sku.localeCompare(b.sku); });
+    window.__activityLogRows = rows;
+    infoEl.textContent = '共 ' + rows.length + ' 条记录（评论服务未连接）';
+    renderActivityLogTable(rows);
+  } else {
+    // Still detecting, retry after 1s
+    setTimeout(renderActivityLog, 1000);
+  }
+}
+
+function renderActivityLogTable(data){
+  var tbody = document.querySelector('#activityLogTable tbody');
+  if(!tbody) return;
+  if(!data || data.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:18px 0">暂无可显示内容（无备注且无评论）</td></tr>';
+    return;
+  }
+  var typeColors = {'备注':'#3b82f6','评论':'#f59e0b'};
+  var escJs = function(s){ return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var html = data.map(function(r, idx){
+    var skuClickable = (r.type === '评论') ? ' style="color:#3b82f6;cursor:pointer;text-decoration:underline"' : '';
+    var skuOnClick = (r.type === '评论') ? ' onclick="openActivityCommentModal(\''+escJs(r.sku)+'\')"' : '';
+    return '<tr>'+
+      '<td style="font-size:11px;font-family:monospace"'+skuClickable+skuOnClick+'>'+escHtml(r.sku)+'</td>'+
+      '<td style="font-size:11px">'+escHtml(r.shop)+'</td>'+
+      '<td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;background:'+(typeColors[r.type]||'#e2e8f0')+';color:#fff">'+escHtml(r.type)+'</span></td>'+
+      '<td style="font-size:12px">'+escHtml(r.content)+'</td>'+
+      '<td style="font-size:11px;color:#64748b">'+escHtml(r.time)+'</td>'+
+      '<td style="font-size:11px">'+escHtml(r.authors)+'</td>'+
+      '<td style="font-size:11px">'+(r.type==='评论'?'<button style="font-size:10px;padding:2px 8px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;color:#3b82f6;cursor:pointer" onclick="openActivityCommentModal(\''+escJs(r.sku)+'\')">查看详情</button>':'')+'</td>'+
+      '</tr>';
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+function filterActivityLog(){
+  var input = document.getElementById('activityLogSearch');
+  if(!input) return;
+  var kw = input.value.trim().toLowerCase();
+  var rows = window.__activityLogRows || [];
+  var filtered;
+  if(!kw){
+    filtered = rows.slice();
+  } else {
+    filtered = rows.filter(function(r){
+      return r.sku.toLowerCase().indexOf(kw) >= 0
+          || r.shop.toLowerCase().indexOf(kw) >= 0
+          || (r.content||'').toLowerCase().indexOf(kw) >= 0
+          || r.type.toLowerCase().indexOf(kw) >= 0
+          || r.authors.toLowerCase().indexOf(kw) >= 0;
+    });
+  }
+  var info = document.getElementById('activityLogInfo');
+  if(info) info.textContent = '共 ' + filtered.length + ' / ' + rows.length + ' 条记录';
+  renderActivityLogTable(filtered);
+}
+
+// ── Activity Comment Modal ──
+function openActivityCommentModal(sku){
+  var overlay = document.getElementById('acOverlay');
+  var titleEl = document.getElementById('acTitle');
+  var subEl = document.getElementById('acSub');
+  var listEl = document.getElementById('acList');
+  if(!overlay || !listEl) return;
+
+  titleEl.textContent = sku;
+  subEl.textContent = '';
+
+  // Check Supabase availability
+  if(!window.__rawComments || !Array.isArray(window.__rawComments)){
+    listEl.innerHTML = '<div style="padding:30px 0;text-align:center;color:#94a3b8;font-size:12px">评论服务暂不可用，请检查网络连接</div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
+  // Filter comments for this SKU
+  var comments = window.__rawComments.filter(function(c){ return (c.sku||'(未指定)') === sku; });
+  // Also try matching by raw sku
+  if(comments.length === 0){
+    comments = window.__rawComments.filter(function(c){ return c.sku === sku || (c.sku||'').toLowerCase() === sku.toLowerCase(); });
+  }
+  
+  subEl.textContent = '共 ' + comments.length + ' 条评论';
+
+  if(comments.length === 0){
+    listEl.innerHTML = '<div style="padding:30px 0;text-align:center;color:#94a3b8;font-size:12px">该SKU暂无评论记录</div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
+  // Sort by time desc
+  comments.sort(function(a,b){
+    var ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    var tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  var pad = function(n){ return n < 10 ? '0'+n : n; };
+  var html = comments.map(function(c){
+    var timeStr = '-';
+    if(c.created_at){
+      var dt = new Date(c.created_at);
+      timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
+    }
+    return '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9">'+
+      '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px">'+
+        (c.author ? '<strong style="color:#475569">'+escHtml(c.author)+'</strong> &middot; ' : '')+
+        escHtml(timeStr)+
+      '</div>'+
+      '<div style="font-size:13px;color:#334155;line-height:1.6">'+escHtml(c.content || '(空)')+'</div>'+
+    '</div>';
+  }).join('');
+
+  listEl.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function closeActivityCommentModal(){
+  var overlay = document.getElementById('acOverlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+// Close modal on overlay click
+(function(){
+  var overlay = document.getElementById('acOverlay');
+  if(overlay){
+    overlay.addEventListener('click', function(e){
+      if(e.target === overlay) closeActivityCommentModal();
+    });
+  }
+})();
+
+
+
+
+function loadCommentStats(){
+    if (window.__supabaseReady === null) {
+        // 检测中，1秒后重试
+        setTimeout(loadCommentStats, 1000);
+        return;
+    }
+    if (window.__supabaseReady !== true) {
+        var container = document.getElementById('commentStatsContent');
+        if(container) container.innerHTML = '<div class="notes-empty">评论服务未连接（' + 
+            (window.__supabaseReady === false ? '网络或服务异常' : '检测中...') + '）</div>';
+        return;
+    }
+    var container = document.getElementById('commentStatsContent');
+    supabaseApi('product_comments?select=*&order=created_at.desc&limit=1000')
+        .then(function(data){
+            if(!container) return;
+            renderCommentStats(data || []);
+        })
+        .catch(function(err){
+            if(!container) return;
+            console.error('加载评论统计失败:', err);
+            container.innerHTML = '<div class="cp-error">加载评论统计失败</div>';
+        });
+}
+
+function renderCommentStats(comments){
+    var container = document.getElementById('commentStatsContent');
+    if(!container) return;
+    
+    if(!comments || comments.length === 0){
+        container.innerHTML = '<div class="notes-empty">暂无评论数据</div>';
+        return;
+    }
+    
+    // Group by SKU
+    var skuMap = {};
+    comments.forEach(function(c){
+        var sku = c.sku || '(未指定)';
+        if(!skuMap[sku]){
+            skuMap[sku] = { count: 0, lastTime: null, authors: new Set(), shop: c.shop || '-' };
+        }
+        skuMap[sku].count++;
+        if(c.created_at){
+            var t = new Date(c.created_at).getTime();
+            if(!skuMap[sku].lastTime || t > skuMap[sku].lastTime){
+                skuMap[sku].lastTime = t;
+            }
+        }
+        if(c.author) skuMap[sku].authors.add(c.author);
+    });
+    
+    // Convert to array and sort by count desc
+    var rows = [];
+    for(var sku in skuMap){
+        var s = skuMap[sku];
+        var timeStr = '';
+        if(s.lastTime){
+            var d = new Date(s.lastTime);
+            var pad = function(n){ return n < 10 ? '0'+n : n; };
+            timeStr = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+        }
+        var authorStr = s.authors.size > 0 ? Array.from(s.authors).join('、') : '-';
+        rows.push({
+            sku: sku,
+            shop: s.shop,
+            count: s.count,
+            lastTime: timeStr,
+            lastTimeTs: s.lastTime || 0,
+            authors: authorStr
+        });
+    }
+    rows.sort(function(a,b){ return b.count - a.count; });
+    
+    var html = '<div class="cmt-tbl-wrap"><table class="cmt-tbl"><thead><tr>'+
+        '<th>SKU</th><th>店铺</th><th style="text-align:center">评论数</th><th>最近评论时间</th><th>参与人员</th>'+
+        '</tr></thead><tbody>';
+    
+    rows.forEach(function(r){
+        html += '<tr>'+
+            '<td><span class="cmt-sku-link" onclick=\'jumpToComment('+JSON.stringify(r.sku)+','+JSON.stringify(r.shop)+')\'>'+escHtml(r.sku)+'</span></td>'+
+            '<td>'+escHtml(r.shop)+'</td>'+
+            '<td style="text-align:center;font-weight:600">'+r.count+'</td>'+
+            '<td>'+r.lastTime+'</td>'+
+            '<td>'+escHtml(r.authors)+'</td>'+
+            '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    html += '<div style="font-size:11px;color:#94a3b8;margin-top:4px">共 '+comments.length+' 条评论，涉及 '+rows.length+' 个SKU</div>';
+    container.innerHTML = html;
+}
+
+function jumpToComment(sku, shop){
+    // Find the SKU in product table and click to open comment panel
+    openCommentPanel(sku, shop);
+}
+
+// ========== UTILS ==========
+function fmtK(v){
+  if(Math.abs(v) >= 1000000) return (v/1000000).toFixed(2)+'M';
+  if(Math.abs(v) >= 1000) return (v/1000).toFixed(2)+'K';
+  return v.toFixed(2);
+}
+
+function tgClps(h){
+  var b = h.nextElementSibling;
+  var on = h.classList.toggle('on');
+  b.classList.toggle('show', on);
+}
+
+// Window resize handler
+window.addEventListener('resize', function(){
+  drawCharts();
+});
+
+// Initial render
+function bootstrap(){
+  console.log('[Init] curWeek=' + curWeek + ' WEEKS=' + WEEKS.length);
+  console.log('[Init] WEEK_DATA keys=' + Object.keys(WEEK_DATA).length);
+  var dd = WEEK_DATA[curWeek];
+  console.log('[Init] current data: ' + (dd ? 'OK shps=' + Object.keys(dd.shops||{}).length + ' prods=' + (dd.allProducts||[]).length : 'NULL'));
+
+  var initList = [
+    {fn:initImgFloat, name:'initImgFloat'},
+    {fn:renderWeekSelect, name:'renderWeekSelect'},
+    {fn:renderShopTags, name:'renderShopTags'},
+    {fn:renderOwnerTags, name:'renderOwnerTags'},
+    {fn:renderMonthTags, name:'renderMonthTags'},
+    {fn:renderShopGrid, name:'renderShopGrid'},
+    {fn:renderProdTable, name:'renderProdTable'},
+    {fn:drawCharts, name:'drawCharts'},
+    {fn:renderProgress, name:'renderProgress'},
+    {fn:renderTargetBoard, name:'renderTargetBoard'},
+    {fn:function(){switchProdTab('all');}, name:'switchProdTab'}
+  ];
+  for(var i = 0; i < initList.length; i++){
+    var item = initList[i];
+    try {
+      item.fn();
+      console.log('[Init] OK: ' + item.name);
+    } catch(e) {
+      console.error('[Init] ERR: ' + item.name + ' - ' + e.message);
+    }
+  }
+  console.log('[Init] DONE');
+}
+
+
+
+// ========== 评论服务 (REST API fetch 直连，不依赖 SDK) ==========
+var currentCommentSku = null;
+var currentCommentShop = null;
+var cpAttachments = [];
+var cpEscHandler = null;
+
+// 通用 REST 调用
+function supabaseApi(path, options) {
+  options = options || {};
+  var headers = {
+    'apikey': window.__supabaseKey,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+  var extra = options.headers || {};
+  for (var k in extra) headers[k] = extra[k];
+  return fetch(window.__supabaseUrl + '/rest/v1/' + path, {
+    method: options.method || 'GET',
+    headers: headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t){ throw new Error('HTTP ' + r.status + ': ' + t); });
+    if (r.status === 204) return null;
+    var ct = r.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') !== -1) return r.json();
+    return r.text();
+  });
+}
+
+function openCommentPanel(sku, shop) {
+    currentCommentSku = sku;
+    currentCommentShop = shop;
+    cpAttachments = [];
+
+    var cpOverlay = document.getElementById('cpOverlay');
+    var cpTitle = document.getElementById('cpTitle');
+    var cpSub = document.getElementById('cpSub');
+    var cpInput = document.getElementById('cpInput');
+    var cpSendError = document.getElementById('cpSendError');
+    var cpList = document.getElementById('cpList');
+    if (!cpOverlay || !cpTitle || !cpInput || !cpList) return;
+
+    cpTitle.textContent = sku;
+    cpSub.textContent = '店铺: ' + shop;
+    cpInput.value = '';
+    if (cpSendError) cpSendError.style.display = 'none';
+    renderCpAttachments();
+    var cpImgWrap = document.getElementById('cpImgWrap');
+    var cpImg = document.getElementById('cpImg');
+    var imgUrl = SKU_IMG[sku];
+    if (imgUrl) {
+        cpImg.src = imgUrl;
+        if (cpImgWrap) cpImgWrap.style.display = 'block';
+    } else {
+        if (cpImgWrap) cpImgWrap.style.display = 'none';
+    }
+    cpList.innerHTML = '<div class="cp-loading">加载中...</div>';
+    cpOverlay.classList.add('show');
+
+    if (!cpEscHandler) {
+        cpEscHandler = function(e) {
+            if (e.key === 'Escape') closeCommentPanel();
+        };
+    }
+    document.addEventListener('keydown', cpEscHandler);
+
+    loadComments(sku, shop);
+}
+
+function closeCommentPanel() {
+    var cpOverlay = document.getElementById('cpOverlay');
+    if (!cpOverlay) return;
+    cpOverlay.classList.remove('show');
+    if (cpEscHandler) {
+        document.removeEventListener('keydown', cpEscHandler);
+    }
+    currentCommentSku = null;
+    currentCommentShop = null;
+    cpAttachments = [];
+}
+
+function loadComments(sku, shop) {
+    if (window.__supabaseReady !== true) {
+        var cpListEl0 = document.getElementById('cpList');
+        if (cpListEl0) cpListEl0.innerHTML = '<div class="cp-error">评论服务未连接</div>';
+        return;
+    }
+    supabaseApi('product_comments?select=*&sku=eq.' + encodeURIComponent(sku) + '&shop=eq.' + encodeURIComponent(shop) + '&order=created_at.desc')
+        .then(function(data) {
+            renderComments(data || []);
+        })
+        .catch(function(err) {
+            console.error('加载评论失败:', err);
+            var cpListEl = document.getElementById('cpList');
+            if (cpListEl) cpListEl.innerHTML = '<div class="cp-error">加载失败，请刷新重试</div>';
+        });
+}
+
+// ========== 评论实时同步 (Supabase Polling) ==========
+var __commentPollTimer = null;
+var __lastCommentIds = null;
+var __commentSyncNotice = null;
+
+function subscribeComments(){
+  if(window.__supabaseReady !== true) return;
+  
+  // Show sync indicator at page bottom
+  function ensureSyncNotice(){
+    if(__commentSyncNotice) return;
+    var el = document.createElement('div');
+    el.id = 'commentSyncNotice';
+    el.style.cssText = 'position:fixed;bottom:12px;right:20px;background:rgba(15,23,42,0.85);color:#e2e8f0;padding:6px 14px;border-radius:20px;font-size:11px;z-index:9999;backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,0.15);letter-spacing:0.3px';
+    el.innerHTML = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:6px;animation:pulse 2s infinite"></span>评论数据实时同步，所有协作者可见';
+    document.body.appendChild(el);
+    __commentSyncNotice = el;
+    
+    // Add pulse animation if not exists
+    if(!document.getElementById('pulseStyle')){
+      var style = document.createElement('style');
+      style.id = 'pulseStyle';
+      style.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}';
+      document.head.appendChild(style);
+    }
+  }
+  ensureSyncNotice();
+
+  // Poll every 8s
+  __commentPollTimer = setInterval(function(){
+    if(window.__supabaseReady !== true) return;
+    supabaseApi('product_comments?select=id,sku,shop,text,author,created_at&order=created_at.desc&limit=500')
+      .then(function(comments){
+        if(!comments || !comments.length) return;
+        var currentIds = comments.map(function(c){ return c.id; }).sort().join(',');
+        if(__lastCommentIds !== null && __lastCommentIds !== currentIds){
+          // New comments detected — refresh if comment panel is open
+          if(currentCommentSku){
+            loadComments(currentCommentSku, currentCommentShop);
+          }
+          // Refresh todo panel
+          if(typeof loadTodoComments === 'function'){
+            loadTodoComments();
+          }
+        }
+        __lastCommentIds = currentIds;
+      }).catch(function(){});
+  }, 8000);
+}
+
+function stopCommentPolling(){
+  if(__commentPollTimer){
+    clearInterval(__commentPollTimer);
+    __commentPollTimer = null;
+  }
+}
+
+
+
+function renderComments(comments) {
+    var list = document.getElementById('cpList');
+    if (!list) return;
+    if (!comments || comments.length === 0) {
+        list.innerHTML = '<div class="cp-empty">暂无评论</div>';
+        return;
+    }
+    list.innerHTML = comments.map(function(c) {
+        var time = '';
+        if (c.created_at) {
+            var d = new Date(c.created_at);
+            var pad = function(n) { return n < 10 ? '0' + n : n; };
+            time = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+        var attachHtml = '';
+        if (c.attachments && c.attachments.length > 0) {
+            attachHtml = '<div class="cp-attach-zone" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">';
+            c.attachments.forEach(function(att) {
+                if (att.type && att.type.startsWith('image/')) {
+                    attachHtml += '<a href="' + escHtml(att.data) + '" target="_blank"><img src="' + escHtml(att.data) + '" style="max-width:120px;max-height:90px;border-radius:4px;cursor:pointer;border:1px solid #e2e8f0"></a>';
+                } else {
+                    attachHtml += '<div style="font-size:11px;color:#64748b;background:#f1f5f9;border-radius:4px;padding:2px 6px;display:inline-block"><a href="' + escHtml(att.data) + '" target="_blank" style="color:inherit;text-decoration:none">' + escHtml(att.name) + '</a></div>';
+                }
+            });
+            attachHtml += '</div>';
+        }
+        var authorHtml = c.author ? '<div class="cp-author">【' + escHtml(c.author) + '】</div>' : '<div class="cp-author" style="color:#94a3b8">【匿名】</div>';
+        return '<div class="cp-item">' + authorHtml + '<div class="cp-text">' + escHtml(c.comment_text || '') + '</div>' + attachHtml + '<div class="cp-time">' + time + '</div></div>';
+    }).join('');
+}
+
+function sendComment() {
+    var input = document.getElementById('cpInput');
+    var btn = document.getElementById('cpSendBtn');
+    var text = input.value.trim();
+
+    if (!text && cpAttachments.length === 0) return;
+    if (!currentCommentSku || !currentCommentShop) return;
+    if (window.__supabaseReady !== true) {
+        var errEl2 = document.getElementById('cpSendError');
+        if (errEl2) { errEl2.style.display = 'block'; errEl2.textContent = '评论服务未连接'; }
+        setTimeout(function() { if (errEl2) errEl2.style.display = 'none'; }, 2500);
+        return;
+    }
+
+    btn.disabled = true;
+    var cpSendErrorEl = document.getElementById('cpSendError');
+    if (cpSendErrorEl) cpSendErrorEl.style.display = 'none';
+
+    var cpAuthorEl = document.getElementById('cpAuthor');
+    var author = (cpAuthorEl && cpAuthorEl.value) || '';
+    supabaseApi('product_comments', {
+        method: 'POST',
+        body: [{
+            sku: currentCommentSku,
+            shop: currentCommentShop,
+            comment_text: text,
+            author: author,
+            attachments: cpAttachments.length > 0 ? cpAttachments : null
+        }]
+    }).then(function(data) {
+        btn.disabled = false;
+        input.value = '';
+        cpAttachments = [];
+        renderCpAttachments();
+        loadComments(currentCommentSku, currentCommentShop);
+    }).catch(function(err) {
+        btn.disabled = false;
+        console.error('发送评论失败:', err);
+        var errEl = document.getElementById('cpSendError');
+        if (errEl) {
+            errEl.style.display = 'block';
+            errEl.textContent = '发送失败，请重试';
+            setTimeout(function() { errEl.style.display = 'none'; }, 2500);
+        }
+    });
+}
+
+// ========== ATTACHMENT HANDLERS ==========
+function renderCpAttachments() {
+    var zone = document.getElementById('cpAttachZone');
+    if (!zone) return;
+    if (cpAttachments.length === 0) { zone.innerHTML = ''; return; }
+    zone.innerHTML = cpAttachments.map(function(att, i) {
+        var thumb = '';
+        if (att.type && att.type.startsWith('image/')) {
+            thumb = '<img src="' + att.data + '" alt="' + escHtml(att.name) + '">';
+        } else {
+            var ext = att.name.split('.').pop().toLowerCase();
+            var iconHtml = ext === 'pdf' ? '&#128196;' : (ext === 'xlsx' || ext === 'xls' ? '&#128202;' : (ext === 'docx' || ext === 'doc' ? '&#128221;' : '&#128206;'));
+            thumb = '<span class="cp-file-icon">' + iconHtml + '</span>';
+        }
+        return '<div class="cp-attach-thumb" onclick="cpPreviewAttachIdx(' + i + ')">' + thumb + '<button class="cp-attach-rm" onclick="event.stopPropagation();cpRemoveAttachment(' + i + ')">&times;</button></div>';
+    }).join('');
+}
+
+function cpAddAttachment(file) {
+    if (cpAttachments.length >= 5) { return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var dataUrl = e.target.result;
+        cpAttachments.push({ name: file.name, type: file.type || 'application/octet-stream', data: dataUrl });
+        renderCpAttachments();
+    };
+    reader.readAsDataURL(file);
+}
+
+function cpRemoveAttachment(idx) {
+    cpAttachments.splice(idx, 1);
+    renderCpAttachments();
+}
+
+function cpPreviewAttach(dataUrl) {
+    var prev = document.getElementById('cpAttachPreview');
+    if (!prev) return;
+    prev.innerHTML = '<img src="' + dataUrl + '" onclick="cpClosePreview()">';
+    prev.style.display = 'block';
+}
+
+function cpPreviewAttachIdx(idx) {
+    if (!cpAttachments[idx]) return;
+    var att = cpAttachments[idx];
+    if (att.type && att.type.startsWith('image/')) {
+        var prev = document.getElementById('cpAttachPreview');
+        if (!prev) return;
+        prev.innerHTML = '<img src="' + att.data + '" onclick="cpClosePreview()">';
+        prev.style.display = 'block';
+        prev.style.left = '50%';
+        prev.style.top = '50%';
+        prev.style.transform = 'translate(-50%,-50%)';
+    }
+}
+
+function cpClosePreview() {
+    var prev = document.getElementById('cpAttachPreview');
+    if (prev) prev.style.display = 'none';
+}
+
+// ========== PASTE + DRAG/DROP INIT ==========
+document.addEventListener('DOMContentLoaded', function() {
+    var overlay = document.getElementById('cpOverlay');
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeCommentPanel();
+        });
+    }
+    var input = document.getElementById('cpInput');
+    if (input) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendComment();
+            }
+        });
+        // Ctrl+V paste image/file
+        input.addEventListener('paste', function(e) {
+            var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            var hasFile = false;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') >= 0) {
+                    var blob = items[i].getAsFile();
+                    if (blob) { cpAddAttachment(blob); hasFile = true; }
+                } else if (items[i].kind === 'file') {
+                    var file = items[i].getAsFile();
+                    if (file) { cpAddAttachment(file); hasFile = true; }
+                }
+            }
+            if (hasFile) e.preventDefault();
+        });
+    }
+    // Drag & drop
+    var inputArea = document.getElementById('cpInputArea');
+    if (inputArea) {
+        var dropHint = document.getElementById('cpDropHint');
+        inputArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (dropHint) dropHint.style.display = 'block';
+        });
+        inputArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            if (dropHint) dropHint.style.display = 'none';
+        });
+        inputArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (dropHint) dropHint.style.display = 'none';
+            var files = e.dataTransfer.files;
+            if (files) {
+                for (var i = 0; i < files.length; i++) {
+                    cpAddAttachment(files[i]);
+                }
+            }
+        });
+    }
+    // Close preview on click outside
+    var prev = document.getElementById('cpAttachPreview');
+    if (prev) {
+        document.addEventListener('click', function(e) {
+            if (e.target === prev || prev.contains(e.target)) return;
+            prev.style.display = 'none';
+        });
+    }
+});
+
+// ========== COMMENT TODO FLOAT PANEL ==========
+var __todoProcessed = {};
+try { __todoProcessed = JSON.parse(localStorage.getItem('todo_processed') || '{}'); } catch(e){ __todoProcessed = {}; }
+
+function saveTodoState(){ localStorage.setItem('todo_processed', JSON.stringify(__todoProcessed)); }
+
+function toggleTodoMinimize(){
+  var p = document.getElementById('todoPanel');
+  p.classList.toggle('minimized');
+}
+
+function toggleTodoPanel(){
+  var body = document.getElementById('todoBody');
+  if(body.style.display === 'none') body.style.display = '';
+  else body.style.display = 'none';
+}
+
+function loadTodoComments(){
+  if(window.__supabaseReady !== true || typeof supabaseApi !== 'function'){
+    if(window.__supabaseReady === null) setTimeout(loadTodoComments, 2000);
+    else document.getElementById('todoPending').innerHTML = '<div class="todo-empty">评论服务暂不可用</div>';
+    return;
+  }
+  supabaseApi('product_comments?select=*&order=created_at.desc&limit=200')
+    .then(function(r){ return r.json(); })
+    .then(function(comments){
+      if(!comments || !comments.length){
+        document.getElementById('todoPending').innerHTML = '<div class="todo-empty">本周暂无评论</div>';
+        return;
+      }
+      renderTodoList(comments);
+    }).catch(function(){
+      document.getElementById('todoPending').innerHTML = '<div class="todo-empty">评论服务暂不可用</div>';
+    });
+}
+
+function renderTodoList(comments){
+  var pendingHtml = '', doneHtml = '';
+  var pad = function(n){ return n < 10 ? '0'+n : n; };
+  var pendingCount = 0;
+  comments.forEach(function(c, i){
+    var cid = 'todo-' + (c.id || i);
+    var sku = c.sku || '(未指定)';
+    var content = c.content || '';
+    var summary = content.length > 30 ? content.substring(0,30)+'...' : content;
+    var timeStr = '';
+    if(c.created_at){
+      var dt = new Date(c.created_at);
+      timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
+    }
+    if(__todoProcessed[cid]){
+      doneHtml += '<div class="todo-item done" data-id="'+cid+'"><input type="checkbox" checked onchange="toggleTodoItem(\''+cid+'\', this)"><div class="todo-left"><span class="todo-sku">'+escHtml(sku)+'</span><span class="todo-summary">'+escHtml(summary)+'</span><div class="todo-meta">'+timeStr+'</div></div></div>';
+    } else {
+      pendingHtml += '<div class="todo-item" data-id="'+cid+'"><input type="checkbox" onchange="toggleTodoItem(\''+cid+'\', this)"><div class="todo-left"><span class="todo-sku">'+escHtml(sku)+'</span><span class="todo-summary">'+escHtml(summary)+'</span><div class="todo-meta">'+timeStr+'</div></div></div>';
+      pendingCount++;
+    }
+  });
+  if(!pendingHtml) pendingHtml = '<div class="todo-empty">全部已处理</div>';
+  document.getElementById('todoPending').innerHTML = pendingHtml;
+  document.getElementById('todoDoneList').innerHTML = doneHtml;
+  document.getElementById('todoCount').textContent = pendingCount;
+}
+
+function toggleTodoItem(cid, cb){
+  if(cb.checked) __todoProcessed[cid] = true;
+  else delete __todoProcessed[cid];
+  saveTodoState();
+  loadTodoComments();
+}
+
+setTimeout(function(){
+  if(typeof curWeek !== 'undefined') loadTodoComments();
+}, 1500);
+
+</script>
+
+<!-- Comment To-do Float Panel -->
+<div id="todoPanel" class="">
+  <div id="todoHeader" onclick="toggleTodoPanel()">
+    <span>评论待办 <span class="todo-count" id="todoCount">0</span></span>
+    <span class="todo-mini-btn" onclick="event.stopPropagation();toggleTodoMinimize()" title="最小化">&#x2014;</span>
+  </div>
+  <div id="todoBody">
+    <div id="todoPending"></div>
+    <div id="todoDone">
+      <div class="todo-section-title">已处理</div>
+      <div id="todoDoneList"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
