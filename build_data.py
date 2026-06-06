@@ -214,7 +214,8 @@ def read_lx_profit(weeks_iso):
     # 列: 0=数据范围, 1=星期结束值, 2=店铺名称, 3=负责人, 4=类目,
     #     5=WB商品ID, 6=卖家SKU, 7=主图, 8=毛利量CNY, 9=毛利率CNY,
     #     10=GSV(后台价), 11=周订单量售完天数, 12=每周日库存量, 13=货值CNY,
-    #     14=销售数量, 15=退款数量, 16=财报净销量, ..., 21=送达退货率
+    #     14=销售数量, 15=退款数量, 16=财报净销量, ..., 21=送达退货率,
+    #     36=AK列(广告花费)
 
     week_data_raw = defaultdict(list)
 
@@ -222,7 +223,7 @@ def read_lx_profit(weeks_iso):
     for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
         if i > 40000:
             break
-        vals = [cell.value for cell in row[:30]]
+        vals = [cell.value for cell in row[:37]]
         week_end = vals[1]
         shop = vals[2]
         cat = vals[4]
@@ -232,6 +233,7 @@ def read_lx_profit(weeks_iso):
         gsv = vals[10]       # GSV(后台价)
         qty = vals[14]       # 销售数量
         return_rate = vals[21] if len(vals) > 21 else None  # 送达退货率
+        ad_spend = vals[36] if len(vals) > 36 else None  # AK列 广告花费
 
         if not week_end or not sku:
             continue
@@ -251,7 +253,8 @@ def read_lx_profit(weeks_iso):
             "margin": sanitize_value(margin_rate),
             "gsv": sanitize_value(gsv) or 0,
             "qty": sanitize_value(qty) or 0,
-            "return_rate": sanitize_value(return_rate)
+            "return_rate": sanitize_value(return_rate),
+            "ad_spend": sanitize_value(ad_spend) or 0
         }
 
         # margin是小数, 转为百分比
@@ -273,12 +276,13 @@ def read_lx_profit(weeks_iso):
         products.sort(key=lambda p: p["profit"], reverse=True)
 
         # 计算店铺汇总
-        shop_summary = defaultdict(lambda: {"gsv": 0, "profit": 0, "margin": 0, "products": 0})
+        shop_summary = defaultdict(lambda: {"gsv": 0, "profit": 0, "margin": 0, "products": 0, "ad_spend": 0})
         for p in products:
             s = shop_summary[p["shop"]]
             s["gsv"] += p["gsv"]
             s["profit"] += p["profit"]
             s["products"] += 1
+            s["ad_spend"] += p.get("ad_spend", 0) or 0
 
         # 计算 weighted margin
         for s in shop_summary.values():
