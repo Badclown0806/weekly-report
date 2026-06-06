@@ -454,7 +454,7 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 
 
-<script src="data.js?v=202606061144"></script>
+<script src="data.js?v=202606061528"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -463,7 +463,7 @@ console.log('Data-driven report loading...');
   var scripts = document.getElementsByTagName('script');
   for(var i=0;i<scripts.length;i++){
     var m = scripts[i].src.match(/data\.js\?v=(\d+)/);
-    if(m){ var el = document.getElementById('buildVer'); if(el) el.textContent = m[1]; break; }
+    if(m){ var el = document.getElementById('buildVer'); if(el) el.textContent = m[1]; var vn = document.getElementById('verNum'); if(vn) vn.textContent = m[1]; break; }
   }
 })();
 
@@ -2581,5 +2581,6 @@ setTimeout(function(){
   </div>
 </div>
 
+<div id="verBadge" style="text-align:center;padding:4px;font-size:10px;color:#94a3b8">数据版本 <span id="verNum">-</span></div>
 </body>
 </html>
