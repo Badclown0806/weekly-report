@@ -484,14 +484,32 @@ var WEEK_LABELS = {};
 var dataInitialized = false;
 console.log('Data-driven report loading...');
 
-// Dynamic loading of data.js via fetch (more reliable than script tag async loading)
+// ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var dataJsSrc = 'data.js?v=202606061558';
-  var verMatch = dataJsSrc.match(/v=(\d+)/);
-  var ver = verMatch ? verMatch[1] : '';
+  var ver = '202606061558';
 
-  function onSuccess() {
-    console.log('data.js loaded via fetch');
+  function parseVarJson(code) {
+    // Parse "var XXX = {...};" format
+    var eqIdx = code.indexOf('=');
+    if (eqIdx < 0) throw new Error('No = in code');
+    var jsonStr = code.substring(eqIdx + 1).trim();
+    if (jsonStr.charAt(jsonStr.length - 1) === ';') {
+      jsonStr = jsonStr.substring(0, jsonStr.length - 1);
+    }
+    return JSON.parse(jsonStr);
+  }
+
+  function updateOverlay(msg) {
+    var overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      var textEl = overlay.querySelector('div:last-child');
+      if (textEl) textEl.textContent = msg;
+    }
+  }
+
+  function onDetailLoaded() {
+    var t1 = performance.now();
+    console.log('[Load] Detail loaded in ' + ((t1 - window.__loadStart) / 1000).toFixed(1) + 's');
     var overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'none';
     var el = document.getElementById('buildVer'); if(el) el.textContent = ver;
@@ -499,53 +517,77 @@ console.log('Data-driven report loading...');
     initFromDataJs();
   }
 
-  function onFailure(msg) {
-    console.error('Failed to load data.js: ' + msg);
+  function onFailure(phase, msg) {
+    console.error('Failed to load ' + phase + ': ' + msg);
     var overlay = document.getElementById('loadingOverlay');
     if (overlay) {
-      overlay.innerHTML = '<div style="color:#dc2626;font-size:14px;text-align:center;padding:20px"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件 (' + msg + ')。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
+      overlay.innerHTML = '<div style="color:#dc2626;font-size:14px;text-align:center;padding:20px"><strong>数据加载失败</strong><br><br>' + phase + ' 加载失败: ' + msg + '<br><br><small>请刷新页面重试</small></div>';
     }
   }
 
-  function tryLoad(retriesLeft) {
-    fetch(dataJsSrc, {cache: 'default'})
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.text();
-      })
-      .then(function(code) {
-        try {
-          // data.js format: var DATA = {...};
-          // Execute in global scope to define window.DATA
-          if (code.indexOf('var DATA ') === 0 || code.indexOf('var DATA=') === 0) {
-            var prefixEnd = code.indexOf('=') + 1;
-            var jsonStr = code.substring(prefixEnd).trim();
-            if (jsonStr.charAt(jsonStr.length - 1) === ';') {
-              jsonStr = jsonStr.substring(0, jsonStr.length - 1);
-            }
-            window.DATA = JSON.parse(jsonStr);
-          } else {
-            // Fallback: eval for non-standard format
-            eval(code);
-          }
-          if (typeof window.DATA === 'undefined') throw new Error('DATA not defined');
-          onSuccess();
-        } catch (e) {
-          throw new Error('Parse error: ' + e.message);
-        }
-      })
-      .catch(function(err) {
-        console.error('data.js fetch error: ' + err.message);
-        if (retriesLeft > 0) {
-          console.log('Retrying data.js, ' + retriesLeft + ' attempts left');
-          setTimeout(function() { tryLoad(retriesLeft - 1); }, 2000);
-        } else {
-          onFailure(err.message);
-        }
-      });
-  }
+  window.__loadStart = performance.now();
 
-  tryLoad(2);
+  // Phase 1: Load core data (WEEKS, SHOP_WEEKLY, SKU_IMG, etc. ~200KB)
+  fetch('data-core.js?v=' + ver, {cache: 'default'})
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      updateOverlay('加载核心数据中...');
+      return r.text();
+    })
+    .then(function(code) {
+      var coreData = parseVarJson(code);
+      window.DATA = coreData;
+      var t1 = performance.now();
+      console.log('[Load] Core loaded in ' + ((t1 - window.__loadStart) / 1000).toFixed(1) + 's (' + Object.keys(coreData).length + ' fields)');
+
+      // Run init immediately with core data - some functions will gracefully skip
+      // since WEEK_DATA/TRAFFIC_WEEKLY won't be available yet
+      initFromDataJs();
+
+      // Phase 2: Load detail data (WEEK_DATA, TRAFFIC_WEEKLY ~4.4MB) in background
+      updateOverlay('加载详细数据中...');
+      return fetch('data-detail.js?v=' + ver, {cache: 'default'});
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function(code) {
+      var detailData = parseVarJson(code);
+      // Merge detail into DATA
+      for (var k in detailData) {
+        if (detailData.hasOwnProperty(k)) window.DATA[k] = detailData[k];
+      }
+      onDetailLoaded();
+    })
+    .catch(function(err) {
+      // If core + detail approach fails, fallback to single data.js
+      if (!window.DATA) {
+        console.warn('[Load] Two-phase failed, trying single data.js: ' + err.message);
+        updateOverlay('正在加载数据...');
+        fetch('data.js?v=' + ver, {cache: 'default'})
+          .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+          })
+          .then(function(code) {
+            window.DATA = parseVarJson(code);
+            console.log('[Load] Single data.js loaded');
+            onDetailLoaded();
+          })
+          .catch(function(e) {
+            onFailure('data.js', e.message);
+          });
+      } else {
+        // Core loaded but detail failed - show what we can
+        console.warn('[Load] Detail failed after core loaded: ' + err.message);
+        updateOverlay('详细数据加载失败，部分功能不可用');
+        setTimeout(function() {
+          var overlay = document.getElementById('loadingOverlay');
+          if (overlay) overlay.style.display = 'none';
+        }, 2000);
+      }
+    });
 })();
 
 // ── Error handler ──
@@ -2557,10 +2599,13 @@ window.addEventListener('resize', function(){
 
 // Initial render
 function bootstrap(){
-  console.log('[Init] curWeek=' + curWeek + ' WEEKS=' + WEEKS.length);
-  console.log('[Init] WEEK_DATA keys=' + Object.keys(WEEK_DATA).length);
-  var dd = WEEK_DATA[curWeek];
-  console.log('[Init] current data: ' + (dd ? 'OK shps=' + Object.keys(dd.shops||{}).length + ' prods=' + (dd.allProducts||[]).length : 'NULL'));
+  var hasWkData = WEEK_DATA && typeof WEEK_DATA === 'object';
+  console.log('[Init] curWeek=' + curWeek + ' WEEKS=' + (WEEKS?WEEKS.length:0) + ' hasWkData=' + hasWkData);
+  if (hasWkData) {
+    console.log('[Init] WEEK_DATA keys=' + Object.keys(WEEK_DATA).length);
+    var dd = WEEK_DATA[curWeek];
+    console.log('[Init] current data: ' + (dd ? 'OK shps=' + Object.keys(dd.shops||{}).length + ' prods=' + (dd.allProducts||[]).length : 'NULL'));
+  }
 
   var initList = [
     {fn:initImgFloat, name:'initImgFloat'},
