@@ -225,6 +225,11 @@ tr:hover td:first-child{background:#f1f5f9}
 .cp-attach-thumb .cp-file-icon{font-size:20px}
 .cp-attach-preview{position:fixed;z-index:10001;background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.28);padding:8px;display:none;max-width:420px;max-height:420px}
 .cp-attach-preview img{max-width:400px;max-height:400px;object-fit:contain;display:block}
+.img-lightbox-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:10002;display:none;align-items:center;justify-content:center}
+.img-lightbox-panel{background:#fff;border-radius:12px;width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;position:relative}
+.img-lightbox-close{position:absolute;top:8px;right:12px;font-size:24px;color:#64748b;cursor:pointer;z-index:1;line-height:1;background:none;border:none}
+.img-lightbox-close:hover{color:#1e293b}
+.img-lightbox-panel img{width:100%;max-height:75vh;object-fit:contain;display:block}
 .cp-drop-hint{position:absolute;inset:0;background:rgba(59,92,246,0.08);border:2px dashed #3b5cf6;border-radius:8px;display:none;z-index:10;pointer-events:none}
 .cp-input-wrap{position:relative;flex:1;display:flex;flex-direction:column}
 .cp-input-wrap textarea{flex:1}
@@ -406,7 +411,7 @@ tr:hover td:first-child{background:#f1f5f9}
 <div><span class="cp-title" id="cpTitle">产品评论</span><span class="cp-sub" id="cpSub"></span> <span style="font-size:10px;color:#22c55e;font-weight:normal;letter-spacing:0.3px"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#22c55e;margin-right:3px;vertical-align:middle"></span>实时同步</span></div>
 <button class="cp-close" onclick="closeCommentPanel()">&times;</button>
 </div>
-<div class="cp-img-wrap" id="cpImgWrap" style="display:none;text-align:center;padding:8px 0;border-bottom:1px solid #e2e8f0;margin-bottom:4px"><img id="cpImg" src="" style="max-width:120px;max-height:120px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain" onerror="this.parentElement.style.display='none'"></div>
+<div class="cp-img-wrap" id="cpImgWrap" style="display:none;text-align:center;padding:8px 0;border-bottom:1px solid #e2e8f0;margin-bottom:4px"><img id="cpImg" src="" onclick="showImageLightbox(this.src)" style="max-width:120px;max-height:120px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain;cursor:pointer" onerror="this.parentElement.style.display='none'"></div>
 <div class="cp-list" id="cpList"></div>
 <div class="cp-attach-zone" id="cpAttachZone"></div>
 <div class="cp-send-error" id="cpSendError"></div>
@@ -1256,7 +1261,7 @@ function renderProdTable(){
   tbody.innerHTML = products.map(function(p, idx){
     var marginCls = p.margin < 0 ? 'neg' : (p.margin > 15 ? 'pos' : '');
     var imgUrl = SKU_IMG[p.sku] || '';
-    var imgHtml = imgUrl ? '<img class="tb-img" src="'+imgUrl+'" onerror="this.style.display=\'none\'" title="'+escHtml(p.sku)+'">' : '';
+    var imgHtml = imgUrl ? '<img class="tb-img" src="'+imgUrl+'" onerror="this.style.display=\'none\'" onclick="event.stopPropagation();showImageLightbox(this.src)" title="'+escHtml(p.sku)+'">' : '';
 
     var noteText = PRODUCT_NOTES[p.sku] || '';
     var wbId = SKU_WB_ID[p.sku] || SKU_WB_ID[p.sku + '|' + p.shop] || '-';
@@ -1348,6 +1353,30 @@ function initImgFloat(){
     if(!img) return;
     document.getElementById('imgFloat').style.display = 'none';
   });
+}
+
+// ========== UNIVERSAL IMAGE LIGHTBOX ==========
+function showImageLightbox(src) {
+  var lb = document.getElementById('imgLightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'imgLightbox';
+    lb.className = 'img-lightbox-overlay';
+    lb.innerHTML = '<div class="img-lightbox-panel"><button class="img-lightbox-close">&times;</button><img src="" alt=""></div>';
+    document.body.appendChild(lb);
+    lb.addEventListener('click', function(e) {
+      if (e.target === lb || e.target.className === 'img-lightbox-close') {
+        lb.style.display = 'none';
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && lb.style.display === 'flex') {
+        lb.style.display = 'none';
+      }
+    });
+  }
+  lb.querySelector('img').src = src;
+  lb.style.display = 'flex';
 }
 
 // PRODUCT_NOTES, NEW_PRODUCT_CREATED already assigned from DATA above
@@ -1852,7 +1881,8 @@ function renderActivityLog(){
               type: '评论',
               content: c.comment_text || '',
               time: timeStr,
-              authors: c.author || '-'
+              authors: c.author || '-',
+              attachments: c.attachments
             });
           });
         }
@@ -1892,11 +1922,21 @@ function renderActivityLogTable(data){
   var html = data.map(function(r, idx){
     var skuClickable = (r.type === '评论') ? ' style="color:#3b82f6;cursor:pointer;text-decoration:underline"' : '';
     var skuOnClick = (r.type === '评论') ? ' onclick="openActivityCommentModal(\''+escJs(r.sku)+'\')"' : '';
+    // Build attachment thumbnails
+    var attachHtml = '';
+    if(r.attachments && r.attachments.length > 0){
+      r.attachments.forEach(function(att){
+        if(att.type && att.type.startsWith('image/')){
+          attachHtml += '<img src="'+escHtml(att.data)+'" onclick="event.stopPropagation();showImageLightbox(this.src)" style="max-width:60px;max-height:60px;border-radius:4px;margin:2px;vertical-align:middle;border:1px solid #e2e8f0;cursor:pointer">';
+        }
+      });
+    }
+    var contentHtml = escHtml(r.content) + (attachHtml ? '<div style="margin-top:4px">'+attachHtml+'</div>' : '');
     return '<tr>'+
       '<td style="font-size:11px;font-family:monospace"'+skuClickable+skuOnClick+'>'+escHtml(r.sku)+'</td>'+
       '<td style="font-size:11px">'+escHtml(r.shop)+'</td>'+
       '<td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;background:'+(typeColors[r.type]||'#e2e8f0')+';color:#fff">'+escHtml(r.type)+'</span></td>'+
-      '<td style="font-size:12px">'+escHtml(r.content)+'</td>'+
+      '<td style="font-size:12px">'+contentHtml+'</td>'+
       '<td style="font-size:11px;color:#64748b">'+escHtml(r.time)+'</td>'+
       '<td style="font-size:11px">'+escHtml(r.authors)+'</td>'+
       '<td style="font-size:11px">'+(r.type==='评论'?'<button style="font-size:10px;padding:2px 8px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;color:#3b82f6;cursor:pointer" onclick="openActivityCommentModal(\''+escJs(r.sku)+'\')">查看详情</button>':'')+'</td>'+
@@ -1974,12 +2014,22 @@ function openActivityCommentModal(sku){
       var dt = new Date(c.created_at);
       timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
     }
+    // Build attachment thumbnails
+    var attachHtml = '';
+    if(c.attachments && c.attachments.length > 0){
+      c.attachments.forEach(function(att){
+        if(att.type && att.type.startsWith('image/')){
+          attachHtml += '<img src="'+escHtml(att.data)+'" onclick="showImageLightbox(this.src)" style="max-width:120px;max-height:90px;border-radius:6px;margin:4px 4px 0 0;border:1px solid #e2e8f0;cursor:pointer">';
+        }
+      });
+    }
     return '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9">'+
       '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px">'+
         (c.author ? '<strong style="color:#475569">'+escHtml(c.author)+'</strong> &middot; ' : '')+
         escHtml(timeStr)+
       '</div>'+
       '<div style="font-size:13px;color:#334155;line-height:1.6">'+escHtml(c.comment_text || '(空)')+'</div>'+
+      (attachHtml ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap">'+attachHtml+'</div>' : '')+
     '</div>';
   }).join('');
 
@@ -2360,7 +2410,7 @@ function renderComments(comments) {
             attachHtml = '<div class="cp-attach-zone" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">';
             c.attachments.forEach(function(att) {
                 if (att.type && att.type.startsWith('image/')) {
-                    attachHtml += '<a href="' + escHtml(att.data) + '" target="_blank"><img src="' + escHtml(att.data) + '" style="max-width:120px;max-height:90px;border-radius:4px;cursor:pointer;border:1px solid #e2e8f0"></a>';
+                    attachHtml += '<img src="' + escHtml(att.data) + '" onclick="showImageLightbox(this.src)" style="max-width:120px;max-height:90px;border-radius:4px;cursor:pointer;border:1px solid #e2e8f0">';
                 } else {
                     attachHtml += '<div style="font-size:11px;color:#64748b;background:#f1f5f9;border-radius:4px;padding:2px 6px;display:inline-block"><a href="' + escHtml(att.data) + '" target="_blank" style="color:inherit;text-decoration:none">' + escHtml(att.name) + '</a></div>';
                 }
@@ -2447,7 +2497,7 @@ function prependCommentToList(c){
     if(c.attachments && c.attachments.length > 0){
         attachHtml = '<div class="cp-attachments">'+c.attachments.map(function(a){
             if(a.type && a.type.startsWith('image/')){
-                return '<img src="'+a.data+'" style="max-width:120px;border-radius:6px;margin:4px">';
+                return '<img src="'+a.data+'" onclick="showImageLightbox(this.src)" style="max-width:120px;border-radius:6px;margin:4px;cursor:pointer">';
             }
             return '<span style="font-size:11px;color:#3b82f6">【'+escHtml(a.name)+'】</span>';
         }).join('')+'</div>';
@@ -2628,15 +2678,25 @@ function renderTodoList(comments){
     var sku = c.sku || '(未指定)';
     var content = c.comment_text || '';
     var summary = content.length > 30 ? content.substring(0,30)+'...' : content;
+    // Build attachment thumbnails
+    var attachHtml = '';
+    if(c.attachments && c.attachments.length > 0){
+      c.attachments.forEach(function(att){
+        if(att.type && att.type.startsWith('image/')){
+          attachHtml += '<img src="'+escHtml(att.data)+'" onclick="event.stopPropagation();showImageLightbox(this.src)" style="max-width:40px;max-height:40px;border-radius:3px;margin:1px;vertical-align:middle;border:1px solid #e2e8f0;cursor:pointer">';
+        }
+      });
+    }
     var timeStr = '';
     if(c.created_at){
       var dt = new Date(c.created_at);
       timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
     }
+    var todoItemHtml = '<div class="todo-left"><span class="todo-sku">'+escHtml(sku)+'</span><span class="todo-summary">'+escHtml(summary)+'</span>'+(attachHtml?'<div style="margin-top:3px">'+attachHtml+'</div>':'')+'<div class="todo-meta">'+timeStr+'</div></div>';
     if(__todoProcessed[cid]){
-      doneHtml += '<div class="todo-item done" data-id="'+cid+'"><input type="checkbox" checked onchange="toggleTodoItem(\''+cid+'\', this)"><div class="todo-left"><span class="todo-sku">'+escHtml(sku)+'</span><span class="todo-summary">'+escHtml(summary)+'</span><div class="todo-meta">'+timeStr+'</div></div></div>';
+      doneHtml += '<div class="todo-item done" data-id="'+cid+'"><input type="checkbox" checked onchange="toggleTodoItem(\''+cid+'\', this)">'+todoItemHtml+'</div>';
     } else {
-      pendingHtml += '<div class="todo-item" data-id="'+cid+'"><input type="checkbox" onchange="toggleTodoItem(\''+cid+'\', this)"><div class="todo-left"><span class="todo-sku">'+escHtml(sku)+'</span><span class="todo-summary">'+escHtml(summary)+'</span><div class="todo-meta">'+timeStr+'</div></div></div>';
+      pendingHtml += '<div class="todo-item" data-id="'+cid+'"><input type="checkbox" onchange="toggleTodoItem(\''+cid+'\', this)">'+todoItemHtml+'</div>';
       pendingCount++;
     }
   });
