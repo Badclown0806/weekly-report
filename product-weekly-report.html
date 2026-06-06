@@ -1180,7 +1180,7 @@ function renderShopGrid(){
     ownerCrossAgg[owner].ad_spend += (p.ad_spend||0);
   });
   var ownerCrossList = Object.keys(ownerCrossAgg).sort(function(a,b){ return ownerCrossAgg[b].profit - ownerCrossAgg[a].profit; });
-  if(ownerCrossList.length > 1){
+  if(ownerCrossList.length > 0){
     html += '<div style="margin-top:10px;padding:8px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">';
     html += '<div style="font-weight:600;font-size:11px;color:#1e40af;margin-bottom:6px">按负责人汇总（跨店铺）</div>';
     html += '<table style="width:100%;font-size:11px;border-collapse:collapse">';
@@ -1193,6 +1193,12 @@ function renderShopGrid(){
         '<td style="text-align:right;padding:1px 4px">'+a.orders.toLocaleString()+'</td>'+
         '<td style="text-align:right;padding:1px 4px">'+(a.ad_spend>0?fmtK(a.ad_spend):'-')+'</td></tr>';
     });
+    html += '<tr style="border-top:2px solid #93c5fd;background:#dbeafe;font-weight:700">'+
+      '<td style="padding:2px 4px">合计</td>'+
+      '<td style="text-align:right;padding:2px 4px">'+fmtK(totalGsv)+'</td>'+
+      '<td style="text-align:right;padding:2px 4px;color:'+(totalProfit>=0?'#16a34a':'#dc2626')+'">'+fmtK(totalProfit)+'</td>'+
+      '<td style="text-align:right;padding:2px 4px">'+totalOrders.toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:2px 4px">'+(totalAdSpend>0?fmtK(totalAdSpend):'-')+'</td></tr>';
     html += '</table></div>';
   }
 
@@ -1903,28 +1909,31 @@ function generateInsights(){
   var zNew = totalNewSkus > 0 ? shopNewTiers('Z-NVTF1', [175,84,56]) : null;
   var gNew = totalNewSkus > 0 ? shopNewTiers('G-NZTF1', [175,84,56]) : null;
 
-  function fmtPct2(num, den){ return den > 0 ? (num/den*100).toFixed(1)+'%' : '0%'; }
+  function fmtPct2(num, den){ return den > 0 ? (num/den*100).toFixed(1)+'%' : '-'; }
+  function fmtCount(num, den){ return den > 0 ? num.toLocaleString() : '-'; }
   function tierTr(label, allNum, allDen, newNum, newDen, newListNum, newListDen){
-    var cls350 = label.indexOf('350')>=0||label.indexOf('175')>=0 ? 'font-weight:600' : '';
-    return '<tr><td style="padding:3px 8px;'+cls350+'">'+label+'</td>'+
-      '<td style="text-align:right;padding:3px 8px">'+allNum+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(allNum,allDen)+'</td>'+
-      '<td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?newNum:'-')+'</td><td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?fmtPct2(newNum,newDen):'-')+'</td>'+
-      '<td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?newListNum:'-')+'</td><td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?fmtPct2(newListNum,newListDen):'-')+'</td>'+
+    return '<tr><td style="padding:3px 8px">'+label+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+allNum.toLocaleString()+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(allNum,allDen)+'</td>'+
+      '<td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtCount(newNum,newDen)+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtPct2(newNum,newDen)+'</td>'+
+      '<td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtCount(newListNum,newListDen)+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtPct2(newListNum,newListDen)+'</td>'+
       '</tr>';
   }
 
   // 合并表格：全部产品 + 新品有销量 + 新品列表
+  h += '<div style="font-size:10px;color:#64748b;margin-bottom:3px;padding:2px 8px;background:#f1f5f9;border-radius:3px;display:inline-block">全产品分层线 ≥350 / ≥175 / ≥105　|　新品分层线 ≥175 / ≥84 / ≥56</div>';
   h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:12px;background:#f8fafc;border-radius:6px;overflow:hidden">';
   h += '<thead><tr style="background:#e2e8f0"><th style="padding:3px 8px;text-align:left" rowspan="2">销量分层</th><th colspan="2" style="padding:3px 8px;text-align:center">全部产品</th><th colspan="2" style="padding:3px 8px;text-align:center;background:#fef3c7">新品(有销量)</th><th colspan="2" style="padding:3px 8px;text-align:center;background:#fef3c7">新品(列表)</th></tr>';
   h += '<tr style="background:#e2e8f0"><th style="padding:3px 6px;text-align:right;font-weight:400">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400">占比</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">占比</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">占比</th></tr></thead>';
   // 全部产品: 350/175/105; 新品: 175/84/56
-  h += tierTr('≥350 / ≥175', tierAll350, totalActiveSkus, newTier175, newSkusInWeek, newTier175, totalNewSkus);
-  h += tierTr('≥175 / ≥84', tierAll175, totalActiveSkus, newTier84, newSkusInWeek, newTier84, totalNewSkus);
-  h += tierTr('≥105 / ≥56', tierAll105, totalActiveSkus, newTier56, newSkusInWeek, newTier56, totalNewSkus);
+  h += tierTr('≥350', tierAll350, totalActiveSkus, 0, 0, 0, 0);
+  h += tierTr('≥175', tierAll175, totalActiveSkus, newTier175, newSkusInWeek, newTier175, totalNewSkus);
+  h += tierTr('≥105', tierAll105, totalActiveSkus, 0, 0, 0, 0);
+  h += tierTr('≥84', 0, 0, newTier84, newSkusInWeek, newTier84, totalNewSkus);
+  h += tierTr('≥56', 0, 0, newTier56, newSkusInWeek, newTier56, totalNewSkus);
   h += '<tr style="border-top:1px solid #e2e8f0"><td style="padding:3px 8px;color:#94a3b8">当周有销量</td>'+
-    '<td style="text-align:right;padding:3px 8px;font-weight:600">'+totalActiveSkus+'</td><td style="text-align:right;padding:3px 8px">100%</td>'+
-    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+(totalNewSkus>0?newSkusInWeek:'-')+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+(totalNewSkus>0?'100%':'-')+'</td>'+
-    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+(totalNewSkus>0?totalNewSkus:'-')+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+(totalNewSkus>0?'100%':'-')+'</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600">'+totalActiveSkus.toLocaleString()+'</td><td style="text-align:right;padding:3px 8px">100%</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+fmtCount(newSkusInWeek,totalNewSkus)+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtPct2(newSkusInWeek,totalNewSkus)+'</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+fmtCount(totalNewSkus,totalNewSkus)+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+fmtPct2(totalNewSkus,totalNewSkus)+'</td>'+
     '</tr>';
   h += '</table>';
 
@@ -1934,6 +1943,7 @@ function generateInsights(){
       '<td style="text-align:right;padding:3px 8px">'+zt+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(zt,zDen)+'</td>'+
       '<td style="text-align:right;padding:3px 8px">'+gt+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(gt,gDen)+'</td></tr>';
   }
+  h += '<div style="font-size:10px;color:#64748b;margin-bottom:3px;padding:2px 8px;background:#eff6ff;border-radius:3px;display:inline-block">全产品分层线 ≥350 / ≥175 / ≥105</div>';
   h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0f9ff;border-radius:6px;overflow:hidden">';
   h += '<thead><tr style="background:#dbeafe"><th style="padding:3px 8px;text-align:left">全部产品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
   h += shopCompareTr('≥350', zAll.tiers[350], gAll.tiers[350], zAll.active, gAll.active);
@@ -1946,6 +1956,7 @@ function generateInsights(){
 
   // Z-NVTF1 / G-NZTF1 新品 对比
   if(zNew && gNew){
+    h += '<div style="font-size:10px;color:#64748b;margin-bottom:3px;padding:2px 8px;background:#f0fdf4;border-radius:3px;display:inline-block">新品分层线 ≥175 / ≥84 / ≥56</div>';
     h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0fdf4;border-radius:6px;overflow:hidden">';
     h += '<thead><tr style="background:#dcfce7"><th style="padding:3px 8px;text-align:left">新品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
     h += shopCompareTr('≥175', zNew.tiers[175], gNew.tiers[175], zNew.total, gNew.total);
@@ -1977,36 +1988,58 @@ function generateInsights(){
   highReturn.sort(function(a,b){ return (b.return_rate||0) - (a.return_rate||0); });
   var topHighReturn = highReturn.slice(0, 5);
 
+  // Build comment map for abnormal SKU quick lookup
+  var __abnCommentMap = {};
+  if(window.__commentCache && window.__commentCache.data){
+    window.__commentCache.data.forEach(function(c){
+      var key = c.sku + '|' + (c.shop||'');
+      if(!__abnCommentMap[key] && c.comment_text){
+        __abnCommentMap[key] = c.comment_text;
+      }
+      // Also index by WB_ID for cross-matching
+      var wId = window.SKU_WB_ID && (window.SKU_WB_ID[c.sku+'|'+c.shop] || window.SKU_WB_ID[c.sku]);
+      if(wId && !__abnCommentMap[wId] && c.comment_text){
+        __abnCommentMap[wId] = c.comment_text;
+      }
+    });
+  }
+
   function skuRow(p, highlightCol){
     var imgUrl = SKU_IMG[p.sku+'|'+p.shop] || SKU_IMG[p.sku] || '';
-    var wbId = SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '-';
-    return '<tr class="abn-sku-row" onclick="jumpToProduct(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'\'">'+
-      '<td style="padding:2px 4px">'+(imgUrl?'<img src="'+imgUrl+'" style="width:30px;height:30px;object-fit:cover;border-radius:3px" onerror="this.style.display=\'none\'">':'')+'</td>'+
-      '<td style="padding:2px 6px"><b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8;font-size:10px">('+escHtml(p.shop)+')</span><br><span style="font-size:10px;color:#94a3b8">ID: '+escHtml(wbId)+'</span></td>'+
-      '<td style="text-align:right;padding:2px 6px">'+(p.qty||0).toLocaleString()+'</td>'+
-      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='return'?'#7c3aed':'#475569')+'">'+(Number(p.return_rate)||0).toFixed(1)+'%</td>'+
-      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='margin'?'#d97706':'#475569')+'">'+(Number(p.margin)||0).toFixed(1)+'%</td>'+
-      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='profit'?'#dc2626':'#475569')+';font-weight:600">'+fmtK(p.profit)+'</td>'+
+    var wbId = SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '';
+    var cKey = p.sku + '|' + p.shop;
+    var cText = __abnCommentMap[cKey] || __abnCommentMap[p.sku] || (wbId ? __abnCommentMap[wbId] : '') || '';
+    var commentCell = cText
+      ? '<span class="abn-comment" title="'+escHtml(cText)+'" onclick="event.stopPropagation();openCommentPanel(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;color:#3b82f6;max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;border-bottom:1px dotted #93c5fd">'+escHtml(cText.substring(0,28)+(cText.length>28?'...':''))+'</span>'
+      : '<span style="color:#cbd5e1;font-size:10px">-</span>';
+    return '<tr class="abn-sku-row" onclick="jumpToProduct(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;transition:background .25s" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+      '<td style="width:32px;padding:4px 3px;vertical-align:middle;text-align:center">'+(imgUrl?'<img src="'+imgUrl+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px" onerror="this.style.display=\'none\'">':'')+'</td>'+
+      '<td style="padding:4px 8px;width:125px;vertical-align:middle"><b style="font-size:11px;color:#1e293b">'+escHtml(p.sku)+'</b><br><span style="color:#94a3b8;font-size:9px">'+escHtml(p.shop)+(wbId?' · ID:'+wbId:'')+'</span></td>'+
+      '<td style="text-align:right;padding:4px 12px;vertical-align:middle;font-size:11px">'+(p.qty||0).toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:4px 12px;vertical-align:middle;font-size:11px;color:'+(highlightCol==='return'?'#7c3aed':'#475569')+'">'+(Number(p.return_rate)||0).toFixed(1)+'%</td>'+
+      '<td style="text-align:right;padding:4px 12px;vertical-align:middle;font-size:11px;color:'+(highlightCol==='margin'?'#d97706':'#475569')+'">'+(Number(p.margin)||0).toFixed(1)+'%</td>'+
+      '<td style="text-align:right;padding:4px 12px;vertical-align:middle;font-size:12px;color:'+(highlightCol==='profit'?'#dc2626':'#475569')+';font-weight:700">'+fmtK(p.profit)+'</td>'+
+      '<td style="padding:4px 6px;vertical-align:middle;width:140px;border-left:1px solid #f1f5f9">'+commentCell+'</td>'+
       '</tr>';
   }
 
   if(topLoss.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;margin-top:8px">亏损最严重 TOP5</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fff5f5;border-radius:4px;overflow:hidden"><thead><tr style="background:#fee2e2;color:#991b1b"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fff5f5;border-radius:4px;overflow:hidden"><thead><tr style="background:#fee2e2;color:#991b1b"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th><th style="padding:3px 6px;text-align:left">评论</th></tr></thead>';
     topLoss.forEach(function(p){ h += skuRow(p, 'profit'); });
     h += '</table>';
   }
 
   if(topLowMargin.length > 0){
-    h += '<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:4px;margin-top:8px">低利润率（<5%）TOP5</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fffbeb;border-radius:4px;overflow:hidden"><thead><tr style="background:#fef3c7;color:#92400e"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:4px;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px">低利润率（<5%）TOP5</div>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fffbeb;border-radius:4px;overflow:hidden"><thead><tr style="background:#fef3c7;color:#92400e"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th><th style="padding:3px 6px;text-align:left">评论</th></tr></thead>';
     topLowMargin.forEach(function(p){ h += skuRow(p, 'margin'); });
     h += '</table>';
   }
 
   if(topHighReturn.length > 0){
-    h += '<div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:4px;margin-top:8px">高退货率（>10%）</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f5f3ff;border-radius:4px;overflow:hidden"><thead><tr style="background:#ede9fe;color:#6b21a8"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:4px;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px">高退货率（>10%）</div>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f5f3ff;border-radius:4px;overflow:hidden"><thead><tr style="background:#ede9fe;color:#6b21a8"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th><th style="padding:3px 6px;text-align:left">评论</th></tr></thead>';
     topHighReturn.forEach(function(p){ h += skuRow(p, 'return'); });
     h += '</table>';
   }
