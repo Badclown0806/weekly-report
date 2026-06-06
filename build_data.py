@@ -663,6 +663,20 @@ def main():
         print(f"  ❌ DATA 无效: {e}")
         return 1
 
+    # ── 自动更新 HTML 中 data.js 的版本号（强制浏览器刷新缓存）──
+    html_path = os.path.join(OUTPUT_DIR, "product-weekly-report.html")
+    if os.path.exists(html_path):
+        new_ver = datetime.now().strftime("%Y%m%d%H%M")
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        updated_html = re.sub(r'data\.js\?v=\d+', f'data.js?v={new_ver}', html)
+        if updated_html != html:
+            with open(html_path, 'w', encoding='utf-8') as f:
+                f.write(updated_html)
+            print(f"\n  已更新 HTML 缓存版本号: ?v={new_ver}")
+        else:
+            print(f"\n  ⚠ HTML 中未找到 data.js?v= 模式，请手动检查")
+
     # ── 数据质量诊断 ──
     print("\n数据质量诊断:")
     # 检查 return_rate 是否为百分比
