@@ -484,37 +484,68 @@ var WEEK_LABELS = {};
 var dataInitialized = false;
 console.log('Data-driven report loading...');
 
-// Dynamic async loading of data.js
+// Dynamic loading of data.js via fetch (more reliable than script tag async loading)
 (function loadDataJs() {
-  var script = document.createElement('script');
   var dataJsSrc = 'data.js?v=202606061558';
   var verMatch = dataJsSrc.match(/v=(\d+)/);
   var ver = verMatch ? verMatch[1] : '';
-  script.src = dataJsSrc;
-  script.async = true;
 
-  script.onload = function() {
-    console.log('data.js loaded asynchronously');
-    // Hide loading overlay
+  function onSuccess() {
+    console.log('data.js loaded via fetch');
     var overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'none';
-    // Show version
     var el = document.getElementById('buildVer'); if(el) el.textContent = ver;
     var vn = document.getElementById('verNum'); if(vn) vn.textContent = ver;
-    // Continue initialization
     initFromDataJs();
-  };
+  }
 
-  script.onerror = function() {
-    console.error('Failed to load data.js');
+  function onFailure(msg) {
+    console.error('Failed to load data.js: ' + msg);
     var overlay = document.getElementById('loadingOverlay');
     if (overlay) {
-      overlay.innerHTML = '<div style="color:#dc2626;font-size:14px;text-align:center;padding:20px"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
+      overlay.innerHTML = '<div style="color:#dc2626;font-size:14px;text-align:center;padding:20px"><strong>数据加载失败</strong><br><br>无法加载 data.js 文件 (' + msg + ')。<br><br><small>请确保 data.js 与 HTML 在同一目录下，然后刷新页面。</small></div>';
     }
-    document.body.style.display = 'block';
-  };
+  }
 
-  document.head.appendChild(script);
+  function tryLoad(retriesLeft) {
+    fetch(dataJsSrc, {cache: 'default'})
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function(code) {
+        try {
+          // data.js format: var DATA = {...};
+          // Execute in global scope to define window.DATA
+          if (code.indexOf('var DATA ') === 0 || code.indexOf('var DATA=') === 0) {
+            var prefixEnd = code.indexOf('=') + 1;
+            var jsonStr = code.substring(prefixEnd).trim();
+            if (jsonStr.charAt(jsonStr.length - 1) === ';') {
+              jsonStr = jsonStr.substring(0, jsonStr.length - 1);
+            }
+            window.DATA = JSON.parse(jsonStr);
+          } else {
+            // Fallback: eval for non-standard format
+            eval(code);
+          }
+          if (typeof window.DATA === 'undefined') throw new Error('DATA not defined');
+          onSuccess();
+        } catch (e) {
+          throw new Error('Parse error: ' + e.message);
+        }
+      })
+      .catch(function(err) {
+        console.error('data.js fetch error: ' + err.message);
+        if (retriesLeft > 0) {
+          console.log('Retrying data.js, ' + retriesLeft + ' attempts left');
+          setTimeout(function() { tryLoad(retriesLeft - 1); }, 2000);
+        } else {
+          onFailure(err.message);
+        }
+      });
+  }
+
+  tryLoad(2);
 })();
 
 // ── Error handler ──
@@ -528,7 +559,7 @@ window.onerror = function(msg, url, line, col, error) {
     return false;
 };
 
-// ── Data variables (populated from data.js via <script> tag) ──
+// ── Data variables (populated from data.js via fetch + JSON.parse) ──
 var WEEKS, WEEKS_ISO, WEEK_LABELS;
 var SHOP_WEEKLY, WEEK_DATA, TRAFFIC_WEEKLY, PERSON_TARGETS;
 var SKU_IMG, SKU_FIRST_DATE, SKU_OWNER, SHOP_OWNERS, SKU_WB_ID;
