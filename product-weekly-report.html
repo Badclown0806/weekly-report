@@ -1167,6 +1167,35 @@ function renderShopGrid(){
   });
   html += '</div>';
 
+  // ── Cross-shop owner summary (consistent with generateInsights aggregation) ──
+  var ownerCrossAgg = {};
+  products.forEach(function(p){
+    if(!selectedShops.has(p.shop)) return;
+    if(p.sku !== '无匹配ID费用' && !productOwnerMatch(p.sku, p.shop)) return;
+    var owner = (SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku] || '未分配');
+    if(!ownerCrossAgg[owner]) ownerCrossAgg[owner] = {gsv:0, profit:0, orders:0, ad_spend:0};
+    ownerCrossAgg[owner].gsv += (p.gsv||0);
+    ownerCrossAgg[owner].profit += (p.profit||0);
+    ownerCrossAgg[owner].orders += (p.qty||0);
+    ownerCrossAgg[owner].ad_spend += (p.ad_spend||0);
+  });
+  var ownerCrossList = Object.keys(ownerCrossAgg).sort(function(a,b){ return ownerCrossAgg[b].profit - ownerCrossAgg[a].profit; });
+  if(ownerCrossList.length > 1){
+    html += '<div style="margin-top:10px;padding:8px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">';
+    html += '<div style="font-weight:600;font-size:11px;color:#1e40af;margin-bottom:6px">按负责人汇总（跨店铺）</div>';
+    html += '<table style="width:100%;font-size:11px;border-collapse:collapse">';
+    html += '<tr style="color:#94a3b8"><th style="text-align:left;font-weight:400;padding:1px 4px">负责人</th><th style="text-align:right;font-weight:400;padding:1px 4px">GSV</th><th style="text-align:right;font-weight:400;padding:1px 4px">利润</th><th style="text-align:right;font-weight:400;padding:1px 4px">订单量</th><th style="text-align:right;font-weight:400;padding:1px 4px">广告费</th></tr>';
+    ownerCrossList.forEach(function(o){
+      var a = ownerCrossAgg[o];
+      html += '<tr><td style="font-weight:600;padding:1px 4px">'+escHtml(o)+'</td>'+
+        '<td style="text-align:right;padding:1px 4px">'+(a.gsv>0?fmtK(a.gsv):'-')+'</td>'+
+        '<td style="text-align:right;font-weight:600;padding:1px 4px;color:'+(a.profit>=0?'#16a34a':'#dc2626')+'">'+fmtK(a.profit)+'</td>'+
+        '<td style="text-align:right;padding:1px 4px">'+a.orders.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:1px 4px">'+(a.ad_spend>0?fmtK(a.ad_spend):'-')+'</td></tr>';
+    });
+    html += '</table></div>';
+  }
+
   shopGrid.innerHTML = html;
 }
 
@@ -1194,6 +1223,33 @@ function switchProdTab(tab){
     if(el) el.className = (k === tab) ? 'tag on' : 'tag';
   });
   renderProdTable();
+}
+
+function jumpToProduct(sku, shop){
+  // Expand product section if collapsed
+  if(!prodExpanded) toggleProdSection();
+  // Switch to all products tab
+  switchProdTab('all');
+  // Wait for DOM update then scroll to target row
+  setTimeout(function(){
+    var table = document.getElementById('prodTable');
+    if(!table) return;
+    var rows = table.querySelectorAll('tbody tr.prod-row');
+    for(var i=0;i<rows.length;i++){
+      var strong = rows[i].querySelector('td:nth-child(2) strong');
+      if(strong && strong.textContent.trim() === sku){
+        rows[i].scrollIntoView({behavior:'smooth',block:'center'});
+        rows[i].style.background = '#fef3c7';
+        rows[i].style.boxShadow = '0 0 0 3px #f59e0b';
+        rows[i].style.transition = 'background 1.2s, box-shadow 1.2s';
+        setTimeout(function(r){
+          r.style.background = '';
+          r.style.boxShadow = '';
+        }, 1800, rows[i]);
+        break;
+      }
+    }
+  }, 150);
 }
 
 // ========== PRODUCT TABLE ==========
@@ -1922,7 +1978,11 @@ function generateInsights(){
   var topHighReturn = highReturn.slice(0, 5);
 
   function skuRow(p, highlightCol){
-    return '<tr>'+'<td style="padding:2px 6px"><b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8;font-size:10px">('+escHtml(p.shop)+')</span></td>'+
+    var imgUrl = SKU_IMG[p.sku+'|'+p.shop] || SKU_IMG[p.sku] || '';
+    var wbId = SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '-';
+    return '<tr class="abn-sku-row" onclick="jumpToProduct(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'\'">'+
+      '<td style="padding:2px 4px">'+(imgUrl?'<img src="'+imgUrl+'" style="width:30px;height:30px;object-fit:cover;border-radius:3px" onerror="this.style.display=\'none\'">':'')+'</td>'+
+      '<td style="padding:2px 6px"><b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8;font-size:10px">('+escHtml(p.shop)+')</span><br><span style="font-size:10px;color:#94a3b8">ID: '+escHtml(wbId)+'</span></td>'+
       '<td style="text-align:right;padding:2px 6px">'+(p.qty||0).toLocaleString()+'</td>'+
       '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='return'?'#7c3aed':'#475569')+'">'+(Number(p.return_rate)||0).toFixed(1)+'%</td>'+
       '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='margin'?'#d97706':'#475569')+'">'+(Number(p.margin)||0).toFixed(1)+'%</td>'+
@@ -1932,21 +1992,21 @@ function generateInsights(){
 
   if(topLoss.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;margin-top:8px">亏损最严重 TOP5</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fff5f5;border-radius:4px;overflow:hidden"><thead><tr style="background:#fee2e2;color:#991b1b"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fff5f5;border-radius:4px;overflow:hidden"><thead><tr style="background:#fee2e2;color:#991b1b"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
     topLoss.forEach(function(p){ h += skuRow(p, 'profit'); });
     h += '</table>';
   }
 
   if(topLowMargin.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:4px;margin-top:8px">低利润率（<5%）TOP5</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fffbeb;border-radius:4px;overflow:hidden"><thead><tr style="background:#fef3c7;color:#92400e"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fffbeb;border-radius:4px;overflow:hidden"><thead><tr style="background:#fef3c7;color:#92400e"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
     topLowMargin.forEach(function(p){ h += skuRow(p, 'margin'); });
     h += '</table>';
   }
 
   if(topHighReturn.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:4px;margin-top:8px">高退货率（>10%）</div>';
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f5f3ff;border-radius:4px;overflow:hidden"><thead><tr style="background:#ede9fe;color:#6b21a8"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f5f3ff;border-radius:4px;overflow:hidden"><thead><tr style="background:#ede9fe;color:#6b21a8"><th style="padding:3px 4px;text-align:center">图</th><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
     topHighReturn.forEach(function(p){ h += skuRow(p, 'return'); });
     h += '</table>';
   }
