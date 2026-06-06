@@ -478,6 +478,10 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 
 
 <script>
+// Pre-init globals that async-loaded code references
+var METRIC_STYLES = {};
+var WEEK_LABELS = {};
+var dataInitialized = false;
 console.log('Data-driven report loading...');
 
 // Dynamic async loading of data.js
@@ -672,6 +676,7 @@ function initFromDataJs() {
 
     // ── Bootstrap ──
     bootstrap();
+    dataInitialized = true;
 }
 
 function getWeekYear(w){
@@ -1592,6 +1597,7 @@ function getDisplayWeeks(){
 
 // Generic metric trend chart
 function drawMetricChart(canvasId, tooltipId, metricKey, dataKey, fmtFn, defaultVal, styleKey){
+  if(!dataInitialized) return;
   var canvas = document.getElementById(canvasId);
   if(!canvas) return;
   var tooltip = document.getElementById(tooltipId);
