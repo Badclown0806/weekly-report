@@ -1848,10 +1848,11 @@ function generateInsights(){
   h += '<div style="margin-bottom:18px">';
   h += '<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #10b981">销量分层占比分析</div>';
 
-  // 全部产品销量分层
+  // 全部产品销量分层（排除Z-NZTF1和G-NZTF1，这两个店单独对比）
   var totalActiveSkus = 0;
   var tierAll350 = 0, tierAll175 = 0, tierAll105 = 0;
   products.forEach(function(p){
+    if(p.shop === 'Z-NZTF1' || p.shop === 'G-NZTF1') return;
     var q = (p.qty || 0);
     if(q > 0){ totalActiveSkus++; }
     if(q >= 350) tierAll350++;
@@ -1876,7 +1877,7 @@ function generateInsights(){
     });
   }
 
-  // Z-NVTF1 / G-NZTF1 分层统计（全部产品阈值 350/175/105）
+  // Z-NZTF1 / G-NZTF1 分层统计（全部产品阈值 350/175/105）
   function shopTiers(shopName, thresholds){
     var active = 0, t = {};
     thresholds.forEach(function(th){ t[th] = 0; });
@@ -1904,9 +1905,9 @@ function generateInsights(){
     return {active: active, total: total, tiers: t};
   }
 
-  var zAll = shopTiers('Z-NVTF1', [350,175,105]);
+  var zAll = shopTiers('Z-NZTF1', [350,175,105]);
   var gAll = shopTiers('G-NZTF1', [350,175,105]);
-  var zNew = totalNewSkus > 0 ? shopNewTiers('Z-NVTF1', [175,84,56]) : null;
+  var zNew = totalNewSkus > 0 ? shopNewTiers('Z-NZTF1', [175,84,56]) : null;
   var gNew = totalNewSkus > 0 ? shopNewTiers('G-NZTF1', [175,84,56]) : null;
 
   function fmtPct2(num, den){ return den > 0 ? (num/den*100).toFixed(1)+'%' : '-'; }
@@ -1937,7 +1938,7 @@ function generateInsights(){
     '</tr>';
   h += '</table>';
 
-  // Z-NVTF1 / G-NZTF1 全部产品 对比
+  // Z-NZTF1 / G-NZTF1 全部产品 对比
   function shopCompareTr(label, zt, gt, zDen, gDen){
     return '<tr><td style="padding:3px 8px">'+label+'</td>'+
       '<td style="text-align:right;padding:3px 8px">'+zt+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(zt,zDen)+'</td>'+
@@ -1945,7 +1946,7 @@ function generateInsights(){
   }
   h += '<div style="font-size:10px;color:#64748b;margin-bottom:3px;padding:2px 8px;background:#eff6ff;border-radius:3px;display:inline-block">全产品分层线 ≥350 / ≥175 / ≥105</div>';
   h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0f9ff;border-radius:6px;overflow:hidden">';
-  h += '<thead><tr style="background:#dbeafe"><th style="padding:3px 8px;text-align:left">全部产品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
+  h += '<thead><tr style="background:#dbeafe"><th style="padding:3px 8px;text-align:left">全部产品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NZTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
   h += shopCompareTr('≥350', zAll.tiers[350], gAll.tiers[350], zAll.active, gAll.active);
   h += shopCompareTr('≥175', zAll.tiers[175], gAll.tiers[175], zAll.active, gAll.active);
   h += shopCompareTr('≥105', zAll.tiers[105], gAll.tiers[105], zAll.active, gAll.active);
@@ -1954,11 +1955,11 @@ function generateInsights(){
     '<td style="text-align:right;padding:3px 8px;font-weight:600">'+gAll.active+'</td><td style="text-align:right;padding:3px 8px">100%</td></tr>';
   h += '</table>';
 
-  // Z-NVTF1 / G-NZTF1 新品 对比
+  // Z-NZTF1 / G-NZTF1 新品 对比
   if(zNew && gNew){
     h += '<div style="font-size:10px;color:#64748b;margin-bottom:3px;padding:2px 8px;background:#f0fdf4;border-radius:3px;display:inline-block">新品分层线 ≥175 / ≥84 / ≥56</div>';
     h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0fdf4;border-radius:6px;overflow:hidden">';
-    h += '<thead><tr style="background:#dcfce7"><th style="padding:3px 8px;text-align:left">新品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
+    h += '<thead><tr style="background:#dcfce7"><th style="padding:3px 8px;text-align:left">新品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NZTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
     h += shopCompareTr('≥175', zNew.tiers[175], gNew.tiers[175], zNew.total, gNew.total);
     h += shopCompareTr('≥84', zNew.tiers[84], gNew.tiers[84], zNew.total, gNew.total);
     h += shopCompareTr('≥56', zNew.tiers[56], gNew.tiers[56], zNew.total, gNew.total);
@@ -2011,7 +2012,7 @@ function generateInsights(){
     var cText = __abnCommentMap[cKey] || __abnCommentMap[p.sku] || (wbId ? __abnCommentMap[wbId] : '') || '';
     var commentCell = cText
       ? '<span class="abn-comment" title="'+escHtml(cText)+'" onclick="event.stopPropagation();openCommentPanel(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;color:#3b82f6;max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;border-bottom:1px dotted #93c5fd">'+escHtml(cText.substring(0,28)+(cText.length>28?'...':''))+'</span>'
-      : '<span style="color:#cbd5e1;font-size:10px">-</span>';
+      : '<span onclick="event.stopPropagation();openCommentPanel(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;color:#94a3b8;font-size:10px" title="点击添加评论">+ 添加</span>';
     return '<tr class="abn-sku-row" onclick="jumpToProduct(\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',\''+escHtml(p.shop).replace(/'/g,"\\'")+'\')" style="cursor:pointer;transition:background .25s" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
       '<td style="width:32px;padding:4px 3px;vertical-align:middle;text-align:center">'+(imgUrl?'<img src="'+imgUrl+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px" onerror="this.style.display=\'none\'">':'')+'</td>'+
       '<td style="padding:4px 8px;width:125px;vertical-align:middle"><b style="font-size:11px;color:#1e293b">'+escHtml(p.sku)+'</b><br><span style="color:#94a3b8;font-size:9px">'+escHtml(p.shop)+(wbId?' · ID:'+wbId:'')+'</span></td>'+
@@ -2161,7 +2162,12 @@ function renderActivityLog(){
           });
         }
         window.__rawComments = comments;
-        allRows.sort(function(a,b){ return a.sku.localeCompare(b.sku); });
+        allRows.sort(function(a,b){
+          if(a.time === '-' && b.time !== '-') return 1;
+          if(b.time === '-' && a.time !== '-') return -1;
+          if(a.time === '-' && b.time === '-') return a.sku.localeCompare(b.sku);
+          return b.time.localeCompare(a.time);
+        });
         window.__activityLogRows = allRows;
         infoEl.textContent = '共 ' + allRows.length + ' 条记录';
         renderActivityLogTable(allRows);
