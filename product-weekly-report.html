@@ -453,7 +453,7 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 
 
-<script src="data.js?v=202606061351"></script>
+<script src="data.js?v=202606061354"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -1834,7 +1834,7 @@ function renderActivityLog(){
 
   // ── Comment stats (async) ──
   if(window.__supabaseReady === true && typeof supabaseApi === 'function'){
-    supabaseApi('product_comments?select=*&order=created_at.desc&limit=1000')
+    getCachedComments()
       .then(function(comments){
         var allRows = rows.slice(); // copy notes
         if(comments && comments.length > 0){
@@ -1850,7 +1850,7 @@ function renderActivityLog(){
               sku: sku,
               shop: c.shop || '-',
               type: '评论',
-              content: c.content || '',
+              content: c.comment_text || '',
               time: timeStr,
               authors: c.author || '-'
             });
@@ -1979,7 +1979,7 @@ function openActivityCommentModal(sku){
         (c.author ? '<strong style="color:#475569">'+escHtml(c.author)+'</strong> &middot; ' : '')+
         escHtml(timeStr)+
       '</div>'+
-      '<div style="font-size:13px;color:#334155;line-height:1.6">'+escHtml(c.content || '(空)')+'</div>'+
+      '<div style="font-size:13px;color:#334155;line-height:1.6">'+escHtml(c.comment_text || '(空)')+'</div>'+
     '</div>';
   }).join('');
 
@@ -2018,7 +2018,7 @@ function loadCommentStats(){
         return;
     }
     var container = document.getElementById('commentStatsContent');
-    supabaseApi('product_comments?select=*&order=created_at.desc&limit=1000')
+    getCachedComments()
         .then(function(data){
             if(!container) return;
             renderCommentStats(data || []);
@@ -2235,21 +2235,50 @@ function closeCommentPanel() {
     cpAttachments = [];
 }
 
+// ========== Global comment cache (avoids redundant Supabase fetches) ==========
+window.__commentCache = null; // { data: [], ts: 0 }
+
+function getCachedComments(forceRefresh){
+  if(!forceRefresh && window.__commentCache && window.__commentCache.data && (Date.now() - window.__commentCache.ts < 60000)){
+    return Promise.resolve(window.__commentCache.data);
+  }
+  if(window.__supabaseReady !== true){
+    return Promise.resolve(window.__commentCache ? (window.__commentCache.data || []) : []);
+  }
+  return supabaseApi('product_comments?select=*&order=created_at.desc&limit=1000')
+    .then(function(data){
+      window.__commentCache = { data: data || [], ts: Date.now() };
+      return data;
+    })
+    .catch(function(){
+      var fallback = window.__commentCache ? (window.__commentCache.data || []) : [];
+      return fallback;
+    });
+}
+
+function invalidateCommentCache(){
+  window.__commentCache = null;
+}
+
 function loadComments(sku, shop) {
     if (window.__supabaseReady !== true) {
         var cpListEl0 = document.getElementById('cpList');
         if (cpListEl0) cpListEl0.innerHTML = '<div class="cp-error">评论服务未连接</div>';
         return;
     }
-    supabaseApi('product_comments?select=*&sku=eq.' + encodeURIComponent(sku) + '&shop=eq.' + encodeURIComponent(shop) + '&order=created_at.desc')
-        .then(function(data) {
-            renderComments(data || []);
-        })
-        .catch(function(err) {
-            console.error('加载评论失败:', err);
-            var cpListEl = document.getElementById('cpList');
-            if (cpListEl) cpListEl.innerHTML = '<div class="cp-error">加载失败，请刷新重试</div>';
+    getCachedComments().then(function(data) {
+        var filtered = data.filter(function(c){
+            return c.sku === sku && c.shop === shop;
         });
+        filtered.sort(function(a,b){
+            return new Date(b.created_at||0) - new Date(a.created_at||0);
+        });
+        renderComments(filtered);
+    }).catch(function(err) {
+        console.error('加载评论失败:', err);
+        var cpListEl = document.getElementById('cpList');
+        if (cpListEl) cpListEl.innerHTML = '<div class="cp-error">加载失败，请刷新重试</div>';
+    });
 }
 
 // ========== 评论实时同步 (Supabase Polling) ==========
@@ -2288,6 +2317,7 @@ function subscribeComments(){
         if(!comments || !comments.length) return;
         var currentIds = comments.map(function(c){ return c.id; }).sort().join(',');
         if(__lastCommentIds !== null && __lastCommentIds !== currentIds){
+          invalidateCommentCache();
           // New comments detected — refresh if comment panel is open
           if(currentCommentSku){
             loadComments(currentCommentSku, currentCommentShop);
@@ -2362,6 +2392,7 @@ function sendComment() {
 
     var cpAuthorEl = document.getElementById('cpAuthor');
     var author = (cpAuthorEl && cpAuthorEl.value) || '';
+    var now = new Date().toISOString();
     supabaseApi('product_comments', {
         method: 'POST',
         body: [{
@@ -2376,7 +2407,18 @@ function sendComment() {
         input.value = '';
         cpAttachments = [];
         renderCpAttachments();
-        loadComments(currentCommentSku, currentCommentShop);
+        // Append new comment locally instead of full reload
+        var newComment = (data && data.length) ? data[0] : {
+            sku: currentCommentSku, shop: currentCommentShop,
+            comment_text: text, author: author, created_at: now
+        };
+        prependCommentToList(newComment);
+        // Invalidate cache so next fetch picks up the new comment
+        invalidateCommentCache();
+        // Update raw comments cache if activity log loaded
+        if(window.__rawComments){ window.__rawComments.unshift(newComment); }
+        // Refresh todo panel
+        if(typeof loadTodoComments === 'function'){ loadTodoComments(); }
     }).catch(function(err) {
         btn.disabled = false;
         console.error('发送评论失败:', err);
@@ -2387,6 +2429,32 @@ function sendComment() {
             setTimeout(function() { errEl.style.display = 'none'; }, 2500);
         }
     });
+}
+
+// Prepend a comment to the open comment panel list (optimistic, no network reload)
+function prependCommentToList(c){
+    var list = document.getElementById('cpList');
+    if(!list) return;
+    var emptyEl = list.querySelector('.cp-empty');
+    var pad = function(n){ return n < 10 ? '0'+n : n; };
+    var timeStr = '';
+    if(c.created_at){
+        var dt = new Date(c.created_at);
+        timeStr = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
+    }
+    var authorHtml = c.author ? '<div class="cp-author">【' + escHtml(c.author) + '】</div>' : '<div class="cp-author" style="color:#94a3b8">【匿名】</div>';
+    var attachHtml = '';
+    if(c.attachments && c.attachments.length > 0){
+        attachHtml = '<div class="cp-attachments">'+c.attachments.map(function(a){
+            if(a.type && a.type.startsWith('image/')){
+                return '<img src="'+a.data+'" style="max-width:120px;border-radius:6px;margin:4px">';
+            }
+            return '<span style="font-size:11px;color:#3b82f6">【'+escHtml(a.name)+'】</span>';
+        }).join('')+'</div>';
+    }
+    var html = '<div class="cp-item">' + authorHtml + '<div class="cp-text">' + escHtml(c.comment_text || '') + '</div>' + attachHtml + '<div class="cp-time">' + timeStr + '</div></div>';
+    if(emptyEl) emptyEl.remove();
+    list.insertAdjacentHTML('afterbegin', html);
 }
 
 // ========== ATTACHMENT HANDLERS ==========
@@ -2539,8 +2607,7 @@ function loadTodoComments(){
     else document.getElementById('todoPending').innerHTML = '<div class="todo-empty">评论服务暂不可用</div>';
     return;
   }
-  supabaseApi('product_comments?select=*&order=created_at.desc&limit=200')
-    .then(function(r){ return r.json(); })
+  getCachedComments()
     .then(function(comments){
       if(!comments || !comments.length){
         document.getElementById('todoPending').innerHTML = '<div class="todo-empty">本周暂无评论</div>';
@@ -2559,7 +2626,7 @@ function renderTodoList(comments){
   comments.forEach(function(c, i){
     var cid = 'todo-' + (c.id || i);
     var sku = c.sku || '(未指定)';
-    var content = c.content || '';
+    var content = c.comment_text || '';
     var summary = content.length > 30 ? content.substring(0,30)+'...' : content;
     var timeStr = '';
     if(c.created_at){
