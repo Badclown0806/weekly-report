@@ -258,13 +258,13 @@ tr:hover td:first-child{background:#f1f5f9}
 .todo-item .todo-meta{color:#94a3b8;font-size:10px;margin-top:1px}
 .todo-empty{text-align:center;color:#94a3b8;padding:14px 0;font-size:11px}
 
-/* 销量颜色标记 (qty tier) */
-tr.qty-tier-3 td{background:#d4edda !important}
-tr.qty-tier-2 td{background:#e8f5e9 !important}
-tr.qty-tier-1 td{background:#f1f8e9 !important}
-tr.qty-tier-3 td:first-child{border-left:4px solid #2e7d32}
-tr.qty-tier-2 td:first-child{border-left:3px solid #43a047}
-tr.qty-tier-1 td:first-child{border-left:2px solid #81c784}
+/* 销量颜色标记 (qty tier) — 浅色底三色 */
+tr.qty-tier-3 td{background:#dbeafe !important}
+tr.qty-tier-2 td{background:#dcfce7 !important}
+tr.qty-tier-1 td{background:#fef9c3 !important}
+tr.qty-tier-3 td:first-child{border-left:4px solid #2563eb}
+tr.qty-tier-2 td:first-child{border-left:3px solid #16a34a}
+tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 
 /* 广告费占比列 */
 .tier-table td{font-size:12px}
@@ -471,7 +471,7 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #81c784}
 </div>
 
 
-<script src="data.js?v=202606061524"></script>
+<script src="data.js?v=202606061558"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -1057,7 +1057,7 @@ function renderShopGrid(){
     ownerKeys.forEach(function(ok){
       if(ok.owner && SHOP_OWNER_WEEKLY[ok.shop] && SHOP_OWNER_WEEKLY[ok.shop][ok.owner]){
         var sw = SHOP_OWNER_WEEKLY[ok.shop][ok.owner][curWeek];
-        if(sw){ ownerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0}; }
+        if(sw){ ownerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0, ad_spend:sw.ad_spend||0}; }
       } else if(!ok.owner && d.shops[ok.shop]){
         ownerTotals[ok.key] = {gsv: d.shops[ok.shop].gsv || 0, profit: d.shops[ok.shop].profit || 0, orders: 0, ad_spend: d.shops[ok.shop].ad_spend || 0};
       }
@@ -1100,13 +1100,14 @@ function renderShopGrid(){
           prevOwnerTotals[matched.key].gsv += (p.gsv || 0);
           prevOwnerTotals[matched.key].profit += (p.profit || 0);
           prevOwnerTotals[matched.key].orders += (p.qty || 0);
+          prevOwnerTotals[matched.key].ad_spend += (p.ad_spend || 0);
         }
       });
     } else if(pd && pd.shops) {
       ownerKeys.forEach(function(ok){
         if(ok.owner && SHOP_OWNER_WEEKLY[ok.shop] && SHOP_OWNER_WEEKLY[ok.shop][ok.owner]){
           var sw = SHOP_OWNER_WEEKLY[ok.shop][ok.owner][prevWeek];
-          if(sw){ prevOwnerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0}; }
+          if(sw){ prevOwnerTotals[ok.key] = {gsv:sw.gsv||0, profit:sw.profit||0, orders:sw.qty||0, ad_spend:sw.ad_spend||0}; }
         } else if(!ok.owner && pd.shops[ok.shop]){
           prevOwnerTotals[ok.key] = {gsv: pd.shops[ok.shop].gsv || 0, profit: pd.shops[ok.shop].profit || 0, orders: 0, ad_spend: pd.shops[ok.shop].ad_spend || 0};
         }
@@ -1141,6 +1142,12 @@ function renderShopGrid(){
     var profitPct = prevProfit !== 0 ? ((st.profit - prevProfit) / Math.abs(prevProfit) * 100) : null;
     var marginPct = prevMargin !== 0 ? (curMargin - prevMargin) : null;
     var ordersPct = prevOrders > 0 ? ((st.orders - prevOrders) / prevOrders * 100) : null;
+    var prevAdSpend = prevSt.ad_spend || 0;
+    var prevAdRatio = prevGsv > 0 ? (prevAdSpend / prevGsv * 100) : 0;
+    var curAdSpend = st.ad_spend || 0;
+    var curAdRatio = hasData && st.gsv > 0 ? (curAdSpend / st.gsv * 100) : 0;
+    var adSpendPct = prevAdSpend > 0 ? ((curAdSpend - prevAdSpend) / prevAdSpend * 100) : null;
+    var adRatioPp = prevAdRatio > 0 ? (curAdRatio - prevAdRatio) : null;
 
     function fmtPct(v){ return v === null ? '-' : ((v>=0?'↑':'↓')+' '+Math.abs(v).toFixed(2)+'%'); }
     function fmtPp(v){ return v === null ? '-' : ((v>=0?'↑':'↓')+' '+Math.abs(v).toFixed(2)+'pp'); }
@@ -1153,8 +1160,8 @@ function renderShopGrid(){
         '<tr><td style="padding:1px 4px">毛利率</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?curMargin.toFixed(2)+'%':'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevMargin!==0?prevMargin.toFixed(2)+'%':'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(marginPct===null? '#94a3b8':(marginPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPp(marginPct)+'</td></tr>'+
         '<tr><td style="padding:1px 4px">利润</td><td style="text-align:right;font-weight:600;padding:1px 4px;color:'+(hasData?(st.profit>=0?'#16a34a':'#dc2626'):'#94a3b8')+'">'+(hasData?fmtK(st.profit):'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevProfit!==0?fmtK(prevProfit):'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(profitPct===null? '#94a3b8':(profitPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(profitPct)+'</td></tr>'+
         '<tr><td style="padding:1px 4px">订单量</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?st.orders.toLocaleString():'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevOrders>0?prevOrders.toLocaleString():'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(ordersPct===null? '#94a3b8':(ordersPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(ordersPct)+'</td></tr>'+
-        '<tr style="border-top:1px dashed #e2e8f0"><td style="padding:1px 4px">广告费</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?fmtK(st.ad_spend||0):'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">-</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">-</td></tr>'+
-        '<tr><td style="padding:1px 4px">广告费占比</td><td style="text-align:right;font-weight:600;padding:1px 4px;color:#7c3aed">'+(hasData && st.gsv>0 ? ((st.ad_spend||0)/st.gsv*100).toFixed(2)+'%' : '-')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">-</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">-</td></tr>'+
+        '<tr style="border-top:1px dashed #e2e8f0"><td style="padding:1px 4px">广告费</td><td style="text-align:right;font-weight:600;padding:1px 4px">'+(hasData?fmtK(curAdSpend):'/')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevAdSpend>0?fmtK(prevAdSpend):'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(adSpendPct===null? '#94a3b8':(adSpendPct>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(adSpendPct)+'</td></tr>'+
+        '<tr><td style="padding:1px 4px">广告费占比</td><td style="text-align:right;font-weight:600;padding:1px 4px;color:#7c3aed">'+(hasData && st.gsv>0 ? curAdRatio.toFixed(2)+'%' : '-')+'</td><td style="text-align:right;padding:1px 4px;color:#94a3b8">'+(prevAdRatio>0?prevAdRatio.toFixed(2)+'%':'-')+'</td><td style="text-align:right;padding:1px 4px;color:'+(adRatioPp===null? '#94a3b8':(adRatioPp>=0?'#16a34a':'#dc2626'))+'">'+fmtPct(adRatioPp)+'</td></tr>'+
       '</table>'+
     '</div>';
   });
@@ -1791,10 +1798,10 @@ function generateInsights(){
   });
 
   // 新品：NEW_PRODUCT_CREATED 中的产品
+  var newProdSet = {};
   var newSkusInWeek = 0, newTier175 = 0, newTier84 = 0, newTier56 = 0;
   var totalNewSkus = 0;
   if(NEW_PRODUCT_CREATED && NEW_PRODUCT_CREATED.length){
-    var newProdSet = {};
     NEW_PRODUCT_CREATED.forEach(function(n){ newProdSet[n[0]] = true; totalNewSkus++; });
     products.forEach(function(p){
       if(newProdSet[p.sku]){
@@ -1807,23 +1814,90 @@ function generateInsights(){
     });
   }
 
-  // 全部产品分层表格
+  // Z-NVTF1 / G-NZTF1 分层统计（全部产品阈值 350/175/105）
+  function shopTiers(shopName, thresholds){
+    var active = 0, t = {};
+    thresholds.forEach(function(th){ t[th] = 0; });
+    products.forEach(function(p){
+      if(p.shop !== shopName) return;
+      var q = (p.qty || 0);
+      if(q > 0) active++;
+      thresholds.forEach(function(th){ if(q >= th) t[th]++; });
+    });
+    return {active: active, tiers: t};
+  }
+  function shopNewTiers(shopName, thresholds){
+    var active = 0, total = 0, t = {};
+    thresholds.forEach(function(th){ t[th] = 0; });
+    for(var sku in newProdSet){
+      if(!newProdSet[sku]) continue;
+      // Find this new SKU in products for this shop
+      var found = null;
+      for(var i=0;i<products.length;i++){
+        if(products[i].sku === sku && products[i].shop === shopName){ found = products[i]; break; }
+      }
+      if(found){ total++; var q = (found.qty||0); if(q>0) active++; thresholds.forEach(function(th){ if(q>=th) t[th]++; }); }
+      else { total++; }
+    }
+    return {active: active, total: total, tiers: t};
+  }
+
+  var zAll = shopTiers('Z-NVTF1', [350,175,105]);
+  var gAll = shopTiers('G-NZTF1', [350,175,105]);
+  var zNew = totalNewSkus > 0 ? shopNewTiers('Z-NVTF1', [175,84,56]) : null;
+  var gNew = totalNewSkus > 0 ? shopNewTiers('G-NZTF1', [175,84,56]) : null;
+
+  function fmtPct2(num, den){ return den > 0 ? (num/den*100).toFixed(1)+'%' : '0%'; }
+  function tierTr(label, allNum, allDen, newNum, newDen, newListNum, newListDen){
+    var cls350 = label.indexOf('350')>=0||label.indexOf('175')>=0 ? 'font-weight:600' : '';
+    return '<tr><td style="padding:3px 8px;'+cls350+'">'+label+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+allNum+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(allNum,allDen)+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?newNum:'-')+'</td><td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?fmtPct2(newNum,newDen):'-')+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?newListNum:'-')+'</td><td style="text-align:right;padding:3px 8px">'+(totalNewSkus>0?fmtPct2(newListNum,newListDen):'-')+'</td>'+
+      '</tr>';
+  }
+
+  // 合并表格：全部产品 + 新品有销量 + 新品列表
   h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:12px;background:#f8fafc;border-radius:6px;overflow:hidden">';
-  h += '<thead><tr style="background:#e2e8f0"><th style="padding:4px 8px;text-align:left">全部产品 销量分层</th><th style="padding:4px 8px;text-align:right">SKU数</th><th style="padding:4px 8px;text-align:right">占比</th></tr></thead>';
-  h += '<tr><td style="padding:4px 8px">≥350 ▼▼▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+tierAll350+'</td><td style="text-align:right;padding:4px 8px">'+(totalActiveSkus>0?(tierAll350/totalActiveSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-  h += '<tr><td style="padding:4px 8px">≥175 ▼▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+tierAll175+'</td><td style="text-align:right;padding:4px 8px">'+(totalActiveSkus>0?(tierAll175/totalActiveSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-  h += '<tr><td style="padding:4px 8px">≥105 ▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+tierAll105+'</td><td style="text-align:right;padding:4px 8px">'+(totalActiveSkus>0?(tierAll105/totalActiveSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-  h += '<tr><td style="padding:4px 8px;color:#94a3b8">当周有销量SKU</td><td style="text-align:right;font-weight:600;padding:4px 8px;border-top:1px solid #e2e8f0">'+totalActiveSkus+'</td><td style="text-align:right;padding:4px 8px;border-top:1px solid #e2e8f0">100%</td></tr>';
+  h += '<thead><tr style="background:#e2e8f0"><th style="padding:3px 8px;text-align:left" rowspan="2">销量分层</th><th colspan="2" style="padding:3px 8px;text-align:center">全部产品</th><th colspan="2" style="padding:3px 8px;text-align:center;background:#fef3c7">新品(有销量)</th><th colspan="2" style="padding:3px 8px;text-align:center;background:#fef3c7">新品(列表)</th></tr>';
+  h += '<tr style="background:#e2e8f0"><th style="padding:3px 6px;text-align:right;font-weight:400">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400">占比</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">占比</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">SKU</th><th style="padding:3px 6px;text-align:right;font-weight:400;background:#fef3c7">占比</th></tr></thead>';
+  // 全部产品: 350/175/105; 新品: 175/84/56
+  h += tierTr('≥350 / ≥175', tierAll350, totalActiveSkus, newTier175, newSkusInWeek, newTier175, totalNewSkus);
+  h += tierTr('≥175 / ≥84', tierAll175, totalActiveSkus, newTier84, newSkusInWeek, newTier84, totalNewSkus);
+  h += tierTr('≥105 / ≥56', tierAll105, totalActiveSkus, newTier56, newSkusInWeek, newTier56, totalNewSkus);
+  h += '<tr style="border-top:1px solid #e2e8f0"><td style="padding:3px 8px;color:#94a3b8">当周有销量</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600">'+totalActiveSkus+'</td><td style="text-align:right;padding:3px 8px">100%</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+(totalNewSkus>0?newSkusInWeek:'-')+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+(totalNewSkus>0?'100%':'-')+'</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600;background:#fffbeb">'+(totalNewSkus>0?totalNewSkus:'-')+'</td><td style="text-align:right;padding:3px 8px;background:#fffbeb">'+(totalNewSkus>0?'100%':'-')+'</td>'+
+    '</tr>';
   h += '</table>';
 
-  // 新品分层表格 - 双重维度
-  if(totalNewSkus > 0){
-    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:12px;background:#f8fafc;border-radius:6px;overflow:hidden">';
-    h += '<thead><tr style="background:#fef3c7"><th style="padding:4px 8px;text-align:left">新品 销量分层</th><th style="padding:4px 8px;text-align:right">SKU数</th><th style="padding:4px 8px;text-align:right">占当周有销量新品</th><th style="padding:4px 8px;text-align:right">占新品总数('+totalNewSkus+')</th></tr></thead>';
-    h += '<tr><td style="padding:4px 8px">≥175 ▼▼▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+newTier175+'</td><td style="text-align:right;padding:4px 8px">'+(newSkusInWeek>0?(newTier175/newSkusInWeek*100).toFixed(1)+'%':'0%')+'</td><td style="text-align:right;padding:4px 8px">'+(totalNewSkus>0?(newTier175/totalNewSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-    h += '<tr><td style="padding:4px 8px">≥84 ▼▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+newTier84+'</td><td style="text-align:right;padding:4px 8px">'+(newSkusInWeek>0?(newTier84/newSkusInWeek*100).toFixed(1)+'%':'0%')+'</td><td style="text-align:right;padding:4px 8px">'+(totalNewSkus>0?(newTier84/totalNewSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-    h += '<tr><td style="padding:4px 8px">≥56 ▼</td><td style="text-align:right;font-weight:600;padding:4px 8px">'+newTier56+'</td><td style="text-align:right;padding:4px 8px">'+(newSkusInWeek>0?(newTier56/newSkusInWeek*100).toFixed(1)+'%':'0%')+'</td><td style="text-align:right;padding:4px 8px">'+(totalNewSkus>0?(newTier56/totalNewSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
-    h += '<tr><td style="padding:4px 8px;color:#94a3b8">当周有销量新品</td><td style="text-align:right;font-weight:600;padding:4px 8px;border-top:1px solid #e2e8f0">'+newSkusInWeek+'</td><td style="text-align:right;padding:4px 8px;border-top:1px solid #e2e8f0">100%</td><td style="text-align:right;padding:4px 8px;border-top:1px solid #e2e8f0">'+(totalNewSkus>0?(newSkusInWeek/totalNewSkus*100).toFixed(1)+'%':'0%')+'</td></tr>';
+  // Z-NVTF1 / G-NZTF1 全部产品 对比
+  function shopCompareTr(label, zt, gt, zDen, gDen){
+    return '<tr><td style="padding:3px 8px">'+label+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+zt+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(zt,zDen)+'</td>'+
+      '<td style="text-align:right;padding:3px 8px">'+gt+'</td><td style="text-align:right;padding:3px 8px">'+fmtPct2(gt,gDen)+'</td></tr>';
+  }
+  h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0f9ff;border-radius:6px;overflow:hidden">';
+  h += '<thead><tr style="background:#dbeafe"><th style="padding:3px 8px;text-align:left">全部产品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
+  h += shopCompareTr('≥350', zAll.tiers[350], gAll.tiers[350], zAll.active, gAll.active);
+  h += shopCompareTr('≥175', zAll.tiers[175], gAll.tiers[175], zAll.active, gAll.active);
+  h += shopCompareTr('≥105', zAll.tiers[105], gAll.tiers[105], zAll.active, gAll.active);
+  h += '<tr style="border-top:1px solid #bfdbfe"><td style="padding:3px 8px;color:#64748b">当周有销量</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600">'+zAll.active+'</td><td style="text-align:right;padding:3px 8px">100%</td>'+
+    '<td style="text-align:right;padding:3px 8px;font-weight:600">'+gAll.active+'</td><td style="text-align:right;padding:3px 8px">100%</td></tr>';
+  h += '</table>';
+
+  // Z-NVTF1 / G-NZTF1 新品 对比
+  if(zNew && gNew){
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f0fdf4;border-radius:6px;overflow:hidden">';
+    h += '<thead><tr style="background:#dcfce7"><th style="padding:3px 8px;text-align:left">新品 店铺对比</th><th colspan="2" style="padding:3px 8px;text-align:center">Z-NVTF1</th><th colspan="2" style="padding:3px 8px;text-align:center">G-NZTF1</th></tr></thead>';
+    h += shopCompareTr('≥175', zNew.tiers[175], gNew.tiers[175], zNew.total, gNew.total);
+    h += shopCompareTr('≥84', zNew.tiers[84], gNew.tiers[84], zNew.total, gNew.total);
+    h += shopCompareTr('≥56', zNew.tiers[56], gNew.tiers[56], zNew.total, gNew.total);
+    h += '<tr style="border-top:1px solid #bbf7d0"><td style="padding:3px 8px;color:#64748b">新品SKU数</td>'+
+      '<td style="text-align:right;padding:3px 8px;font-weight:600">'+zNew.total+'</td><td style="text-align:right;padding:3px 8px">100%</td>'+
+      '<td style="text-align:right;padding:3px 8px;font-weight:600">'+gNew.total+'</td><td style="text-align:right;padding:3px 8px">100%</td></tr>';
     h += '</table>';
   }
   h += '</div>';
@@ -1847,25 +1921,34 @@ function generateInsights(){
   highReturn.sort(function(a,b){ return (b.return_rate||0) - (a.return_rate||0); });
   var topHighReturn = highReturn.slice(0, 5);
 
+  function skuRow(p, highlightCol){
+    return '<tr>'+'<td style="padding:2px 6px"><b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8;font-size:10px">('+escHtml(p.shop)+')</span></td>'+
+      '<td style="text-align:right;padding:2px 6px">'+(p.qty||0).toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='return'?'#7c3aed':'#475569')+'">'+(Number(p.return_rate)||0).toFixed(1)+'%</td>'+
+      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='margin'?'#d97706':'#475569')+'">'+(Number(p.margin)||0).toFixed(1)+'%</td>'+
+      '<td style="text-align:right;padding:2px 6px;color:'+(highlightCol==='profit'?'#dc2626':'#475569')+';font-weight:600">'+fmtK(p.profit)+'</td>'+
+      '</tr>';
+  }
+
   if(topLoss.length > 0){
-    h += '<div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px">亏损最严重 TOP5</div>';
-    topLoss.forEach(function(p){
-      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> 利润 <span style="color:#dc2626">'+fmtK(p.profit)+'</span>，利润率 '+(Number(p.margin)||0).toFixed(1)+'%</div>';
-    });
+    h += '<div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;margin-top:8px">亏损最严重 TOP5</div>';
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fff5f5;border-radius:4px;overflow:hidden"><thead><tr style="background:#fee2e2;color:#991b1b"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    topLoss.forEach(function(p){ h += skuRow(p, 'profit'); });
+    h += '</table>';
   }
 
   if(topLowMargin.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#d97706;margin-bottom:4px;margin-top:8px">低利润率（<5%）TOP5</div>';
-    topLowMargin.forEach(function(p){
-      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> GSV '+fmtK(p.gsv)+'，利润率 '+(Number(p.margin)||0).toFixed(1)+'%</div>';
-    });
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#fffbeb;border-radius:4px;overflow:hidden"><thead><tr style="background:#fef3c7;color:#92400e"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    topLowMargin.forEach(function(p){ h += skuRow(p, 'margin'); });
+    h += '</table>';
   }
 
   if(topHighReturn.length > 0){
     h += '<div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:4px;margin-top:8px">高退货率（>10%）</div>';
-    topHighReturn.forEach(function(p){
-      h += '<div style="margin-bottom:2px;font-size:12px;padding:2px 8px">- <b>'+escHtml(p.sku)+'</b> <span style="color:#94a3b8">('+escHtml(p.shop)+')</span> 退货率 <span style="color:#7c3aed">'+(Number(p.return_rate)||0).toFixed(1)+'%</span></div>';
-    });
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:8px;background:#f5f3ff;border-radius:4px;overflow:hidden"><thead><tr style="background:#ede9fe;color:#6b21a8"><th style="padding:3px 6px;text-align:left">SKU</th><th style="padding:3px 6px;text-align:right">销量</th><th style="padding:3px 6px;text-align:right">退货率</th><th style="padding:3px 6px;text-align:right">利润率</th><th style="padding:3px 6px;text-align:right">利润</th></tr></thead>';
+    topHighReturn.forEach(function(p){ h += skuRow(p, 'return'); });
+    h += '</table>';
   }
 
   if(topLoss.length === 0 && topLowMargin.length === 0 && topHighReturn.length === 0){
