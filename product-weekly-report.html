@@ -356,7 +356,7 @@ tr:hover td:first-child{background:#f1f5f9}
 <table id="activityLogTable" class="prod-tbl"><thead><tr>
 <th style="width:150px">SKU</th><th style="width:85px">店铺</th><th style="width:60px">类型</th><th>内容</th><th style="width:90px">时间</th><th style="width:75px">参与人员</th><th style="width:72px">操作</th>
 </tr></thead><tbody></tbody></table>
-</div></div></div>
+</div></div>
 </div>
 
 
@@ -453,7 +453,7 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 
 
-<script src="data.js?v=202606061317"></script>
+<script src="data.js?v=202606061339"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -1650,6 +1650,7 @@ function generateInsights(){
   if(selectedOwners && selectedOwners.size < OWNERS.length){
     products = products.filter(function(p){
       var owner = (SKU_OWNER && SKU_OWNER[p.sku+'|'+p.shop]) || (SKU_OWNER && SKU_OWNER[p.sku]) || '';
+      if(!owner) return true; // unknown owner, show anyway (consistent with productOwnerMatch)
       return selectedOwners.has(owner);
     });
   }
