@@ -453,7 +453,7 @@ tr:hover td:first-child{background:#f1f5f9}
 </div>
 
 
-<script src="data.js?v=202606061339"></script>
+<script src="data.js?v=202606061351"></script>
 <script>
 console.log('Data-driven report loading...');
 
@@ -1024,6 +1024,7 @@ function renderShopGrid(){
         if(!ok.owner){ matched = ok; break; }
         else {
           var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+          if(!own){ matched = ok; break; }
           if(own === ok.owner){ matched = ok; break; }
         }
       }
@@ -1070,6 +1071,7 @@ function renderShopGrid(){
           if(!ok.owner){ matched = ok; break; }
           else {
             var own = SKU_OWNER[p.sku+'|'+p.shop] || SKU_OWNER[p.sku];
+            if(!own){ matched = ok; break; }
             if(own === ok.owner){ matched = ok; break; }
           }
         }
