@@ -526,6 +526,7 @@ var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
+var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
   var ver = '202606061558';
@@ -835,6 +836,7 @@ function tglS(s){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
+  renderTierAnalysis();
 }
 
 function clearShopFilter(){
@@ -846,6 +848,7 @@ function clearShopFilter(){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
+  renderTierAnalysis();
 }
 
 // ========== OWNER TAGS ==========
@@ -885,6 +888,7 @@ function tglO(o){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
+  renderTierAnalysis();
 }
 
 function clearOwnerFilter(){
@@ -898,6 +902,7 @@ function clearOwnerFilter(){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
+  renderTierAnalysis();
 }
 
 // Get active shops considering owner filter
