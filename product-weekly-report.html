@@ -1160,7 +1160,7 @@ function renderShopGrid(){
   var totalAdRatio = totalGsv > 0 ? (totalAdSpend / totalGsv * 100) : 0;
 
   var prevWeek = getPrevWeek(curWeek);
-  var pd = prevWeek ? WEEK_DATA[prevWeek] : null;
+  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
 
   var prevOwnerTotals = {};
   ownerKeys.forEach(function(ok){ prevOwnerTotals[ok.key] = {gsv:0, profit:0, orders:0, ad_spend:0}; });
@@ -1354,6 +1354,12 @@ function renderProdTable(){
   var info = document.getElementById('tableInfo');
   var newNote = document.getElementById('newProdNote');
   if (!prodTable || !info) return;
+  if (!WEEK_DATA) {
+    prodTable.getElementsByTagName('tbody')[0].innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;color:#94a3b8">详细数据加载中，请稍候…</td></tr>';
+    info.textContent = '';
+    newNote.textContent = '';
+    return;
+  }
   var d = WEEK_DATA[curWeek];
   var tbody = prodTable.getElementsByTagName('tbody')[0];
 
@@ -1804,7 +1810,7 @@ function getMetricVal(shopKey, week, metricKey, dataKey){
   if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][week] && typeof SHOP_WEEKLY[shop][week][metricKey] === 'number'){
     return SHOP_WEEKLY[shop][week][metricKey];
   }
-  if(WEEK_DATA[week]){
+  if(WEEK_DATA && WEEK_DATA[week]){
     var wd = WEEK_DATA[week];
     if(wd.shops && wd.shops[shop] && typeof wd.shops[shop][dataKey] === 'number'){
       return wd.shops[shop][dataKey];
@@ -1853,6 +1859,10 @@ function getMetricVal(shopKey, week, metricKey, dataKey){
 function renderProgress(){
   var insightContent = document.getElementById('insightContent');
   if (!insightContent) return;
+  if (!WEEK_DATA) {
+    insightContent.innerHTML = '<p style="color:#94a3b8">详细数据加载中，请稍候…</p>';
+    return;
+  }
   var d = WEEK_DATA[curWeek];
   if(!d || !d.shops){
     insightContent.innerHTML = '<p style="color:#94a3b8">暂无'+curWeek+'数据</p>';
@@ -1870,9 +1880,10 @@ function renderProgress(){
 
 // ========== NARRATIVE INSIGHTS GENERATOR ==========
 function generateInsights(){
+  if (!WEEK_DATA) return '';
   var d = WEEK_DATA[curWeek];
   var prevWeek = getPrevWeek(curWeek);
-  var pd = prevWeek ? WEEK_DATA[prevWeek] : null;
+  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
   var curLabel = WEEK_LABELS[curWeek];
 
   // ── Build product list (exclude 无匹配ID费用) ──
