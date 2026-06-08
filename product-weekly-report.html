@@ -527,6 +527,7 @@ var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
+var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
   var ver = '202606061558';
@@ -3119,7 +3120,7 @@ function renderTierTable(title, products, allTiers, newTiers, newCutoff) {
   function makeRow(label, allVal, allDenom, newSaleVal, newSaleDenom) {
     var allPct = allDenom > 0 ? (allVal / allDenom * 100).toFixed(1) + '%' : '0.0%';
     var newSalePct = newSaleDenom > 0 ? (newSaleVal / newSaleDenom * 100).toFixed(1) + '%' : '0.0%';
-    var cls = label === '高' ? ' tier-high' : (label === '中' ? ' tier-mid' : (label === '低' ? ' tier-low' : ''));
+    var cls = label === 'S级' ? ' tier-high' : (label === 'A级' ? ' tier-mid' : (label === 'B级' ? ' tier-low' : ''));
     return '<tr><td class="tier-label' + cls + '">' + label + '</td>' +
       '<td><span class="tier-val">' + allVal + '</span><span class="tier-pct">' + allPct + '</span></td>' +
       '<td><span class="tier-val">' + newSaleVal + '</span><span class="tier-pct">' + newSalePct + '</span></td></tr>';
@@ -3127,18 +3128,18 @@ function renderTierTable(title, products, allTiers, newTiers, newCutoff) {
 
   var rows = '';
 
-  // 高
-  rows += makeRow('高',
+  // S级
+  rows += makeRow('S级',
     allTierResult[allTiers[0]] || 0, allSalesCnt,
     newSalesTier[newTiers[0]] || 0, newSalesCnt);
 
-  // 中
-  rows += makeRow('中',
+  // A级
+  rows += makeRow('A级',
     allTierResult[allTiers[1]] || 0, allSalesCnt,
     newSalesTier[newTiers[1]] || 0, newSalesCnt);
 
-  // 低
-  rows += makeRow('低',
+  // B级
+  rows += makeRow('B级',
     allTierResult[allTiers[2]] || 0, allSalesCnt,
     newSalesTier[newTiers[2]] || 0, newSalesCnt);
 
@@ -3195,6 +3196,37 @@ function renderTierAnalysis(){
   html += '</div>';
 
   html += '</div>';
+
+  // === 按负责人汇总（男装）：仅在非全选负责人时显示 ===
+  if (selectedOwners.size < OWNERS.length) {
+    var ownerMenProducts = {};
+    OWNERS.forEach(function(o) {
+      if (selectedOwners.has(o)) {
+        var oProducts = menProducts.filter(function(p) {
+          var skuOwner = SKU_OWNER[p.sku + '|' + p.shop] || SKU_OWNER[p.sku];
+          return skuOwner === o;
+        });
+        if (oProducts.length > 0) {
+          ownerMenProducts[o] = oProducts;
+        }
+      }
+    });
+    var ownerKeys = Object.keys(ownerMenProducts);
+    if (ownerKeys.length > 0) {
+      html += '<div class="tier-split" style="margin-top:16px">';
+      var ownerDisplayed = 0;
+      ownerKeys.forEach(function(o) {
+        var oProducts = ownerMenProducts[o];
+        if (ownerDisplayed % 2 === 0 && ownerDisplayed > 0) { html += '</div><div class="tier-split">'; }
+        html += '<div class="tier-half">';
+        html += '<div class="tier-section-title">' + o + ' (' + oProducts.length + ' SKU)</div>';
+        html += renderTierTable('销量分层占比', oProducts, ALL_TIERS, NEW_TIERS, NEW_CUTOFF);
+        html += '</div>';
+        ownerDisplayed++;
+      });
+      html += '</div>';
+    }
+  }
 
   // === 店铺层：根据 selectedShops 展示 ===
   html += '<div class="tier-split" style="margin-top:16px">';
