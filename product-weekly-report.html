@@ -500,14 +500,6 @@ var CORE_DATA = {"WEEKS":["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W1
     return JSON.parse(jsonStr);
   }
 
-  function updateOverlay(msg) {
-    var overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-      var textEl = overlay.querySelector('div:last-child');
-      if (textEl) textEl.textContent = msg;
-    }
-  }
-
   function onDetailLoaded() {
     var t1 = performance.now();
     console.log('[Load] Detail loaded in ' + ((t1 - window.__loadStart) / 1000).toFixed(1) + 's');
@@ -521,7 +513,6 @@ var CORE_DATA = {"WEEKS":["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W1
   window.__loadStart = performance.now();
 
   // Phase 1: Use embedded core data — no network fetch needed
-  updateOverlay('加载核心数据中...');
   window.DATA = CORE_DATA;
   var t1 = performance.now();
   console.log('[Load] Core loaded in ' + ((t1 - window.__loadStart) / 1000).toFixed(1) + 's (' + Object.keys(CORE_DATA).length + ' fields, inline)');
@@ -529,14 +520,32 @@ var CORE_DATA = {"WEEKS":["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W1
   // Run init immediately with core data — page renders right away
   initFromDataJs();
 
-  // Phase 2: Load detail data (WEEK_DATA, TRAFFIC_WEEKLY ~4.4MB) in background
-  updateOverlay('加载详细数据中...');
-  fetch('data-detail.js?v=' + ver, {cache: 'default'})
+  // Hide loading overlay IMMEDIATELY after core data renders
+  // Core data is enough for the page framework; detail is only an enhancement
+  var overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    console.log('[Load] Core rendered, overlay hidden at ' + ((performance.now() - window.__loadStart) / 1000).toFixed(2) + 's');
+  }
+  // Update version display now (detail may fail)
+  var vEl = document.getElementById('buildVer'); if(vEl) vEl.textContent = ver + ' (核心)';
+  var vnEl = document.getElementById('verNum'); if(vnEl) vnEl.textContent = ver + ' (核心)';
+
+  // Phase 2: Load detail data (WEEK_DATA, TRAFFIC_WEEKLY ~4.4MB) as background enhancement
+  // 15s timeout — if network is slow, silently degrade with core-only data
+  var detailController = new AbortController();
+  var detailTimeout = setTimeout(function() {
+    detailController.abort();
+    console.warn('[Load] Detail fetch timed out after 15s, using core-only data');
+  }, 15000);
+
+  fetch('data-detail.js?v=' + ver, {cache: 'default', signal: detailController.signal})
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.text();
     })
     .then(function(code) {
+      clearTimeout(detailTimeout);
       var detailData = parseVarJson(code);
       // Merge detail into DATA
       for (var k in detailData) {
@@ -545,13 +554,14 @@ var CORE_DATA = {"WEEKS":["W1","W2","W3","W4","W5","W6","W7","W8","W9","W10","W1
       onDetailLoaded();
     })
     .catch(function(err) {
+      clearTimeout(detailTimeout);
       // Core already loaded and rendered — just degrade gracefully
-      console.warn('[Load] Detail failed: ' + err.message);
-      updateOverlay('详细数据加载失败，部分功能不可用');
-      setTimeout(function() {
-        var overlay = document.getElementById('loadingOverlay');
-        if (overlay) overlay.style.display = 'none';
-      }, 2000);
+      if (err.name === 'AbortError') {
+        console.warn('[Load] Detail fetch aborted (timeout), using core-only data');
+      } else {
+        console.warn('[Load] Detail fetch failed: ' + err.message);
+      }
+      // No overlay manipulation needed — already hidden in Phase 1
     });
 })();
 
@@ -696,12 +706,14 @@ function initFromDataJs() {
 
     // ── State (init) ──
     curWeek = WEEKS[WEEKS.length - 1];
-    // Find latest week with WEEK_DATA
-    for (var _i = WEEKS.length - 1; _i >= 0; _i--) {
+    // Find latest week with WEEK_DATA (safely skip if detail not loaded yet)
+    if (WEEK_DATA) {
+      for (var _i = WEEKS.length - 1; _i >= 0; _i--) {
         if (WEEK_DATA[WEEKS[_i]]) {
             curWeek = WEEKS[_i];
             break;
         }
+      }
     }
     selectedShops = new Set(SHOPS);
     OWNERS = ["包家豪", "张梦瑶", "毛立新", "江凯伦", "陈敏华"];
