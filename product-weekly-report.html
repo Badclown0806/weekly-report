@@ -3171,7 +3171,7 @@ setTimeout(function(){
 }, 1500);
 
 // ========== 销量分层占比分析 ==========
-var NEW_CUTOFF = '2026-05-01';
+var NEW_CUTOFF = (function(){ var d = new Date(); d.setDate(d.getDate() - 45); return d.toISOString().slice(0,10); })();
 var ALL_TIERS = [350, 175, 105];
 var NEW_TIERS = [175, 84, 56];
 
