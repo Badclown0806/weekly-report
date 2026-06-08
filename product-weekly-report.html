@@ -561,25 +561,11 @@ console.log('Data-driven report loading...');
       onDetailLoaded();
     })
     .catch(function(err) {
-      // If core + detail approach fails, fallback to single data.js
       if (!window.DATA) {
-        console.warn('[Load] Two-phase failed, trying single data.js: ' + err.message);
-        updateOverlay('正在加载数据...');
-        fetch('data.js?v=' + ver, {cache: 'default'})
-          .then(function(r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.text();
-          })
-          .then(function(code) {
-            window.DATA = parseVarJson(code);
-            console.log('[Load] Single data.js loaded');
-            onDetailLoaded();
-          })
-          .catch(function(e) {
-            onFailure('data.js', e.message);
-          });
+        // Core data failed to load — no fallback, show actual error
+        onFailure('data-core.js', err.message);
       } else {
-        // Core loaded but detail failed - show what we can
+        // Core loaded but detail failed — degrade gracefully
         console.warn('[Load] Detail failed after core loaded: ' + err.message);
         updateOverlay('详细数据加载失败，部分功能不可用');
         setTimeout(function() {
