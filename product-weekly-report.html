@@ -727,7 +727,7 @@ function getWeekDisplay(w){
 }
 function getDaysOnSale(sku){
   // 首次可售库存日期(起) → 至今(止)
-  if(!sku || !SKU_FIRST_DATE[sku]) return '-';
+  if(!sku || !SKU_FIRST_DATE || !SKU_FIRST_DATE[sku]) return '-';
   var firstParts = SKU_FIRST_DATE[sku].split('-');
   if(firstParts.length < 3) return '-';
   var firstYear = parseInt(firstParts[0]);
@@ -958,7 +958,7 @@ function renderTargetBoard(){
   var months = getSelectedMonths();
   var persons = getTargetPersons();
   
-  if(persons.length === 0) {
+  if(persons.length === 0 || !PERSON_TARGETS) {
     tgtGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
     return;
   }
@@ -1053,6 +1053,7 @@ function hasShopData(shop){
   // Check SHOP_WEEKLY
   if(SHOP_WEEKLY[shop]) return true;
   // Check WEEK_DATA for any week
+  if(!WEEK_DATA) return false;
   for(var wk in WEEK_DATA){
     var d = WEEK_DATA[wk];
     if(d.shops && d.shops[shop]) return true;
@@ -1064,6 +1065,7 @@ function hasShopData(shop){
 
 // Get product list for a week (fallback: top10Profit if allProducts missing)
 function getWeekProducts(wk){
+  if(!WEEK_DATA) return [];
   var d = WEEK_DATA[wk];
   if(d && d.allProducts && d.allProducts.length > 0) return d.allProducts;
   if(d && d.top10Profit && d.top10Profit.length > 0) return d.top10Profit;
@@ -1073,7 +1075,7 @@ function getWeekProducts(wk){
 function renderShopGrid(){
   var shopGrid = document.getElementById('shopGrid');
   if (!shopGrid) return;
-  var d = WEEK_DATA[curWeek];
+  var d = WEEK_DATA ? WEEK_DATA[curWeek] : null;
   var products = getWeekProducts(curWeek);
 
   if(products.length === 0 && (!d || !d.shops)){
