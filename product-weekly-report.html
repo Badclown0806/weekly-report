@@ -553,6 +553,7 @@ var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
 var DETAIL_DATA = null;
+var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
   var ver = '202606061558';
@@ -3269,13 +3270,8 @@ function renderTierAnalysis(){
   var html = '';
 
   // === 男装 + 女装 + 负责人 合并到同一行 ===
-  var thresholds = '<span class="tier-card-badge" style="margin-left:8px">全产品: ≥' + ALL_TIERS.join('/≥') + ' | 新品: ≥' + NEW_TIERS.join('/≥') + '</span>';
-  html += '<div style="margin-bottom:14px"><div class="tier-section-title">产品分层占比分析' + thresholds + '</div>';
-  html += '<div class="tier-card-grid">';
-  html += renderTierTable('男装', menProducts, ALL_TIERS, NEW_TIERS, NEW_CUTOFF, prevMenProducts);
-  html += renderTierTable('女装', womenProducts, ALL_TIERS, NEW_TIERS, NEW_CUTOFF, prevWomenProducts);
-
-  // 按负责人汇总（男装）：仅在非全选负责人时显示
+  // 先收集负责人卡数量以确定列数
+  var ownerCards = [];
   if (selectedOwners.size < OWNERS.length) {
     var ownerMenProducts = {}, ownerPrevMenProducts = {};
     OWNERS.forEach(function(o) {
@@ -3284,23 +3280,29 @@ function renderTierAnalysis(){
           var skuOwner = SKU_OWNER[p.sku + '|' + p.shop] || SKU_OWNER[p.sku];
           return skuOwner === o;
         });
-        if (oProducts.length > 0) {
-          ownerMenProducts[o] = oProducts;
-        }
+        if (oProducts.length > 0) ownerMenProducts[o] = oProducts;
         var oPrevProducts = prevMenProducts.filter(function(p) {
           var skuOwner = SKU_OWNER[p.sku + '|' + p.shop] || SKU_OWNER[p.sku];
           return skuOwner === o;
         });
-        if (oPrevProducts.length > 0) {
-          ownerPrevMenProducts[o] = oPrevProducts;
-        }
+        if (oPrevProducts.length > 0) ownerPrevMenProducts[o] = oPrevProducts;
       }
     });
-    var ownerKeys = Object.keys(ownerMenProducts);
-    ownerKeys.forEach(function(o) {
-      html += renderTierTable(o, ownerMenProducts[o], ALL_TIERS, NEW_TIERS, NEW_CUTOFF, ownerPrevMenProducts[o] || []);
+    Object.keys(ownerMenProducts).forEach(function(o) {
+      ownerCards.push({ name: o, products: ownerMenProducts[o], prev: ownerPrevMenProducts[o] || [] });
     });
   }
+  var combinedCols = 2 + ownerCards.length;
+  var combinedGridStyle = 'grid-template-columns:repeat(' + combinedCols + ',1fr)';
+
+  var thresholds = '<span class="tier-card-badge" style="margin-left:8px">全产品: ≥' + ALL_TIERS.join('/≥') + ' | 新品: ≥' + NEW_TIERS.join('/≥') + '</span>';
+  html += '<div style="margin-bottom:14px"><div class="tier-section-title">产品分层占比分析' + thresholds + '</div>';
+  html += '<div class="tier-card-grid" style="' + combinedGridStyle + '">';
+  html += renderTierTable('男装', menProducts, ALL_TIERS, NEW_TIERS, NEW_CUTOFF, prevMenProducts);
+  html += renderTierTable('女装', womenProducts, ALL_TIERS, NEW_TIERS, NEW_CUTOFF, prevWomenProducts);
+  ownerCards.forEach(function(oc) {
+    html += renderTierTable(oc.name, oc.products, ALL_TIERS, NEW_TIERS, NEW_CUTOFF, oc.prev);
+  });
   html += '</div></div>';
 
   // === 店铺层：一行 5 个，不足 5 个自适应 ===
@@ -3327,7 +3329,7 @@ function renderTierAnalysis(){
       }
     });
   }
-  var shopGridStyle = shopDisplayed >= 5 ? 'grid-template-columns:repeat(5,1fr)' : 'grid-template-columns:repeat(auto-fill,minmax(200px,1fr))';
+  var shopGridStyle = shopDisplayed >= 3 ? 'grid-template-columns:repeat(3,1fr)' : 'grid-template-columns:repeat(auto-fill,minmax(280px,1fr))';
   html += '<div class="tier-section-title" style="margin-top:16px">按店铺</div>';
   html += '<div class="tier-card-grid" style="' + shopGridStyle + '">';
   html += shopCards;
