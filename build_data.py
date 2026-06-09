@@ -140,6 +140,8 @@ def read_product_list():
 
         if img:
             sku_img[sku] = str(img)
+            if shop:
+                sku_img[f"{sku}|{shop}"] = str(img)
         if owner:
             sku_owner[sku] = str(owner)
             if shop:
@@ -147,12 +149,20 @@ def read_product_list():
                 # 店铺限定映射：优先用于 productOwnerMatch 的 SKU|shop 匹配
                 sku_owner[f"{sku}|{shop}"] = str(owner)
         if create_time:
+            fd_str = None
             if isinstance(create_time, (datetime, date)):
-                sku_first_date[sku] = create_time.strftime("%Y-%m-%d") if isinstance(create_time, datetime) else create_time.isoformat()
+                fd_str = create_time.strftime("%Y-%m-%d") if isinstance(create_time, datetime) else create_time.isoformat()
             elif isinstance(create_time, str):
-                sku_first_date[sku] = create_time[:10]
+                fd_str = create_time[:10]
+            if fd_str:
+                sku_first_date[sku] = fd_str
+                if shop:
+                    sku_first_date[f"{sku}|{shop}"] = fd_str
         if wb_id:
-            sku_wb_id[sku] = str(int(wb_id)) if isinstance(wb_id, float) else str(wb_id)
+            wb_id_str = str(int(wb_id)) if isinstance(wb_id, float) else str(wb_id)
+            sku_wb_id[sku] = wb_id_str
+            if shop:
+                sku_wb_id[f"{sku}|{shop}"] = wb_id_str
 
     # 转换 shop_owner_set → dict
     shop_owners = {s: {o: True for o in owners} for s, owners in shop_owner_set.items()}
