@@ -339,6 +339,8 @@ def read_traffic_weekly(weeks_iso):
 
     # 同时追踪每个SKU首次出现库存的日期（用于上架天数计算）
     sku_first_inventory_date = {}
+    # 追踪每个SKU最新日期的可售数量（E列）
+    sku_latest_inventory = {}  # sku -> {'date': date, 'value': float}
 
     for i, row in enumerate(ws.iter_rows(min_row=2)):
         if i > 200000:
@@ -388,6 +390,9 @@ def read_traffic_weekly(weeks_iso):
                 if inv_val > 0:
                     if sku_str not in sku_first_inventory_date or d_date < sku_first_inventory_date[sku_str]:
                         sku_first_inventory_date[sku_str] = d_date
+                # 追踪最新日期的可售数量
+                if sku_str not in sku_latest_inventory or d_date > sku_latest_inventory[sku_str]['date']:
+                    sku_latest_inventory[sku_str] = {'date': d_date, 'value': inv_val}
             except (ValueError, TypeError):
                 pass
 
@@ -421,7 +426,8 @@ def read_traffic_weekly(weeks_iso):
     total_entries = sum(len(v) for v in traffic_weekly.values())
     print(f"  TRAFFIC_WEEKLY: {len(traffic_weekly)} weeks, {total_entries} total SKU-week entries")
     print(f"  SKU首次库存日期 (运营日数据): {len(sku_first_inventory_date)} 个SKU")
-    return traffic_weekly, sku_first_inventory_date
+    print(f"  SKU最新可售数量 (运营日数据): {len(sku_latest_inventory)} 个SKU")
+    return traffic_weekly, sku_first_inventory_date, sku_latest_inventory
 
 
 # ── 阶段 5: 读取年规进度 → PERSON_TARGETS ─────────────
@@ -577,7 +583,7 @@ def main():
 
     # 阶段 4: 运营日数据
     print("\n[4/5] 读取运营日数据...")
-    traffic_weekly, sku_first_inventory_date = read_traffic_weekly(weeks_iso)
+    traffic_weekly, sku_first_inventory_date, sku_latest_inventory = read_traffic_weekly(weeks_iso)
 
     # 阶段 4.5: 将运营日数据 M列(销量) 合并到 WEEK_DATA.qty
     print("  合并运营日数据 M列(销量) 到 WEEK_DATA...")
@@ -602,6 +608,12 @@ def main():
     print(f"  SKU_FIRST_DATE: {len(sku_first_date)} 个 (仅取自运营日数据首次库存>0日期)")
     print(f"    无库存记录的SKU将不显示上架天数（显示为 '-'）")
 
+    # SKU_INVENTORY: 每个SKU最新日期的可售数量
+    sku_inventory = {}
+    for sku, info in sku_latest_inventory.items():
+        sku_inventory[sku] = int(info['value'])
+    print(f"  SKU_INVENTORY: {len(sku_inventory)} 个SKU (最新日期可售数量)")
+
     # 阶段 5: 年规进度
     print("\n[5/5] 读取年规进度...")
     person_targets = read_person_targets()
@@ -625,6 +637,7 @@ def main():
         "SKU_WB_ID": sku_wb_id,
         "PRODUCT_NOTES": {},
         "NEW_PRODUCT_CREATED": [],
+        "SKU_INVENTORY": sku_inventory,
     }
 
     # ── 写入 data.js ──
