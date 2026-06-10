@@ -135,19 +135,25 @@ def read_product_list():
         owner = vals[13] if len(vals) > 13 else None
         create_time = vals[14] if len(vals) > 14 else None
 
-        if not sku:
+        if not sku or not wb_id:
             continue
 
+        wb_id_str = str(int(wb_id)) if isinstance(wb_id, float) else str(wb_id)
+        
+        # 关键修改：使用 SKU+WB商品ID 组合作为唯一标识
+        sku_wb_key = f"{sku}|{wb_id_str}"
+        if shop:
+            sku_wb_key_shop = f"{sku}|{shop}|{wb_id_str}"
+        
         if img:
-            sku_img[sku] = str(img)
+            sku_img[sku_wb_key] = str(img)
             if shop:
-                sku_img[f"{sku}|{shop}"] = str(img)
+                sku_img[sku_wb_key_shop] = str(img)
         if owner:
-            sku_owner[sku] = str(owner)
+            sku_owner[sku_wb_key] = str(owner)
             if shop:
                 shop_owner_set[str(shop)].add(str(owner))
-                # 店铺限定映射：优先用于 productOwnerMatch 的 SKU|shop 匹配
-                sku_owner[f"{sku}|{shop}"] = str(owner)
+                sku_owner[sku_wb_key_shop] = str(owner)
         if create_time:
             fd_str = None
             if isinstance(create_time, (datetime, date)):
@@ -155,14 +161,14 @@ def read_product_list():
             elif isinstance(create_time, str):
                 fd_str = create_time[:10]
             if fd_str:
-                sku_first_date[sku] = fd_str
+                sku_first_date[sku_wb_key] = fd_str
                 if shop:
-                    sku_first_date[f"{sku}|{shop}"] = fd_str
-        if wb_id:
-            wb_id_str = str(int(wb_id)) if isinstance(wb_id, float) else str(wb_id)
-            sku_wb_id[sku] = wb_id_str
-            if shop:
-                sku_wb_id[f"{sku}|{shop}"] = wb_id_str
+                    sku_first_date[sku_wb_key_shop] = fd_str
+        
+        # 存储 WB商品ID 映射
+        sku_wb_id[sku_wb_key] = wb_id_str
+        if shop:
+            sku_wb_id[sku_wb_key_shop] = wb_id_str
 
     # 转换 shop_owner_set → dict
     shop_owners = {s: {o: True for o in owners} for s, owners in shop_owner_set.items()}
@@ -601,11 +607,38 @@ def main():
                     qty_merged += 1
     print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 M列)")
 
-    # SKU_FIRST_DATE: 仅取运营日数据中首次出现库存>0的日期（即真正的上架日期）
-    sku_first_date = {}
+    # 构建 SKU 到 WB_IDs 的映射
+    sku_to_wb_ids = {}
+    for key in sku_wb_id:
+        parts = key.split('|')
+        if len(parts) >= 2:
+            sku = parts[0]
+            wb_id = sku_wb_id[key]
+            if sku not in sku_to_wb_ids:
+                sku_to_wb_ids[sku] = set()
+            sku_to_wb_ids[sku].add(wb_id)
+    
+    # SKU_FIRST_DATE: 合并两个来源
+    # 1. 产品列表中的创建时间（已有 SKU+WB_ID 组合 key）
+    # 2. 运营日数据首次库存>0的日期（仅 SKU key，作为补充/优先数据）
+    merged_sku_first_date = {}
+    
+    # 先从运营日数据获取首次库存>0日期（优先级更高，因为反映真实上架）
     for sku, d in sku_first_inventory_date.items():
-        sku_first_date[sku] = d.strftime("%Y-%m-%d") if isinstance(d, date) else str(d)[:10]
-    print(f"  SKU_FIRST_DATE: {len(sku_first_date)} 个 (仅取自运营日数据首次库存>0日期)")
+        date_str = d.strftime("%Y-%m-%d") if isinstance(d, date) else str(d)[:10]
+        # 仅 SKU 级别 key
+        merged_sku_first_date[sku] = date_str
+        # 同时为每个 WB_ID 变体设置相同日期（因为运营日数据没有 WB_ID 区分）
+        if sku in sku_to_wb_ids:
+            for wb_id in sku_to_wb_ids[sku]:
+                merged_sku_first_date[f"{sku}|{wb_id}"] = date_str
+    
+    # 再从产品列表补充（仅补充运营日数据中没有的）
+    for key, date_str in sku_first_date.items():
+        if key not in merged_sku_first_date:
+            merged_sku_first_date[key] = date_str
+    
+    print(f"  SKU_FIRST_DATE: {len(merged_sku_first_date)} 个 (合并产品列表+运营日数据)")
     print(f"    无库存记录的SKU将不显示上架天数（显示为 '-'）")
 
     # SKU_INVENTORY: 每个SKU最新日期的可售数量
@@ -631,7 +664,7 @@ def main():
         "TRAFFIC_WEEKLY": traffic_weekly,
         "PERSON_TARGETS": person_targets,
         "SKU_IMG": sku_img,
-        "SKU_FIRST_DATE": sku_first_date,
+        "SKU_FIRST_DATE": merged_sku_first_date,
         "SKU_OWNER": sku_owner,
         "SHOP_OWNERS": shop_owners,
         "SKU_WB_ID": sku_wb_id,
