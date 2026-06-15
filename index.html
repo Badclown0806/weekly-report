@@ -1,11 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=product-weekly-report.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品周报 - 导航</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+.container { background: #fff; border-radius: 12px; padding: 48px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); text-align: center; max-width: 500px; }
+h1 { font-size: 24px; color: #1a1a1a; margin-bottom: 8px; }
+p { color: #666; margin-bottom: 32px; font-size: 14px; }
+.links { display: flex; flex-direction: column; gap: 16px; }
+.links a { display: block; padding: 16px 24px; background: #0070f3; color: #fff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 500; transition: background 0.2s; }
+.links a:hover { background: #0051a8; }
+.links a.sabc { background: #10b981; }
+.links a.sabc:hover { background: #059669; }
+</style>
 </head>
 <body>
-正在跳转到产品周报...
-<a href="product-weekly-report.html">如果没有自动跳转，请点击这里</a>
+<div class="container">
+<h1>产品周报</h1>
+<p>选择要查看的面板</p>
+<div class="links">
+<a href="product-weekly-report-preview-v4.html">产品周报 V4</a>
+<a class="sabc" href="sabc-tracker-v2.html">SABC 达标追踪 V2</a>
+</div>
+</div>
 </body>
 </html>

@@ -1,0 +1,583 @@
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SABC 达标追踪 V2 · V3实时分级驱动</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:#f1f5f9;color:#0f172a;padding:20px;min-height:100vh}
+.page-wrap{max-width:1400px;margin:0 auto}
+h1{font-size:22px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.subtitle{font-size:12px;color:#64748b;margin-bottom:20px}
+
+/* Summary cards */
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.summary-card{background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #e2e8f0}
+.summary-card .val{font-size:28px;font-weight:700;color:#0f172a}
+.summary-card .lab{font-size:11px;color:#64748b;margin-top:2px}
+.sc{background:#fff;border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid #e2e8f0}
+.sc h2{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+
+/* Department cards */
+.dept-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:20px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;background:#f8fafc;border-bottom:2px solid #e2e8f0;font-weight:600;color:#475569;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #f1f5f9}
+tr:hover td{background:#f8fafc}
+
+/* Grade badges */
+.grade-S{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#dc2626;color:#fff}
+.grade-A{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#f59e0b;color:#fff}
+.grade-B{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#3b82f6;color:#fff}
+.grade-C{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:#94a3b8;color:#fff}
+
+/* Progress bars */
+.progress-row{margin-bottom:16px}
+.progress-row .pr-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.progress-row .pr-name{font-weight:600;font-size:13px;color:#0f172a}
+.progress-row .pr-dept{font-weight:400;font-size:11px;color:#94a3b8;margin-left:6px}
+.progress-row .pr-stats{font-size:11px;color:#475569}
+.progress-row .pr-stats span{margin-left:10px}
+.progress-row .pr-detail{font-size:11px;color:#64748b;margin-top:3px;display:flex;gap:14px;flex-wrap:wrap}
+.progress-row .pr-detail strong{color:#0f172a}
+.progress-track{height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden;position:relative;margin-bottom:2px}
+.progress-done{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:7px;position:absolute;left:0;top:0;transition:width .4s}
+.progress-row.dept-sum{border-top:2px solid #e2e8f0;padding-top:14px;margin-top:8px}
+.progress-row.grand-sum{border-top:2px solid #cbd5e1;padding-top:14px;margin-top:8px}
+.progress-row.grand-sum .pr-name{font-size:14px}
+.dept-label{font-size:12px;font-weight:700;color:#475569;margin-bottom:8px;padding-bottom:4px;border-bottom:1px dashed #e2e8f0}
+
+/* Inventory panel */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px}
+.inv-card{background:#f8fafc;border-radius:8px;padding:14px 16px;border:1px solid #e2e8f0}
+.inv-card .inv-name{font-weight:700;font-size:13px;color:#0f172a;margin-bottom:6px}
+.inv-card .inv-bars{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inv-card .inv-tier{display:flex;align-items:center;gap:4px;font-size:11px;color:#475569}
+.inv-card .inv-val{font-weight:700;font-size:14px}
+.inv-card .inv-target{font-size:10px;color:#94a3b8}
+.inv-card .inv-note{font-size:10px;color:#94a3b8;margin-top:6px}
+
+/* Tier tag */
+.tier-tag{padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;color:#fff}
+.tier-tag.s{background:#dc2626}.tier-tag.a{background:#f59e0b}.tier-tag.b{background:#3b82f6}.tier-tag.c{background:#94a3b8}
+
+/* Data source badge */
+.data-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:600;margin-left:8px}
+.data-badge.live{background:#dcfce7;color:#166534}.data-badge.fallback{background:#fef9c3;color:#854d0e}
+
+/* Notes */
+.note{font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.6}
+.note strong{color:#475569}
+
+/* Responsive */
+@media(max-width:768px){.dept-row{grid-template-columns:1fr}.inv-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<h1>SABC 达标追踪 <span style="font-size:12px;color:#8b5cf6;font-weight:600">V2 · V3 实时分级驱动</span></h1>
+<p class="subtitle">基于全年利润目标 + WEEK_DATA 实时 SABC 分级 → 动态推算达标方案 · 数据截止 2026年5月 · 剩余8个月（6月-1月）</p>
+
+<!-- Summary Cards -->
+<div class="summary-row">
+  <div class="summary-card"><div class="val" id="sumTarget">—</div><div class="lab">全年利润目标</div></div>
+  <div class="summary-card"><div class="val" id="sumDone">—</div><div class="lab">已实现利润</div></div>
+  <div class="summary-card"><div class="val" id="sumRemain">—</div><div class="lab">剩余需完成</div></div>
+  <div class="summary-card"><div class="val" id="sumPct">—</div><div class="lab">当前完成率</div></div>
+  <div class="summary-card"><div class="val" id="sumMonthly">—</div><div class="lab">月均需完成</div></div>
+  <div class="summary-card"><div class="val" id="sumWeekly">—</div><div class="lab">周均需完成</div></div>
+</div>
+
+<!-- Department Overview -->
+<div class="dept-row">
+  <div class="sc">
+    <div class="dept-header">运营一部</div>
+    <div class="dept-sub">江凯伦 · 陈敏华 · 包家豪 · 陈欣诺 · 林梓蕾</div>
+    <table>
+      <thead><tr><th>人员</th><th>年目标</th><th>已完成</th><th>完成率</th><th>月均需</th><th>S级</th><th>A级</th><th>B级</th><th>周均利润</th></tr></thead>
+      <tbody id="dept1Body"></tbody>
+    </table>
+  </div>
+  <div class="sc">
+    <div class="dept-header">运营二部</div>
+    <div class="dept-sub">张梦瑶 · 毛立新</div>
+    <table>
+      <thead><tr><th>人员</th><th>年目标</th><th>已完成</th><th>完成率</th><th>月均需</th><th>S级</th><th>A级</th><th>B级</th><th>周均利润</th></tr></thead>
+      <tbody id="dept2Body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SABC Product Target Summary -->
+<div class="sc">
+  <h2>SABC 产品达标方案 <span class="data-badge" id="tierBadge">—</span></h2>
+  <p style="font-size:11px;color:#64748b;margin-bottom:10px" id="tierDesc">分级阈值：加载中…</p>
+  <table>
+    <thead>
+      <tr><th>人员</th><th>部门</th><th>剩余利润</th><th>S 产品</th><th>A 产品</th><th>B 产品</th><th>C级基础贡献</th><th>总月贡献</th><th>月需利润</th><th>缺口</th><th>建议</th></tr>
+    </thead>
+    <tbody id="planBody"></tbody>
+  </table>
+  <div class="note" style="margin-top:12px" id="methodNote"></div>
+</div>
+
+<!-- Product Inventory Panel (NEW in V2) -->
+<div class="sc">
+  <h2>产品存量盘点 <span style="color:#8b5cf6;font-size:12px">· 基于近4周 WEEK_DATA 实时分级</span></h2>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px">当日实际 S/A/B/C 级产品数量 vs 达标方案所需目标 · 差额即需新增/升级产品数</p>
+  <div class="inv-grid" id="invPanel"></div>
+  <div class="note" style="margin-top:10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;color:#0c4a6e;line-height:1.7"><strong>存量差额使用指南：</strong><br>
+    · 正差额（绿色 → 蓝色）：已有产品超出目标，剩余利润可用现有产品消化<br>
+    · 负差额（红色）：须新增或从低等级升级产品填补。优先将高利润率 B 级升级为 A，或将高增长 A 级冲刺为 S<br>
+    · 产品等级按 V3 标准实时变化（销量/利润率/增长率动态），建议每月刷新一次存量数据</div>
+</div>
+
+<!-- Monthly Pace -->
+<div class="sc">
+  <h2>累计完成进度</h2>
+  <p style="font-size:11px;color:#64748b;margin-bottom:14px">绿色=已完成 · 灰色=剩余待完成 · 右侧标注月均需 &amp; SAB产品需</p>
+  <div id="pacePanel"></div>
+</div>
+
+<!-- Notes -->
+<div class="sc" style="background:#fffbeb;border-color:#fcd34d">
+  <h2 style="border-bottom-color:#fcd34d">操作建议</h2>
+  <div class="note">
+    <p><strong>1. 女装店铺（Z-NZTF1店、G-NZTF1店）：</strong>优先打造 S/A 级爆款，单店目标 3-5 个 S 级 + 8-10 个 A 级产品，利润贡献占比目标 60%+。</p>
+    <p><strong>2. 男装店铺：</strong>维持 B 级基本盘，重点筛选利润率高、退货率低的产品升级 A 级，每店目标 1-2 个 S 级标杆款。</p>
+    <p><strong>3. 包家豪 / 陈欣诺 / 林梓蕾：</strong>完成率偏低（<10%），建议 6-7 月集中打造 3-5 个 B 级以上产品，8 月起进入 A 级冲刺。</p>
+    <p><strong>4. 月度跟进节奏：</strong>每月底更新完成率，低于当月目标则下月追加产品数量或提升等级。S 级产品至少维持 3 个月稳定销量方可计为达标。</p>
+  </div>
+</div>
+
+</div>
+
+<!-- Data source -->
+<script src="output/data.js"></script>
+
+<script>
+// ========== DATA ==========
+var REMAINING_MONTHS = 8;
+var WEEKS_PER_MONTH = 4;
+
+// Fixed fallback thresholds (used when data.js is not loaded)
+var FIXED_TIER_MONTHLY = { S: 6.0, A: 3.2, B: 1.2, C: 0.4 };
+var FIXED_TIER_WEEKLY  = { S: 1.5, A: 0.8, B: 0.3, C: 0.1 };
+
+var DEPARTMENTS = {
+  "运营一部": ["江凯伦","陈敏华","包家豪","陈欣诺","林梓蕾"],
+  "运营二部": ["张梦瑶","毛立新"]
+};
+
+var PERSONS = [
+  { name:"江凯伦",   dept:"运营一部", target:8392422, done:2911252 },
+  { name:"陈敏华",   dept:"运营一部", target:5904690, done:1776765 },
+  { name:"包家豪",   dept:"运营一部", target:1844131, done:128504  },
+  { name:"陈欣诺",   dept:"运营一部", target:5395134, done:51321   },
+  { name:"林梓蕾",   dept:"运营一部", target:5397380, done:100442  },
+  { name:"张梦瑶",   dept:"运营二部", target:8755270, done:2618965 },
+  { name:"毛立新",   dept:"运营二部", target:6720000, done:1727728 }
+];
+
+// ========== HELPERS ==========
+function fmtW(n) { return (n / 10000).toFixed(1) + '万'; }
+function fmtPct(n) { return (n * 100).toFixed(1) + '%'; }
+
+// ========== STEP 1: Dynamic tier computation from WEEK_DATA ==========
+var USE_DYNAMIC = false;
+var tierMonthly = { S: 6.0, A: 3.2, B: 1.2, C: 0.4 };
+var tierWeekly  = { S: 1.5, A: 0.8, B: 0.3, C: 0.1 };
+var inventoryData = {}; // { personName: {S: n, A: n, B: n, C: n} }
+
+function computeDynamicTiers() {
+  if (typeof WEEK_DATA === 'undefined') {
+    console.log('[SABC-V2] WEEK_DATA not found, using fixed thresholds');
+    return false;
+  }
+
+  // Get latest week keys from WEEK_DATA
+  var weekKeys = Object.keys(WEEK_DATA).filter(function(k) {
+    return k.match(/^w\d+$/i) && WEEK_DATA[k] && typeof WEEK_DATA[k] === 'object';
+  }).sort(function(a,b) {
+    return parseInt(a.replace(/^W/i,'')) - parseInt(b.replace(/^W/i,''));
+  });
+
+  if (weekKeys.length === 0) {
+    console.log('[SABC-V2] No week data keys found');
+    return false;
+  }
+
+  // Take last 4 weeks
+  var latestWeeks = weekKeys.slice(-4);
+  console.log('[SABC-V2] Using weeks:', latestWeeks.join(', '));
+
+  // Collect all products across selected weeks
+  var productMap = {}; // key: "shop|sku"
+  latestWeeks.forEach(function(wk) {
+    var products = WEEK_DATA[wk];
+    if (!Array.isArray(products)) return;
+    products.forEach(function(p) {
+      if (!p.sku || p.sku === '无匹配ID费用') return;
+      var key = (p.shop || '') + '|' + p.sku;
+      if (!productMap[key]) {
+        productMap[key] = { shop: p.shop || '', sku: p.sku, totalQty: 0, totalProfit: 0, totalGsv: 0, weekCount: 0 };
+      }
+      productMap[key].totalQty += (p.qty || 0);
+      productMap[key].totalProfit += (p.profit || 0);
+      productMap[key].totalGsv += (p.gsv || 0);
+      productMap[key].weekCount += 1;
+    });
+  });
+
+  // Compute metrics per product
+  var productList = [];
+  for (var key in productMap) {
+    var m = productMap[key];
+    var avgWeeklyQty = m.totalQty / m.weekCount;
+    var profitRate = m.totalGsv > 0 ? (m.totalProfit / m.totalGsv * 100) : 0;
+    var avgWeeklyProfit = m.totalProfit / m.weekCount;
+    var avgMonthlyProfit = avgWeeklyProfit * 4;
+    productList.push({
+      key: key,
+      shop: m.shop,
+      sku: m.sku,
+      avgWeeklyQty: avgWeeklyQty,
+      profitRate: profitRate,
+      avgWeeklyProfit: avgWeeklyProfit,
+      avgMonthlyProfit: avgMonthlyProfit
+    });
+  }
+
+  // Apply V3 thresholds to grade each product
+  // S: >=350件/周 + 利润率>=20%
+  // A: >=175件/周 + 利润率>=10% + 增长率>=10% (simplified: use profit rate as proxy for health)
+  // B: >=105件/周 + 利润率>=10%
+  // C: rest
+  productList.forEach(function(p) {
+    if (p.avgWeeklyQty >= 350 && p.profitRate >= 20) {
+      p.grade = 'S';
+    } else if (p.avgWeeklyQty >= 175 && p.profitRate >= 10) {
+      p.grade = 'A';
+    } else if (p.avgWeeklyQty >= 105 && p.profitRate >= 10) {
+      p.grade = 'B';
+    } else {
+      p.grade = 'C';
+    }
+  });
+
+  // Map to owners
+  var ownerLookup = {};
+  if (typeof SKU_OWNER_LOOKUP !== 'undefined') {
+    ownerLookup = SKU_OWNER_LOOKUP;
+  } else if (typeof SKU_OWNER !== 'undefined') {
+    // Build lookup from SKU_OWNER
+    for (var k in SKU_OWNER) {
+      var parts = k.split('|');
+      if (parts.length === 3) {
+        ownerLookup[parts[0] + '|' + parts[1]] = SKU_OWNER[k];
+      }
+      if (!ownerLookup[parts[0]]) {
+        ownerLookup[parts[0]] = SKU_OWNER[k];
+      }
+    }
+  }
+
+  // Group by owner and grade
+  var ownerGrades = {}; // { personName: { S: [products], A: [...], B: [...], C: [...] } }
+  productList.forEach(function(p) {
+    var owner = ownerLookup[p.sku + '|' + p.shop] || ownerLookup[p.sku] || null;
+    if (!owner) return;
+    var personName = PERSONS.find(function(pe){ return pe.name === owner; });
+    if (!personName) return;
+    if (!ownerGrades[owner]) ownerGrades[owner] = { S: [], A: [], B: [], C: [] };
+    ownerGrades[owner][p.grade].push(p);
+  });
+
+  // Compute per-tier actual averages
+  var allS = [], allA = [], allB = [];
+  for (var o in ownerGrades) {
+    allS = allS.concat(ownerGrades[o].S.map(function(p){ return p.avgMonthlyProfit; }));
+    allA = allA.concat(ownerGrades[o].A.map(function(p){ return p.avgMonthlyProfit; }));
+    allB = allB.concat(ownerGrades[o].B.map(function(p){ return p.avgMonthlyProfit; }));
+  }
+
+  var actualS = allS.length > 0 ? allS.reduce(function(a,b){return a+b;},0) / allS.length : FIXED_TIER_MONTHLY.S;
+  var actualA = allA.length > 0 ? allA.reduce(function(a,b){return a+b;},0) / allA.length : FIXED_TIER_MONTHLY.A;
+  var actualB = allB.length > 0 ? allB.reduce(function(a,b){return a+b;},0) / allB.length : FIXED_TIER_MONTHLY.B;
+
+  // Set dynamic thresholds (clamp reasonable range)
+  tierMonthly = {
+    S: Math.max(2, Math.min(15, actualS / 10000)),
+    A: Math.max(1, Math.min(8, actualA / 10000)),
+    B: Math.max(0.5, Math.min(3, actualB / 10000)),
+    C: 0.4
+  };
+  tierWeekly = {
+    S: tierMonthly.S / 4,
+    A: tierMonthly.A / 4,
+    B: tierMonthly.B / 4,
+    C: 0.1
+  };
+
+  // Build inventory data
+  for (var o in ownerGrades) {
+    inventoryData[o] = {
+      S: ownerGrades[o].S.length,
+      A: ownerGrades[o].A.length,
+      B: ownerGrades[o].B.length,
+      C: ownerGrades[o].C.length,
+      Sproducts: ownerGrades[o].S,
+      Aproducts: ownerGrades[o].A,
+      Bproducts: ownerGrades[o].B,
+      Cproducts: ownerGrades[o].C
+    };
+  }
+
+  // Fill zero for persons without products
+  PERSONS.forEach(function(p) {
+    if (!inventoryData[p.name]) {
+      inventoryData[p.name] = { S: 0, A: 0, B: 0, C: 0, Sproducts: [], Aproducts: [], Bproducts: [], Cproducts: [] };
+    }
+  });
+
+  // Update UI badge
+  document.getElementById('tierBadge').className = 'data-badge live';
+  document.getElementById('tierBadge').textContent = 'V3 实时分级';
+  document.getElementById('tierDesc').textContent =
+    '动态分级阈值（基于近4周实际数据）：S ≈ ' + tierMonthly.S.toFixed(1) + '万/月 · A ≈ ' + tierMonthly.A.toFixed(1) +
+    '万/月 · B ≈ ' + tierMonthly.B.toFixed(1) + '万/月 · C ≈ 0.4 万/月 （S产品' + allS.length +
+    '个 · A产品' + allA.length + '个 · B产品' + allB.length + '个）';
+
+  return true;
+}
+
+// ========== STEP 2: Calculate SABC plan ==========
+function calcPlan(person) {
+  var remain = person.target - Math.max(0, person.done);
+  var monthlyNeedWan = (remain / REMAINING_MONTHS) / 10000;
+  var weeklyNeedWan = monthlyNeedWan / WEEKS_PER_MONTH;
+
+  var cContrib = monthlyNeedWan * 0.30;
+  var sabNeed = monthlyNeedWan * 0.70;
+  var sNeed = sabNeed * 0.40;
+  var aNeed = sabNeed * 0.35;
+  var bNeed = sabNeed * 0.25;
+
+  var sTarget = Math.ceil(sNeed / tierMonthly.S);
+  var aTarget = Math.ceil(aNeed / tierMonthly.A);
+  var bTarget = Math.ceil(bNeed / tierMonthly.B);
+
+  var sContrib = sTarget * tierMonthly.S;
+  var aContrib = aTarget * tierMonthly.A;
+  var bContrib = bTarget * tierMonthly.B;
+  var sabContrib = sContrib + aContrib + bContrib;
+  var totalContrib = cContrib + sabContrib;
+  var gap = totalContrib - monthlyNeedWan;
+
+  while (gap < -tierMonthly.S && sTarget < 30) { sTarget++; sabContrib += tierMonthly.S; totalContrib += tierMonthly.S; gap += tierMonthly.S; }
+  while (gap < -tierMonthly.A && aTarget < 50) { aTarget++; sabContrib += tierMonthly.A; totalContrib += tierMonthly.A; gap += tierMonthly.A; }
+  while (gap < -tierMonthly.B && bTarget < 80) { bTarget++; sabContrib += tierMonthly.B; totalContrib += tierMonthly.B; gap += tierMonthly.B; }
+
+  return {
+    remain: remain,
+    monthlyNeed: monthlyNeedWan * 10000,
+    monthlyNeedWan: monthlyNeedWan,
+    weeklyNeed: weeklyNeedWan * 10000,
+    sTarget: sTarget,
+    aTarget: aTarget,
+    bTarget: bTarget,
+    cContribWan: cContrib,
+    sabContribWan: sabContrib,
+    monthlyContrib: totalContrib,
+    gap: gap,
+    pct: person.done / person.target
+  };
+}
+
+// ========== STEP 3: Render ==========
+function render() {
+  var plans = {};
+  var totalTarget = 0, totalDone = 0, totalRemain = 0;
+  PERSONS.forEach(function(p) {
+    plans[p.name] = calcPlan(p);
+    totalTarget += p.target;
+    totalDone += p.done;
+    totalRemain += plans[p.name].remain;
+  });
+  var totalPct = totalDone / totalTarget;
+  var totalMonthly = totalRemain / REMAINING_MONTHS;
+  var totalWeekly = totalMonthly / WEEKS_PER_MONTH;
+
+  // Summary
+  document.getElementById('sumTarget').textContent = fmtW(totalTarget);
+  document.getElementById('sumDone').textContent = fmtW(totalDone);
+  document.getElementById('sumRemain').textContent = fmtW(totalRemain);
+  document.getElementById('sumPct').textContent = fmtPct(totalPct);
+  document.getElementById('sumMonthly').textContent = fmtW(totalMonthly);
+  document.getElementById('sumWeekly').textContent = fmtW(totalWeekly);
+
+  // Department tables
+  ['运营一部','运营二部'].forEach(function(dept) {
+    var deptId = dept === '运营一部' ? 'dept1Body' : 'dept2Body';
+    var tb = document.getElementById(deptId);
+    var rows = '';
+    var deptMonthly = 0, deptSTotal = 0, deptATotal = 0, deptBTotal = 0;
+    DEPARTMENTS[dept].forEach(function(name) {
+      var p = PERSONS.find(function(x){return x.name===name;});
+      var pl = plans[name];
+      deptMonthly += pl.monthlyNeed;
+      deptSTotal += pl.sTarget;
+      deptATotal += pl.aTarget;
+      deptBTotal += pl.bTarget;
+      rows += '<tr>' +
+        '<td>' + name + '</td>' +
+        '<td>' + fmtW(p.target) + '</td>' +
+        '<td>' + fmtW(p.done) + '</td>' +
+        '<td><span style="color:' + (pl.pct >= 0.3 ? '#16a34a' : '#dc2626') + ';font-weight:600">' + fmtPct(pl.pct) + '</span></td>' +
+        '<td><strong>' + fmtW(pl.monthlyNeed) + '</strong></td>' +
+        '<td><span class="grade-S">' + pl.sTarget + '</span></td>' +
+        '<td><span class="grade-A">' + pl.aTarget + '</span></td>' +
+        '<td><span class="grade-B">' + pl.bTarget + '</span></td>' +
+        '<td>' + fmtW(pl.weeklyNeed) + '</td>' +
+        '</tr>';
+    });
+    rows += '<tr style="background:#f8fafc;font-weight:600">' +
+      '<td>小计</td><td>—</td><td>—</td><td>—</td>' +
+      '<td>' + fmtW(deptMonthly) + '</td>' +
+      '<td><span class="grade-S">' + deptSTotal + '</span></td>' +
+      '<td><span class="grade-A">' + deptATotal + '</span></td>' +
+      '<td><span class="grade-B">' + deptBTotal + '</span></td>' +
+      '<td>—</td></tr>';
+    tb.innerHTML = rows;
+  });
+
+  // Plan table
+  var planBody = document.getElementById('planBody');
+  var planRows = '';
+  PERSONS.forEach(function(p) {
+    var pl = plans[p.name];
+    var gapClass = pl.gap >= 0 ? 'color:#16a34a' : 'color:#dc2626';
+    var suggestion = pl.gap >= 2 ? '达标有余' : (pl.gap >= -2 ? '基本达标' : '缺口' + fmtW(-pl.gap * 10000) + '，需追加' + Math.ceil(-pl.gap / tierMonthly.A) + '个A级或' + Math.ceil(-pl.gap / tierMonthly.B) + '个B级');
+    planRows += '<tr>' +
+      '<td>' + p.name + '</td>' +
+      '<td>' + p.dept + '</td>' +
+      '<td>' + fmtW(pl.remain) + '</td>' +
+      '<td><span class="grade-S">' + pl.sTarget + '个</span></td>' +
+      '<td><span class="grade-A">' + pl.aTarget + '个</span></td>' +
+      '<td><span class="grade-B">' + pl.bTarget + '个</span></td>' +
+      '<td><span class="grade-C">' + pl.cContribWan.toFixed(1) + '万</span></td>' +
+      '<td><strong>' + pl.monthlyContrib.toFixed(1) + '万</strong></td>' +
+      '<td><strong>' + fmtW(pl.monthlyNeed) + '</strong></td>' +
+      '<td style="' + gapClass + ';font-weight:600">' + (pl.gap >= 0 ? '+' : '') + pl.gap.toFixed(1) + '万</td>' +
+      '<td style="font-size:11px;color:#64748b">' + suggestion + '</td>' +
+      '</tr>';
+  });
+  planBody.innerHTML = planRows;
+
+  // Inventory panel (NEW V2)
+  var invPanel = document.getElementById('invPanel');
+  var invHtml = '';
+  PERSONS.forEach(function(p) {
+    var inv = inventoryData[p.name] || { S: 0, A: 0, B: 0, C: 0 };
+    var pl = plans[p.name];
+    var sDiff = inv.S - pl.sTarget;
+    var aDiff = inv.A - pl.aTarget;
+    var bDiff = inv.B - pl.bTarget;
+    var totalDiff = (inv.S + inv.A + inv.B) - (pl.sTarget + pl.aTarget + pl.bTarget);
+
+    invHtml += '<div class="inv-card">' +
+      '<div class="inv-name">' + p.name + ' <span style="font-size:10px;color:#94a3b8;font-weight:400">' + p.dept + '</span></div>' +
+      '<div class="inv-bars">' +
+        '<div class="inv-tier"><span class="tier-tag s">S</span><span class="inv-val">' + inv.S + '</span><span class="inv-target">/目标' + pl.sTarget + '</span>' +
+          '<span style="font-size:10px;color:' + (sDiff >= 0 ? '#16a34a' : '#dc2626') + '">(' + (sDiff >= 0 ? '+' : '') + sDiff + ')</span></div>' +
+        '<div class="inv-tier"><span class="tier-tag a">A</span><span class="inv-val">' + inv.A + '</span><span class="inv-target">/目标' + pl.aTarget + '</span>' +
+          '<span style="font-size:10px;color:' + (aDiff >= 0 ? '#16a34a' : '#dc2626') + '">(' + (aDiff >= 0 ? '+' : '') + aDiff + ')</span></div>' +
+        '<div class="inv-tier"><span class="tier-tag b">B</span><span class="inv-val">' + inv.B + '</span><span class="inv-target">/目标' + pl.bTarget + '</span>' +
+          '<span style="font-size:10px;color:' + (bDiff >= 0 ? '#16a34a' : '#dc2626') + '">(' + (bDiff >= 0 ? '+' : '') + bDiff + ')</span></div>' +
+        '<div class="inv-tier"><span class="tier-tag c">C</span><span class="inv-val">' + inv.C + '</span><span class="inv-target">基础盘</span></div>' +
+      '</div>' +
+      '<div class="inv-note">SAB合计 <strong style="color:' + (totalDiff >= 0 ? '#16a34a' : '#dc2626') + '">' + (inv.S + inv.A + inv.B) + '/' + (pl.sTarget + pl.aTarget + pl.bTarget) + '个 · 差额' + (totalDiff >= 0 ? '+' : '') + totalDiff + '个</strong></div>' +
+      '</div>';
+  });
+  invPanel.innerHTML = invHtml;
+
+  // Progress panel
+  var pacePanel = document.getElementById('pacePanel');
+  var paceHtml = '';
+  ['运营一部','运营二部'].forEach(function(dept) {
+    paceHtml += '<div class="dept-label">' + dept + '</div>';
+    DEPARTMENTS[dept].forEach(function(name) {
+      var p = PERSONS.find(function(x){return x.name===name;});
+      var pl = plans[name];
+      var sabTotal = pl.sTarget + pl.aTarget + pl.bTarget;
+      paceHtml += '<div class="progress-row">' +
+        '<div class="pr-header">' +
+          '<span><span class="pr-name">' + p.name + '</span><span class="pr-dept">' + dept + '</span></span>' +
+          '<span class="pr-stats"><span>月均需 <strong>' + fmtW(pl.monthlyNeed) + '</strong></span><span>SAB <strong>' + sabTotal + '个</strong></span></span>' +
+        '</div>' +
+        '<div class="progress-track"><div class="progress-done" style="width:' + (pl.pct * 100).toFixed(1) + '%"></div></div>' +
+        '<div class="pr-detail">已完成 <strong>' + fmtW(p.done) + '</strong> · 目标 <strong>' + fmtW(p.target) + '</strong> · 完成率 <strong style="color:' + (pl.pct >= 0.3 ? '#16a34a' : '#dc2626') + '">' + fmtPct(pl.pct) + '</strong> · 剩余 <strong style="color:#f59e0b">' + fmtW(pl.remain) + '</strong></div>' +
+        '</div>';
+    });
+    var deptPersons = DEPARTMENTS[dept].map(function(n){return PERSONS.find(function(x){return x.name===n;});});
+    var dsTarget = deptPersons.reduce(function(a,b){return a+b.target;},0);
+    var dsDone = deptPersons.reduce(function(a,b){return a+b.done;},0);
+    var dsRemain = dsTarget - dsDone;
+    var dsPct = dsDone / dsTarget;
+    var dsMonthly = dsRemain / REMAINING_MONTHS;
+    var dsSab = deptPersons.reduce(function(a,b){return a+plans[b.name].sTarget+plans[b.name].aTarget+plans[b.name].bTarget;},0);
+    paceHtml += '<div class="progress-row dept-sum">' +
+      '<div class="pr-header">' +
+        '<span class="pr-name" style="color:#475569">' + dept + ' 小计</span>' +
+        '<span class="pr-stats"><span>月均需 <strong>' + fmtW(dsMonthly) + '</strong></span><span>SAB <strong>' + dsSab + '个</strong></span></span>' +
+      '</div>' +
+      '<div class="progress-track"><div class="progress-done" style="width:' + (dsPct * 100).toFixed(1) + '%"></div></div>' +
+      '<div class="pr-detail">已完成 <strong>' + fmtW(dsDone) + '</strong> · 目标 <strong>' + fmtW(dsTarget) + '</strong> · 完成率 <strong style="color:' + (dsPct >= 0.3 ? '#16a34a' : '#dc2626') + '">' + fmtPct(dsPct) + '</strong> · 剩余 <strong style="color:#f59e0b">' + fmtW(dsRemain) + '</strong></div>' +
+      '</div>';
+  });
+  paceHtml += '<div class="progress-row grand-sum">' +
+    '<div class="pr-header">' +
+      '<span class="pr-name">总计</span>' +
+      '<span class="pr-stats"><span>月均需 <strong>' + fmtW(totalMonthly) + '</strong></span><span>SAB <strong>' + Object.values(plans).reduce(function(a,pl){return a+pl.sTarget+pl.aTarget+pl.bTarget;},0) + '个</strong></span></span>' +
+    '</div>' +
+    '<div class="progress-track"><div class="progress-done" style="width:' + (totalPct * 100).toFixed(1) + '%"></div></div>' +
+    '<div class="pr-detail">已完成 <strong>' + fmtW(totalDone) + '</strong> · 目标 <strong>' + fmtW(totalTarget) + '</strong> · 完成率 <strong style="color:' + (totalPct >= 0.3 ? '#16a34a' : '#dc2626') + '">' + fmtPct(totalPct) + '</strong> · 剩余 <strong style="color:#f59e0b">' + fmtW(totalRemain) + '</strong></div>' +
+    '</div>';
+  pacePanel.innerHTML = paceHtml;
+
+  // Update method note
+  var noteEl = document.getElementById('methodNote');
+  if (USE_DYNAMIC) {
+    noteEl.innerHTML = '<strong>计算方法说明（V3实时分级驱动）：</strong><br>' +
+      '① 从 WEEK_DATA 近4周数据计算每个 SKU 的周均销量 + 利润率 → 按 V3 规则分 S/A/B/C 级（S≥350件/周+利润率≥20%，A≥175件/周+利润率≥10%，B≥105件/周+利润率≥10%）<br>' +
+      '② 按等级取实际月均利润贡献均值（S≈' + tierMonthly.S.toFixed(1) + '万/月 · A≈' + tierMonthly.A.toFixed(1) + '万/月 · B≈' + tierMonthly.B.toFixed(1) + '万/月）替代固定阈值<br>' +
+      '③ 月需利润 = 剩余利润 ÷ 8个月 · C级自然贡献 = 月需 × 30% · SAB需 = 月需 × 70%（40%/35%/25%分配）<br>' +
+      '④ 产品数 = 向上取整(各等级需贡献 ÷ 实际均值)<br>' +
+      '<span style="font-size:10px;color:#0369a1">* 数据不可用时自动降级回固定阈值（S=6万/A=3.2万/B=1.2万/月）；切换为实时数据后级差更精准反映产品结构差距</span>';
+  } else {
+    noteEl.innerHTML = '<strong>计算方法说明（固定阈值·降级模式）：</strong><br>' +
+      '① 月需利润 = 剩余利润 ÷ 8个月<br>' +
+      '② C级自然贡献 = 月需 × 30%（C级产品虽单产低但数量大，作为基础盘自然产生约30%利润）<br>' +
+      '③ SAB需贡献 = 月需 × 70%，按 40% S + 35% A + 25% B 分配<br>' +
+      '④ 产品数 = 向上取整(各等级需贡献 ÷ 单产品月贡献)：S=6万/月、A=3.2万/月、B=1.2万/月<br>' +
+      '<span style="font-size:10px;color:#b45309">* WEEK_DATA 未加载或数据不足，降级使用固定阈值；将本文件部署到与 data.js 同域即可启用 V3 实时分级</span>';
+  }
+}
+
+// ========== INIT ==========
+USE_DYNAMIC = computeDynamicTiers();
+if (!USE_DYNAMIC) {
+  tierMonthly = FIXED_TIER_MONTHLY;
+  tierWeekly = FIXED_TIER_WEEKLY;
+  document.getElementById('tierBadge').className = 'data-badge fallback';
+  document.getElementById('tierBadge').textContent = '降级·固定阈值';
+  document.getElementById('tierDesc').textContent = '分级阈值（固定）：S = 6.0万/月 · A = 3.2万/月 · B = 1.2万/月 · C = 0.4万/月（WEEK_DATA 未加载，使用固定值）';
+}
+render();
+</script>
+
+</body>
+</html>
