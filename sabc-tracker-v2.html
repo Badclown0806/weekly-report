@@ -127,6 +127,10 @@ tr:hover td{background:#f8fafc}
 <!-- Product Inventory Panel (NEW in V2) -->
 <div class="sc">
   <h2>产品存量盘点 <span style="color:#8b5cf6;font-size:12px">· 基于近4周 WEEK_DATA 实时分级</span></h2>
+  <p style="font-size:10px;color:#64748b;margin-bottom:6px;line-height:1.6">
+    <strong>分级公式（自动计算）：</strong>周均销量 = 近4周销量合计 ÷ 出现周数 · 利润率 = 近4周利润合计 ÷ 近4周GSV合计<br>
+    S ≥ 350件/周 + 利润率 ≥ 20% ｜ A ≥ 175件/周 + 利润率 ≥ 10% ｜ B ≥ 105件/周 + 利润率 ≥ 10% ｜ C = 其余（库存=0 自动排除）
+  </p>
   <p style="font-size:11px;color:#64748b;margin-bottom:12px">当日实际 S/A/B/C 级产品数量 vs 达标方案所需目标 · 差额即需新增/升级产品数</p>
   <div class="inv-grid" id="invPanel"></div>
   <div class="note" style="margin-top:10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;color:#0c4a6e;line-height:1.7"><strong>存量差额使用指南：</strong><br>
