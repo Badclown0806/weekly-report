@@ -163,6 +163,7 @@ tr:hover td{background:#f8fafc}
 if (typeof DATA !== 'undefined') {
   var WEEK_DATA = DATA.WEEK_DATA;
   var SKU_OWNER = DATA.SKU_OWNER;
+  var SKU_INVENTORY = DATA.SKU_INVENTORY || {};
 }
 // ========== DATA ==========
 var REMAINING_MONTHS = 8;
@@ -273,6 +274,22 @@ function computeDynamicTiers() {
       p.grade = 'C';
     }
   });
+
+  // Exclude C-grade products with zero inventory
+  var excludedC = 0;
+  productList = productList.filter(function(p) {
+    if (p.grade === 'C') {
+      var inv = SKU_INVENTORY[p.sku];
+      if (inv === 0 || inv === undefined || inv === null) {
+        excludedC++;
+        return false;
+      }
+    }
+    return true;
+  });
+  if (excludedC > 0) {
+    console.log('[SABC-V2] Excluded ' + excludedC + ' C-grade products (inventory=0)');
+  }
 
   // Map to owners
   var ownerLookup = {};

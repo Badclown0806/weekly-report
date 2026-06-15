@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SABC 达标追踪</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #0f172a; padding: 24px; }
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+h3 { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 10px; }
+.bar-wrap { height: 46px; background: #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; position: relative; }
+.bar-done { height: 100%; background: #3b82f6; border-radius: 8px 0 0 8px; display: flex; align-items: center; padding-left: 10px; color: #fff; font-size: 11px; font-weight: 600; min-width: 0; transition: width 0.3s; }
+.bar-done.low { border-radius: 8px; min-width: 38px; }
+.bar-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+.bar-person { font-weight: 600; color: #0f172a; }
+.bar-numbers { color: #64748b; }
+.bar-numbers .done { color: #3b82f6; font-weight: 600; }
+.bar-numbers .remain { color: #94a3b8; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { padding: 6px 8px; text-align: center; border-bottom: 2px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 11px; }
+td { padding: 5px 8px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+td:first-child, th:first-child { text-align: left; }
+.grade-badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; color: #fff; }
+.S-badge { background: #dc2626; }
+.A-badge { background: #f59e0b; }
+.Bplus-badge { background: #3b82f6; }
+.B-badge { background: #64748b; }
+.C-badge { background: #94a3b8; }
+.target-up { color: #16a34a; font-weight: 700; }
+.target-eq { color: #94a3b8; }
+.steps { display: flex; gap: 10px; }
+.step-card { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; font-size: 11px; }
+.step-card.done { border-color: #16a34a; background: #f0fdf4; }
+.step-card.done .step-num { background: #16a34a; }
+.step-num { display: inline-block; width: 22px; height: 22px; border-radius: 11px; background: #94a3b8; color: #fff; font-size: 11px; font-weight: 700; line-height: 22px; margin-bottom: 6px; }
+.step-title { font-weight: 600; margin-bottom: 4px; color: #0f172a; }
+.step-count { color: #64748b; }
+.batches { display: flex; gap: 10px; }
+.batch-card { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; font-size: 11px; }
+.batch-label { font-weight: 700; color: #3b5cf6; font-size: 13px; margin-bottom: 4px; }
+.batch-detail { color: #64748b; line-height: 1.6; }
+.kpi-row { display: flex; gap: 16px; font-size: 12px; }
+.kpi-item { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
+.kpi-value { font-size: 18px; font-weight: 700; color: #0f172a; }
+.kpi-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+.section-divider { border-top: 1px solid #e2e8f0; margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<div style="max-width: 900px; margin: 0 auto;">
+
+<div class="card">
+  <h2>SABC 达标追踪</h2>
+
+  <!-- 全年目标概览 — 全员 -->
+  <div id="overview"></div>
+
+  <!-- 各等级对比 — 仅毛立新/张梦瑶 -->
+  <h3 style="margin-top:20px">各等级 当前 vs 12月目标</h3>
+  <div id="gradeTable"></div>
+
+  <div class="section-divider"></div>
+
+  <!-- 存量升级路径 — 仅毛立新/张梦瑶 -->
+  <h3>存量升级路径</h3>
+  <div class="steps" id="upgradeSteps"></div>
+
+  <div class="section-divider"></div>
+
+  <!-- 新品批次 -->
+  <h3>新品批次排期</h3>
+  <div class="batches" id="newBatches"></div>
+
+  <div class="section-divider"></div>
+
+  <!-- 关键指标 — 全员汇总 -->
+  <h3>关键指标</h3>
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div style="margin-top:16px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:11px;color:#92400e">
+    手动等级弹性：每标 1 个手动 S，新品 S 需求 -1，存量周利润 +13K；每标 2 个手动 A，新品 A 需求 -2，存量周利润 +13K
+  </div>
+</div>
+
+</div>
+
+<script>
+(function() {
+
+var plan = {
+  persons: {
+    "江凯伦":   { target: 8392422, done: 2911252, pct: 34.7 },
+    "陈敏华":   { target: 5904690, done: 1776765, pct: 30.1 },
+    "张梦瑶":   { target: 8755270, done: 2618965, pct: 29.9 },
+    "毛立新":   { target: 6720000, done: 1727730, pct: 25.7 },
+    "包家豪":   { target: 1844131, done: 128504,  pct: 7.0 },
+    "林梓蕾":   { target: 5397380, done: 100442,  pct: 1.9 },
+    "陈欣诺":   { target: 5395134, done: 51321,   pct: 1.0 }
+  },
+  personOrder: ["江凯伦","陈敏华","张梦瑶","毛立新","包家豪","林梓蕾","陈欣诺"],
+  totalRemaining: 33094050,
+  current: {
+    "毛立新": { S:0, A:0, "B+":4, B:9, C:155 },
+    "张梦瑶": { S:1, A:1, "B+":3, B:10, C:93 }
+  },
+  target: {
+    "毛立新": { S:1, A:4, "B+":7, B:35, C:121 },
+    "张梦瑶": { S:4, A:7, "B+":3, B:35, C:59 }
+  },
+  upgrade: [
+    { name: "砍亏损C", mlx: 39, zmy: 24, desc: "利润率<0", done: false },
+    { name: "砍零销", mlx: 31, zmy: 10, desc: "14天无销", done: false },
+    { name: "C→B 升级", mlx: 20, zmy: 18, desc: "利润率≥5%+推量", done: false },
+    { name: "B→A 升级", mlx: 0, zmy: 2, desc: "增长达标直接升", done: false }
+  ],
+  batches: [
+    { batch: 1, month: "6月底", count: "6-8个", note: "新品阈值期(≤45天)门槛减半", profit: "10月达产 ~7K/17K" },
+    { batch: 2, month: "7月底", count: "6-8个", note: "新品阈值期(≤45天)门槛减半", profit: "11月达产 ~16K/33K" },
+    { batch: 3, month: "8月底", count: "6-8个", note: "12月峰值达产", profit: "12月达产 ~22K/41K" }
+  ],
+  grades: ["S","A","B+","B","C"],
+  gradeLabels: { S:"S", A:"A", "B+":"B+", B:"B", C:"C" },
+  gradeBg: { S:"#dc2626", A:"#f59e0b", "B+":"#3b82f6", B:"#64748b", C:"#94a3b8" }
+};
+
+var fmt = function(n) { return n >= 10000 ? (n/10000).toFixed(1)+"万" : n.toLocaleString(); };
+
+// 全年目标概览 — 全员
+var ov = document.getElementById("overview");
+ov.innerHTML = "";
+plan.personOrder.forEach(function(p){
+  var d = plan.persons[p];
+  var remain = d.target - d.done;
+  var isLow = d.pct < 5;
+  ov.innerHTML +=
+    '<div class="bar-info">' +
+      '<span class="bar-person">' + p + '</span>' +
+      '<span class="bar-numbers">' +
+        '<span class="done">已达成 ' + fmt(d.done) + ' (' + d.pct + '%)</span> | ' +
+        '<span class="remain">剩余 ' + fmt(remain) + '</span> &rarr; 目标 ' + fmt(d.target) +
+      '</span>' +
+    '</div>' +
+    '<div class="bar-wrap" style="margin-bottom:12px">' +
+      '<div class="bar-done' + (isLow ? ' low' : '') + '" style="width:' + Math.max(d.pct, 0.5) + '%">' + (isLow ? '' : d.pct + '%') + '</div>' +
+    '</div>';
+});
+
+// 各等级对比表 — 仅毛立新/张梦瑶
+var tb = document.getElementById("gradeTable");
+var h = '<table><thead><tr><th>等级</th><th>毛立新 当前</th><th>毛立新 目标</th><th>张梦瑶 当前</th><th>张梦瑶 目标</th></tr></thead><tbody>';
+plan.grades.forEach(function(g){
+  var cMlx = plan.current["毛立新"][g], tMlx = plan.target["毛立新"][g];
+  var cZmy = plan.current["张梦瑶"][g], tZmy = plan.target["张梦瑶"][g];
+  var clsMlx = tMlx > cMlx ? "target-up" : (tMlx === cMlx ? "target-eq" : "");
+  var clsZmy = tZmy > cZmy ? "target-up" : (tZmy === cZmy ? "target-eq" : "");
+  h += '<tr>' +
+    '<td><span class="grade-badge" style="background:' + plan.gradeBg[g] + '">' + g + '</span></td>' +
+    '<td>' + cMlx + '</td>' +
+    '<td class="' + clsMlx + '">' + tMlx + '</td>' +
+    '<td>' + cZmy + '</td>' +
+    '<td class="' + clsZmy + '">' + tZmy + '</td>' +
+    '</tr>';
+});
+h += '</tbody></table>';
+tb.innerHTML = h;
+
+// 存量升级路径 — 仅毛立新/张梦瑶
+var us = document.getElementById("upgradeSteps");
+us.innerHTML = plan.upgrade.map(function(s){
+  var cls = s.mlx === 0 && s.zmy === 0 ? " step-card" : " step-card done";
+  return '<div class="' + cls + '">' +
+    '<div class="step-num">' + (cls.indexOf("done")>=0 ? "✓" : "") + '</div>' +
+    '<div class="step-title">' + s.name + '</div>' +
+    '<div class="step-count">毛 ' + s.mlx + ' / 张 ' + s.zmy + '</div>' +
+    '<div style="font-size:10px;color:#94a3b8;margin-top:2px">' + s.desc + '</div>' +
+    '</div>';
+}).join("");
+
+// 新品批次
+var nb = document.getElementById("newBatches");
+nb.innerHTML = plan.batches.map(function(b){
+  return '<div class="batch-card">' +
+    '<div class="batch-label">第' + b.batch + '批 · ' + b.month + '</div>' +
+    '<div class="batch-detail">数量: ' + b.count + '</div>' +
+    '<div class="batch-detail">' + b.note + '</div>' +
+    '<div class="batch-detail" style="font-size:10px;color:#94a3b8;margin-top:2px">' + b.profit + '</div>' +
+    '</div>';
+}).join("");
+
+// 关键指标 — 全员汇总
+var kpi = document.getElementById("kpiRow");
+kpi.innerHTML =
+  '<div class="kpi-item"><div class="kpi-value">~3,309 万</div><div class="kpi-label">剩余利润目标</div></div>' +
+  '<div class="kpi-item"><div class="kpi-value">45.6 万/周</div><div class="kpi-label">12月目标周利润</div></div>' +
+  '<div class="kpi-item"><div class="kpi-value">39.5 万/周</div><div class="kpi-label">周均需达成</div></div>' +
+  '<div class="kpi-item"><div class="kpi-value">276 个</div><div class="kpi-label">产品总数</div></div>';
+
+})();
+</script>
+
+</body>
+</html>
