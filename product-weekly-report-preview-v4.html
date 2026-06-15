@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -430,55 +430,84 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <div class="sc" id="prodSection">
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- SABC 自动分级模块 -->
+<!-- SABC 模块 — 三子区：分级结果 / 分层占比追踪 / 等级变动 -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04)" id="sabcModule">
-  <h2 style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 6px 0">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-    <span>自动分级 <span style="font-size:11px;font-weight:400;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px">SABC</span></span>
-    <span style="display:flex;align-items:center;gap:8px">
-    <span onclick="toggleSabcTable()" style="font-size:12px;color:#3b5cf6;cursor:pointer;user-select:none" id="sabcToggleIcon">点击展开</span><span onclick="toggleSabcGrid()" style="font-size:11px;color:#64748b;cursor:pointer;user-select:none" id="sabcGridToggleIcon">展开表格</span><span onclick="toggleSabcInfo()" style="font-size:11px;color:#3b82f6;cursor:pointer;font-weight:400">分级说明</span>
-    </span>
-    </div>
+  <h2 style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 10px 0">
+    自动分级 <span style="font-size:11px;font-weight:400;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px">SABC</span>
   </h2>
-  <div id="sabcInfoPanel" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:14px;font-size:12px;color:#475569;line-height:1.8">
-    <div style="font-weight:700;color:#0f172a;margin-bottom:8px">SABC 分级规则（根据选中周次实时计算）</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#dc2626;color:#fff">S</span> 周均销量≥350件 且 利润率≥20% — 爆款</div>
-      <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#f59e0b;color:#fff">A</span> 周均销量≥175件 且 利润率≥10% 且 增长≥10% — 潜力款</div>
-      <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#3b82f6;color:#fff">B</span> 周均销量≥105件 且 利润率≥10% — 常规款 | 利润率≥25%为B+</div>
-      <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#94a3b8;color:#fff">C</span> 未达以上标准 | 亏损/14天零销/滞销高库存</div>
+
+  <!-- 子区 ①：分级结果 -->
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px">
+    <div onclick="toggleSabcResult()" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:13px;color:#0f172a">分级结果</span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <span onclick="event.stopPropagation();toggleSabcInfo()" style="font-size:11px;color:#3b82f6;cursor:pointer;font-weight:400">分级说明</span>
+        <span style="font-size:11px;color:#94a3b8" id="sabcResultHint">展开</span>
+      </span>
     </div>
-    <div style="margin-top:8px;color:#94a3b8;font-size:11px">新品（上架≤45天）门槛减半：S≥175 / A≥84 / B≥56</div>
+    <div id="sabcInfoPanel" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-top:10px;font-size:12px;color:#475569;line-height:1.8">
+      <div style="font-weight:700;color:#0f172a;margin-bottom:8px">SABC 分级规则（根据选中周次实时计算）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#dc2626;color:#fff">S</span> 周均销量≥350件 且 利润率≥20% — 爆款</div>
+        <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#f59e0b;color:#fff">A</span> 周均销量≥175件 且 利润率≥10% 且 增长≥10% — 潜力款</div>
+        <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#3b82f6;color:#fff">B</span> 周均销量≥105件 且 利润率≥10% — 常规款 | 利润率≥25%为B+</div>
+        <div><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:#94a3b8;color:#fff">C</span> 未达以上标准 | 亏损/14天零销/滞销高库存</div>
+      </div>
+      <div style="margin-top:8px;color:#94a3b8;font-size:11px">新品（上架≤45天）门槛减半：S≥175 / A≥84 / B≥56</div>
+    </div>
+    <div id="sabcResultContent" style="display:none">
+      <div id="sabcPieWrap" style="border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;margin:10px 0;background:#fff"></div>
+      <div id="sabcTableWrap" style="overflow:auto;max-height:500px">
+        <table class="sabc-table" style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">等级</th>
+              <th style="padding:6px 4px;text-align:center;white-space:nowrap;min-width:42px">图片</th>
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">SKU</th>
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">店铺</th>
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">类目</th>
+              <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-3</th>
+              <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-2</th>
+              <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-1</th>
+              <th style="padding:6px 6px;text-align:right;white-space:nowrap">本周</th>
+              <th style="padding:6px 6px;text-align:right;white-space:nowrap">周均</th>
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">趋势</th>
+              <th style="padding:6px 8px;text-align:right;white-space:nowrap">利润率</th>
+              <th style="padding:6px 8px;text-align:right;white-space:nowrap">库存</th>
+              <th style="padding:6px 8px;text-align:left;white-space:nowrap">分级原因</th>
+            </tr>
+          </thead>
+          <tbody id="sabcTableBody">
+            <tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
-  <div id="sabcPieWrap" style="display:none;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:14px;background:#fff"></div>
-  <div id="sabcTableWrap" style="display:none;overflow:auto;max-height:500px">
-    <table class="sabc-table" style="width:100%;border-collapse:collapse;font-size:11px">
-      <thead>
-        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">等级</th>
-          <th style="padding:6px 4px;text-align:center;white-space:nowrap;min-width:42px">图片</th>
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">SKU</th>
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">店铺</th>
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">类目</th>
-          <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-3</th>
-          <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-2</th>
-          <th style="padding:6px 6px;text-align:right;white-space:nowrap">W-1</th>
-          <th style="padding:6px 6px;text-align:right;white-space:nowrap">本周</th>
-          <th style="padding:6px 6px;text-align:right;white-space:nowrap">周均</th>
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">趋势</th>
-          <th style="padding:6px 8px;text-align:right;white-space:nowrap">利润率</th>
-          <th style="padding:6px 8px;text-align:right;white-space:nowrap">库存</th>
-          <th style="padding:6px 8px;text-align:left;white-space:nowrap">分级原因</th>
-        </tr>
-      </thead>
-      <tbody id="sabcTableBody">
-        <tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px">加载中…</td></tr>
-      </tbody>
-    </table>
+
+  <!-- 子区 ②：分层占比追踪 -->
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px">
+    <div onclick="toggleTierTracker()" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:13px;color:#0f172a">分层占比追踪<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px">系统/手动/目标</span></span>
+      <span style="font-size:11px;color:#94a3b8" id="tierTrackerHint">展开</span>
+    </div>
+    <div id="personTierBreakdown" style="display:none;margin-top:10px">
+      <div id="tierSummaryCard"></div>
+      <div id="tierPersonCards"></div>
+    </div>
   </div>
-  <div id="sabcGradeChanges" style="margin-bottom:12px"></div>
-  <div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px">
+
+  <!-- 子区 ③：等级变动 -->
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px">
+    <div onclick="toggleGradeChanges()" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;font-size:13px;color:#0f172a">等级变动<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px">跨周对比</span></span>
+      <span style="font-size:11px;color:#94a3b8" id="gradeChangesHint">展开</span>
+    </div>
+    <div id="sabcGradeChanges" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div style="margin-top:0;padding-top:8px">
     <a href="D:\周汇报文件\sabc-tracker.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:#3b5cf6;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;transition:all .15s" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b5cf6'">
       SABC 达标追踪
       <span style="font-size:11px;opacity:0.8">&#x2192;</span>
@@ -549,12 +578,6 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <div style="margin-top:8px;font-size:11px;color:#94a3b8" id="tableInfo"></div>
 </div>
 </div>
-
-<div class="sc tier-section" id="tierAnalysis">
-<h2 onclick="toggleTierSection()" style="cursor:pointer;user-select:none;margin:0;padding:0"><div style="display:flex;justify-content:space-between;align-items:center"><span>产品分层占比分析</span><span style="font-size:11px;font-weight:400;color:#64748b;cursor:pointer" id="tierExpandHint">(点击展开)</span></div></h2>
-<div class="cblk"><div class="ctxt" id="tierContent"></div></div>
-</div>
-
 <!-- 产品动态日志（合并评论统计 + 产品备注） -->
 <div class="sc" id="activityLogSection">
 <h2 onclick="toggleActivitySection()" style="cursor:pointer;user-select:none;margin:0;padding:0"><div style="display:flex;justify-content:space-between;align-items:center"><span>产品动态日志</span><span style="font-size:11px;font-weight:400;color:#64748b;cursor:pointer" id="activityExpandHint">(点击展开)</span></div></h2>
@@ -897,6 +920,14 @@ function initFromDataJs() {
     WEEKS = DATA.WEEKS;
     WEEKS_ISO = DATA.WEEKS_ISO;
     WEEK_LABELS = DATA.WEEK_LABELS;
+
+    // Build week-to-month map: W1 → '7', W5 → '8', etc.
+    WEEK_TO_MONTH = {};
+    WEEK_LABELS.forEach(function(label) {
+      var m = label.match(/W(\d+).*?·(\d+)\./);
+      if (m) WEEK_TO_MONTH['W' + m[1]] = String(parseInt(m[2]));
+    });
+
     SHOP_WEEKLY = DATA.SHOP_WEEKLY;
     WEEK_DATA = DATA.WEEK_DATA;
     TRAFFIC_WEEKLY = DATA.TRAFFIC_WEEKLY;
@@ -1188,6 +1219,16 @@ function initFromDataJs() {
 
     console.log('Initializing with selectedWeeks=' + Array.from(selectedWeeks).join(',') + ', SHOPS=' + SHOPS.length);
 
+    // Sync months with initial week selection
+    if (WEEK_TO_MONTH && selectedWeeks.size > 0) {
+      selectedMonths.clear();
+      selectedWeeks.forEach(function(sw) {
+        var m = WEEK_TO_MONTH[sw];
+        if (m) selectedMonths.add(m);
+      });
+      if (selectedMonths.size === 0) selectedMonths.add('5');
+    }
+
     // ── Bootstrap ──
     dataInitialized = true;
     bootstrap();
@@ -1266,7 +1307,7 @@ function tglWk(w){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  
 }
 
 function getSelectedWeeks(){
@@ -1409,7 +1450,7 @@ function tglS(s){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  
 }
 
 function clearShopFilter(){
@@ -1422,9 +1463,10 @@ function clearShopFilter(){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  
   SABC_GRADE_CACHE = {};
   renderSabcTable();
+  
 }
 
 function setShopCategory(cat){
@@ -1449,9 +1491,10 @@ function setShopCategory(cat){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  
   SABC_GRADE_CACHE = {};
   renderSabcTable();
+  
 }
 
 // ========== OWNER TAGS ==========
@@ -1520,7 +1563,8 @@ function tglO(o){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  if (tierTrackerExpanded && typeof renderPersonTierBreakdown === 'function') renderPersonTierBreakdown();
+  
   
   // Auto-refresh owner summary if panel is visible
   if(ownerSummaryVisible) {
@@ -1539,9 +1583,11 @@ function clearOwnerFilter(){
   renderProgress();
   renderActivityLog();
   renderTargetBoard();
-  renderTierAnalysis();
+  if (tierTrackerExpanded && typeof renderPersonTierBreakdown === 'function') renderPersonTierBreakdown();
+  
   SABC_GRADE_CACHE = {};
   renderSabcTable();
+  
 }
 
 // Get active shops considering owner filter
@@ -2069,23 +2115,26 @@ function renderShopGrid(){
 }
 
 // ========== PRODUCT SECTION COLLAPSE ==========
-function toggleSabcInfo(){var p=document.getElementById('sabcInfoPanel');if(p)p.style.display=p.style.display==='none'?'block':'none';}
-function toggleSabcTable(){
-  sabcExpanded = !sabcExpanded;
-  var pieWrap = document.getElementById('sabcPieWrap');
-  var gradeChanges = document.getElementById('sabcGradeChanges');
-  var icon = document.getElementById('sabcToggleIcon');
-  if (pieWrap) pieWrap.style.display = sabcExpanded ? 'block' : 'none';
-  if (gradeChanges) gradeChanges.style.display = sabcExpanded ? 'block' : 'none';
-  if (icon) icon.textContent = sabcExpanded ? '点击收起' : '点击展开';
-}
+var sabcResultExpanded = false;
+var tierTrackerExpanded = false;
+var gradeChangesExpanded = false;
 
-function toggleSabcGrid(){
-  sabcGridExpanded = !sabcGridExpanded;
-  var grid = document.getElementById('sabcTableWrap');
-  var icon = document.getElementById('sabcGridToggleIcon');
-  if (grid) grid.style.display = sabcGridExpanded ? 'block' : 'none';
-  if (icon) icon.textContent = sabcGridExpanded ? '收起表格' : '展开表格';
+function toggleSabcInfo(){var p=document.getElementById('sabcInfoPanel');if(p)p.style.display=p.style.display==='none'?'block':'none';}
+function toggleSabcResult(){
+  sabcResultExpanded = !sabcResultExpanded;
+  var content = document.getElementById('sabcResultContent');
+  var hint = document.getElementById('sabcResultHint');
+  if (content) content.style.display = sabcResultExpanded ? 'block' : 'none';
+  if (hint) hint.textContent = sabcResultExpanded ? '收起' : '展开';
+  if (sabcResultExpanded && typeof renderSabcTable === 'function') renderSabcTable();
+}
+function toggleTierTracker(){
+  tierTrackerExpanded = !tierTrackerExpanded;
+  var content = document.getElementById('personTierBreakdown');
+  var hint = document.getElementById('tierTrackerHint');
+  if (content) content.style.display = tierTrackerExpanded ? 'block' : 'none';
+  if (hint) hint.textContent = tierTrackerExpanded ? '收起' : '展开';
+  if (tierTrackerExpanded && typeof renderPersonTierBreakdown === 'function') renderPersonTierBreakdown();
 }
 function toggleProdSection(){
   prodExpanded = !prodExpanded;
@@ -2184,7 +2233,9 @@ function renderProdTable(){
   if (SABC_GRADE_FILTER !== 'all') {
     products = products.filter(function(p) {
       var g = getProductGrade(p.shop, p.sku);
-      return g && (g.grade === SABC_GRADE_FILTER || (SABC_GRADE_FILTER === 'B' && g.grade === 'B+'));
+      if (!g) return false;
+      var dg = resolveDisplayGrade(g.grade, p.shop, p.sku, g.profitRate, g.totalMaoli);
+      return dg === SABC_GRADE_FILTER;
     });
   }
 
@@ -2344,7 +2395,8 @@ function renderProdTable(){
     var sabcGradeInfo = getProductGrade(p.shop, p.sku);
     var manualKey = p.shop + '|' + p.sku;
     var isManual = manualOverrides.hasOwnProperty(manualKey);
-    var autoGrade = sabcGradeInfo ? sabcGradeInfo.grade : null;
+    var rawGrade = sabcGradeInfo ? sabcGradeInfo.grade : null;
+    var autoGrade = rawGrade ? resolveDisplayGrade(rawGrade, p.shop, p.sku, sabcGradeInfo.profitRate, sabcGradeInfo.totalMaoli) : null;
     var gradeColor = autoGrade ? getGradeColor(autoGrade) : { bg: '#e2e8f0', text: '#64748b' };
     var sabcGradeHtml = autoGrade
       ? '<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;background:'+gradeColor.bg+';color:'+gradeColor.text+'">'+autoGrade+'</span>'
@@ -2504,9 +2556,9 @@ function getSortValue(p, key){
       var gk = (key === 'manualGrade') ? (manualOverrides[p.shop + '|' + p.sku] || '') : '';
       if (!gk) {
         var gi = getProductGrade(p.shop, p.sku);
-        gk = gi ? gi.grade : '';
+        if (gi) gk = resolveDisplayGrade(gi.grade, p.shop, p.sku, gi.profitRate, gi.totalMaoli);
       }
-      var gradeOrder = { 'S': 4, 'A': 3, 'B+': 2.5, 'B': 2, 'C': 1 };
+      var gradeOrder = { 'S': 7, 'A': 6, 'B+': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
       return gk ? (gradeOrder[gk] || 0) : 0;
     case 'img': return 0;
     default: return 0;
@@ -3028,7 +3080,6 @@ function generateInsights(){
 // ========== SECTION COLLAPSE FUNCTIONS ==========
 var progressExpanded = false;
 var activityExpanded = false;
-var tierExpanded = false;
 var targetExpanded = false;
 var chartExpanded = false;
 var shopGridExpanded = false;
@@ -3060,20 +3111,6 @@ function toggleShopGridSection(){
 function toggleInsightSub(id){
   var el = document.getElementById(id);
   if(el) { if(el.classList.contains('show')) el.classList.remove('show'); else el.classList.add('show'); }
-}
-
-function toggleTierSection(){
-  tierExpanded = !tierExpanded;
-  var tierContent = document.getElementById('tierContent');
-  var hint = document.getElementById('tierExpandHint');
-  if(tierContent) {
-    if(tierExpanded){
-      tierContent.classList.add('show');
-    } else {
-      tierContent.classList.remove('show');
-    }
-  }
-  if(hint) hint.textContent = tierExpanded ? '(点击收起)' : '(点击展开)';
 }
 
 function toggleProgressSection(){
@@ -4569,6 +4606,7 @@ window.tglO = function(owner) {
     }
     SABC_GRADE_CACHE = {};
     renderSabcTable();
+    
   }, 100);
 }
 
@@ -4717,10 +4755,11 @@ function bootstrap(){
     {fn:renderShopGrid, name:'renderShopGrid'},
     {fn:renderProdTable, name:'renderProdTable'},
     {fn:renderSabcTable, name:'renderSabcTable'},
+    {fn:computeAllSabcGrades, name:'computeAllSabcGrades'},
     {fn:drawCharts, name:'drawCharts'},
     {fn:renderProgress, name:'renderProgress'},
     {fn:renderTargetBoard, name:'renderTargetBoard'},
-        {fn:renderTierAnalysis, name:'renderTierAnalysis'},
+    
     {fn:renderManualGradeButtons, name:'renderManualGradeButtons'},
     {fn:function(){curProdTab='all';}, name:'switchProdTab'}
   ];
@@ -5303,11 +5342,23 @@ var SABC_NEW_THRESHOLDS = { S: 175, A: 84, B: 56 };
 var SABC_PROFIT_THRESHOLDS = { S: 20, A: 10, B: 10, BPlus: 25 };
 var SABC_GRADE_FILTER = 'all';
 var SABC_GRADE_CACHE = {};
-var sabcExpanded = false;
-var sabcGridExpanded = false;
-var gradeChangesExpanded = false;
 var MANUAL_GRADE_FILTER = 'all';
-var manualOverrides = (function(){try{var d=localStorage.getItem('sabc_manual_overrides');return d?JSON.parse(d):{};}catch(e){return{};}})(); // key: "shop|SKU" → value: grade ('S'|'A'|'B'|'C'|'' for clear)
+var DEFAULT_MANUAL_GRADES = {"ZPTF2店|WBOK2489SB": "C", "ZPTF2店|WBOK2577SHU": "C", "ZPTF2店|WBMN2383SH": "C", "ZPTF2店|WBMK2423SMH": "C", "ZPTF2店|WBMK2471SH": "C", "ZPTF2店|WBMK2471SHU": "C", "ZPTF2店|WBMK2449SZ": "D", "ZPTF2店|WBMK2449SH": "C", "ZPTF2店|WBMN2383SL": "C", "ZPTF2店|WBMK2471SHH": "C", "ZPTF2店|WBMK2423SHZ": "C", "ZPTF2店|WBK4092SH": "D", "ZPTF2店|WBMK2466SSH": "D", "ZPTF2店|WBMM4153SLV": "D", "ZPTF2店|WBMM4150SB": "D", "ZPTF2店|WBMM4154SHU": "D", "ZPTF2店|WBK4092SSH": "D", "ZPTF2店|WBMK2466SH": "C", "ZPTF2店|WBMM4154SX": "D", "ZPTF2店|WBMM4154SH": "D", "ZPTF2店|WBK4092SB": "D", "ZPTF2店|WBMM4150SSU": "D", "ZPTF2店|WBMM4153SHU": "D", "ZPTF2店|WBMK2446SYM": "C", "ZPTF2店|WBOK2574SHU": "D", "ZPTF2店|WBK4092SLV": "D", "ZPTF2店|WBMN2383SBL": "C", "ZPTF2店|WBMK2446SHU": "D", "ZPTF2店|WBMK2423SH": "C", "ZPTF2店|WBMK2446SH": "D", "ZPTF1店|WBOK2545XB": "C", "ZPTF1店|WBMK2423XMH": "C", "ZPTF1店|WBMK2402XKAIQ": "D", "ZPTF1店|WBOK2681XBH": "C", "ZPTF1店|WBMK2402XKA": "C", "ZPTF1店|WBMK2402XMH": "C", "ZPTF1店|WBMK2450XH": "C", "ZPTF1店|WBOK2640XSH": "D", "ZPTF1店|WBOK2556XHU": "D", "ZPTF1店|WBMK2453XZ": "C", "ZPTF1店|WBMK2402XH": "C", "ZPTF1店|WBMK2388XHU": "C", "ZPTF1店|WBMN2383XBL": "C", "ZPTF1店|WBMN2383XH": "C", "ZPTF1店|WBMN2383XL": "C", "ZPTF1店|WBL2341XHU": "D", "ZPTF1店|WBMM4147XH": "D", "ZPTF1店|WBMM4156XHU": "D", "ZPTF1店|WBMM4150XB": "D", "ZPTF1店|WBMM4150XHU": "D", "ZPTF1店|WBMK2451XZ": "D", "ZPTF1店|WBMK2388XH": "C", "ZPTF1店|WBL2341XH": "C", "ZPTF1店|WBMM4147XLV": "D", "ZPTF1店|WBMM4156XZ": "D", "ZPTF1店|WBMM4147XHU": "D", "ZPTF1店|WBMM4150XSU": "C", "ZPTF1店|WBK4097XB": "D", "ZPTF1店|WBMW3997XH": "D", "ZPTF1店|WBOK2670XSH": "D", "ZPTF1店|WBMW3997XZQ": "D", "ZPTF1店|WBK4097XKA": "C", "ZPTF1店|WBMM4150XX": "D", "ZPTF1店|WBMK2423XHZ": "C", "ZPTF1店|WBMW3997XBH": "D", "ZPTF1店|WBMN2383XHU": "C", "ZPTF1店|WBMK2451XSH": "D", "ZPTF1店|WBMK2451XH": "D", "ZPTF1店|WBMK2423XH": "D", "ZPTF1店|WBL2341XHL": "D", "ZPTF1店|WBMK2453XH": "C", "ZPTF1店|WBMK2453XHU": "C", "ZPTF1店|WBMK2423XK": "D", "Z-NZTF1店|WBMW8017-AAHEI": "B", "Z-NZTF1店|WBMK2550-AAHH": "B", "Z-NZTF1店|WBMK2519-AAXING": "C", "Z-NZTF1店|WBMW8017-AAYM": "B", "Z-NZTF1店|WBMK2523-AAMB": "B", "Z-NZTF1店|WBMK2539-AAMB": "C", "Z-NZTF1店|WBMK2540-AASH": "C", "Z-NZTF1店|WBMK2539-AAZONG": "C", "Z-NZTF1店|WBMK2519-AAKQ": "C", "Z-NZTF1店|WBMK2501-NZQH": "C", "Z-NZTF1店|WBMN2506-AASLAN": "C", "Z-NZTF1店|WBOQ2646-AAMB": "C", "Z-NZTF1店|WBOK2644-AAF": "C", "Z-NZTF1店|WBMK2539-AAHS": "C", "Z-NZTF1店|WBMK2518-AABH": "C", "Z-NZTF1店|WBMK2501-NZH": "C", "Z-NZTF1店|WBMN2532-AAHEI": "C", "Z-NZTF1店|WBOK2612-AAHUI": "C", "Z-NZTF1店|WBOK2719-AAHUI": "D", "Z-NZTF1店|WBON2716-AALS": "D", "Z-NZTF1店|WBOK2720-AAZS": "D", "Z-NZTF1店|WBMN2506-AABS": "D", "Z-NZTF1店|WBMK2521-AAZONG": "C", "Z-NZTF1店|WBMK2502-ABAI": "D", "Z-NZTF1店|WBMK2557-AAZH": "D", "Z-NZTF1店|WBOK2626-AAHEI": "D", "Z-NZTF1店|WBMK2557-AABH": "D", "Z-NZTF1店|WBMK2507-AAJH": "D", "Z-NZTF1店|WBMK2521-AAHEI": "C", "Z-NZTF1店|WBOK2627-AAXING": "D", "Z-NZTF1店|WBMK2518-AAHEI": "C", "Z-NZTF1店|WBMK2505-AAHEI": "D", "Z-NZTF1店|WBMN2520-AAHH": "D", "Z-NZTF1店|WBMK2546-AAZONG": "C", "Z-NZTF1店|WBMK2531-AAHUI": "D", "Z-NZTF1店|WBON2655-AALAN": "D", "Z-NZTF1店|WBMK2522-AALV": "C", "Z-NZTF1店|WBON2721-AAQL": "D", "Z-NZTF1店|WBMK2523-AAKQ": "D", "Z-NZTF1店|WBMK2575-AABAI": "D", "Z-NZTF1店|WBMM4169-AATUO": "D", "Z-NZTF1店|WBMK2509-AAHEI": "D", "Z-NZTF1店|WBMK2525-AAHEI": "D", "Z-NZTF1店|WBMK2524-AAZONG": "D", "Z-NZTF1店|WBMK2565-AASH": "D", "Z-NZTF1店|WBMN2551-AAZONG": "D", "Z-NZTF1店|WBOK2614-AALV": "D", "Z-NZTF1店|WBMK2503-AAHUI": "C", "Z-NZTF1店|WBMK2517-AABAI": "D", "Z-NZTF1店|WBMK2558-AAHEI": "D", "WBBG1店|WBMN23839L": "B", "WBBG1店|WBK22339HL": "C", "WBBG1店|WBK22339H": "C", "WBBG1店|WBMN23839H": "C", "WB1店|K2233HEI": "C", "WB1店|K2205": "C", "WB1店|MK2402MIHUI": "C", "WB1店|LWBJA2141HEI": "C", "WB1店|L2293": "C", "WB1店|MK2402HEI": "C", "WB1店|K21482MBAI": "C", "WB1店|KS21511HEI": "D", "WB1店|K2216HEI": "D", "WB1店|J2079HEI": "C", "WB1店|LWBJA2141SHENKA": "C", "WB1店|K2216LAN": "D", "WB1店|L2286HNL": "D", "WB1店|L2286HEI": "D", "WB1店|K22321KA": "C", "WB1店|K2179LAN": "C", "WB1店|K22321HEI": "D", "WB1店|MN2383LAN": "C", "WB1店|WBMW3948H": "C", "WB1店|MK2380JLV": "C", "WB1店|MK2418HUI": "C", "WB1店|L4114HEI": "D", "WB1店|L22831LAN": "D", "WB1店|K4092KAIQ": "D", "WB1店|L3899HEI": "D", "WB1店|L3844HUI": "D", "WB1店|k2182": "C", "WB1店|L3844HEI": "D", "WB1店|BL5113HUI1": "D", "WB1店|BL5113HEI1": "D", "WB1店|K2245MBAI1": "D", "WB1店|K4092XING": "C", "WB1店|L2255": "C", "WB1店|MK2423HEI": "C", "WB1店|MK2427HEI": "C", "WB1店|LWB2363LAN": "D", "WB1店|G2534LAN": "D", "WB1店|MK2380HEI": "C", "WB1店|G2534HEI": "C", "MYTF5店|WBMK2467-VHEI": "B", "MYTF5店|WBMK2487-V": "C", "MYTF5店|WBMK2491-VHUI": "C", "MYTF5店|WBOK2529-VKQ": "C", "MYTF5店|WBOK2554-VHH": "B", "MYTF5店|WBMK2467-VLV": "C", "MYTF5店|WBL3896-VM": "C", "MYTF5店|WB-OC8020-VHE": "C", "MYTF5店|WBOK2544-VHUI": "C", "MYTF5店|WBOK2544-VHH": "C", "MYTF5店|WBOK2542-VBH": "C", "MYTF5店|WBMK2453-VZI": "C", "MYTF5店|WBMK2453-VHEI": "C", "MYTF5店|WBMK2453-VHUI": "C", "MYTF5店|WBOK2529-VHEI": "C", "MYTF5店|WBMC8003-VHEI": "C", "MYTF5店|WBMM4148-VHH": "D", "MYTF5店|WBK4094-VZQ": "D", "MYTF5店|WBMM4148-VKQ": "C", "MYTF5店|WBMM4146-VHUI": "D", "MYTF5店|WBMM4146-VHONG": "D", "MYTF5店|WBMM4148-VZQ": "D", "MYTF5店|WBK4094-VKQ": "D", "MYTF5店|WBMM4146-VZQ": "D", "MYTF5店|WBOK2554-VHEI": "D", "MYTF5店|WBMM4165-VHONG": "C", "MYTF5店|WBMK2453-V1HEI": "D", "MYTF5店|WBMM4146-VBAI": "D", "MYTF5店|WBMM4165-VBAI": "D", "MYTF5店|WBMM4165-VZONG": "D", "MYTF5店|WB-OK2710-VHU": "D", "MYTF5店|WBMC8003-VKA": "C", "MYTF5店|WBOK2553-VBH": "C", "MYTF5店|WBOK2542-VHH": "D", "MYTF5店|WBOK2552-VZQ": "D", "MYTF1店|MK2423-10HZONG": "A", "MYTF1店|MK2423-10MBAI": "B", "MYTF1店|WBMK2462-10HUI": "A", "MYTF1店|WBMW3971-10BH": "A", "MYTF1店|WBMN2433-10LAN": "C", "MYTF1店|MK2423-10HEI": "B", "MYTF1店|WBMN2433-10HUI": "B", "MYTF1店|WBMN2430-10": "B", "MYTF1店|WBMW3995-10BH": "C", "MYTF1店|WBMK2462-10HEI": "B", "MYTF1店|WBMW3971-10HH": "C", "MYTF1店|WBMK2464-10HEI": "C", "MYTF1店|WBMW3982-10MIBAI": "C", "MYTF1店|WBMW3971-10HEI": "B", "MYTF1店|WBMN2430-10LAN": "B", "MYTF1店|WBMK2431-10HUI": "C", "MYTF1店|WBMK2452-10HH": "D", "MYTF1店|WBMW3995-10": "B", "MYTF1店|WBMW3982-10HEI": "C", "MYTF1店|WBMK2464-10HUI": "C", "MYTF1店|WBMK2451-10YM": "C", "MYTF1店|WBMK2461-10X": "D", "MYTF1店|WBMW3952-10ZONG": "D", "MYTF1店|WBMK2461-10HEI": "C", "MYTF1店|WBMK2461-10KA": "C", "MYTF1店|WBRMK2462-HEI": "C", "MYTF1店|WBMW3952-10SHU": "D", "MYTF1店|WBMK2452-10HEI": "C", "MYTF1店|WBMK2451-10ZONG": "D", "MYTF1店|WBRMK2462-HUI": "C", "MYTF1店|WBMK2431-10LAN": "D", "MYTF1店|WBMW3952-10HEI": "D", "MYTF1店|WBMK2451-10SHUI": "D", "MYTF1店|WBMK2451-10HEI": "D", "MHWB2店|WBMK23881HU": "C", "MHWB2店|WBMN2383-1HEI": "B", "MHWB2店|WBK22331H": "C", "MHWB2店|WBMN24331L": "C", "MHWB2店|WBMK23881H": "C", "MHWB2店|WBMN2408H": "C", "MHWB2店|WBMK23911KQ": "C", "MHWB2店|WBMK24181HSH": "C", "MHWB2店|WBMK24241H": "D", "MHWB2店|WBMN23821L": "D", "MHWB2店|WBL22871H": "D", "MHWB2店|WBMN24331HU": "C", "MHWB2店|WBL23651H": "C", "MHWB2店|WBMN2398LAN": "C", "MHWB2店|WBMK24291MB": "C", "MHWB2店|WBMN23821H": "C", "MHWB2店|WBMK24271H": "C", "MHWB2店|WBMK23911H": "C", "MHWB2店|WBMK24521BHH": "D", "MHWB2店|WBMK24181H": "C", "MHWB2店|WBMK24021KA": "C", "MHWB2店|WBL23571BHH": "C", "MHWB2店|WBMW39481H": "C", "MHWB2店|WBMN2408L": "C", "MHWB2店|WBMK24251H": "D", "MHWB2店|WBMK24251KA": "D", "MHWB2店|WBL22871HU": "D", "MHWB2店|WBMN2383-1LAN": "B", "MHWB2店|WBMK24361H": "C", "MHTF2店|WBOK25697HU": "B", "MHTF2店|WBMK24627HH": "B", "MHTF2店|WBOK25697HS": "C", "MHTF2店|WBMK24647HU": "C", "MHTF2店|WBOK26677HH": "C", "MHTF2店|WBMK24627H": "C", "MHTF2店|WBOK25857YM": "D", "MHTF2店|WBMK24187HU": "C", "MHTF2店|WBMM41547HU": "C", "MHTF2店|WBON26377L": "C", "MHTF2店|WBMW39487H": "C", "MHTF2店|WBMW39827H": "D", "MHTF2店|WBL41147MB": "D", "MHTF2店|WBK40927X": "D", "MHTF2店|WBK40927SH": "D", "MHTF2店|WBMW39827MB": "D", "MHTF2店|WBMM41547X": "D", "MHTF2店|WBMM41557MB": "D", "MHTF2店|WBMM41467MB": "D", "MHTF2店|WBMM41557H": "D", "MHTF2店|WBMM41547B": "D", "MHTF2店|WBMM41547H": "D", "MHTF2店|WBOK25667HH": "C", "MHTF2店|WBON26597ZQ": "D", "MHTF2店|WBMM41467Z": "D", "MHTF2店|WBMK24517SH": "C", "MHTF2店|WBMK24527HH": "D", "MHTF2店|WBK40927H": "C", "MHTF2店|WBMM41467HH": "D", "MHTF2店|WBMK24527BHH": "D", "MHTF2店|WBMK24517H": "D", "MHTF2店|WBMK24647H": "C", "MHTF2店|WBOK26747MH": "D", "MHTF1店|WBMK24272H": "B", "MHTF1店|WBMK245921KQ": "C", "MHTF1店|WBMN24692H": "B", "MHTF1店|WBMK24272MB": "C", "MHTF1店|WBMN23832L": "B", "MHTF1店|WBL23412H": "D", "MHTF1店|WBK22332H": "C", "MHTF1店|WBL23572BHH": "C", "MHTF1店|WBMN24692L": "B", "MHTF1店|WBMK24022KA": "C", "MHTF1店|WBMK24672H": "C", "MHTF1店|WBMN23832H": "B", "MHTF1店|WBMN24332L": "C", "MHTF1店|WBJ20792H": "C", "MHTF1店|WBMN24332HU": "C", "MHTF1店|WBMK24712H": "C", "MHTF1店|WBMK23992Z": "C", "MHTF1店|WBMN24322H": "C", "MHTF1店|WBMK24022MH": "C", "MHTF1店|WBMK24642HU": "C", "MHTF1店|WBMK24592KQ": "C", "MHTF1店|WBMK24672HL": "C", "MHTF1店|WBMK24592H": "C", "MHTF1店|WBK40872H": "D", "MHTF1店|WBMK24482H": "D", "MHTF1店|WBMM41552H": "D", "MHTF1店|WBMK23992H": "C", "MHTF1店|WBK40922H": "D", "MHTF1店|WBMK24482BHH": "C", "MHTF1店|WBMK24182HU": "D", "MHTF1店|WBMK23992HU": "C", "MHTF1店|WBK40922X": "D", "MHTF1店|WBK40922SH": "D", "MHTF1店|WBMK24252H": "C", "MHTF1店|WBMN24322L": "D", "MHTF1店|WBMK24022H": "C", "MHTF1店|WBMK245921H": "C", "MHTF1店|WBMW39482H": "D", "MHTF1店|WBMK24252KA": "C", "MHTF1店|WBMK24512H": "D", "MHTF1店|WBMK24232H": "D", "MHTF1店|WBMK24642H": "C", "LXTF4店|WB-OK2601-WKQ": "C", "LXTF4店|WB-OK2672-WMB": "C", "LXTF4店|WBMN2468-WHEI": "C", "LXTF4店|WB-OK2601-WZ": "C", "LXTF4店|WBMK2706-WSH": "C", "LXTF4店|WBMK2495-WZONG": "C", "LXTF4店|WBOK2561-WHUI": "C", "LXTF4店|WBOK2708-ZJH": "C", "LXTF4店|WBOK2574-WHUI": "C", "LXTF4店|WBMK2706-WHEI": "C", "LXTF4店|WBMK2462-10HUI": "A", "LXTF4店|WBOK2561-WHEI": "C", "LXTF4店|WBOK2703-WMH": "C", "LXTF4店|WBMK2706-WHH": "C", "LXTF4店|WBL6019-WHEI": "C", "LXTF4店|WBL6019-WKA": "D", "LXTF4店|WBMK2451-WZONG": "D", "LXTF4店|WBMM4149-WTH": "D", "LXTF4店|WBMK2484-WHEI": "C", "LXTF4店|WBMM4149-WHH": "D", "LXTF4店|WB-OK2663-WHUI": "D", "LXTF4店|WBMK2484-WHUI": "C", "LXTF4店|WBMM4147-WHUI": "D", "LXTF4店|WBMM4147-WYM": "D", "LXTF4店|WBOK2556-VHUI": "D", "LXTF4店|WBMK2423-WHZONG": "C", "LXTF4店|WBMK2451-WHEI": "C", "LXTF4店|WBMK2451-WYM": "C", "LXTF4店|WBMK2423-WHEI": "D", "LXTF4店|WBMK2451-WSHUI": "D", "LXTF4店|WBMK2495-WHUI": "C", "LXTF2店|WBMN2474-YBAI": "B", "LXTF2店|WBMK2486-YHZ": "B", "LXTF2店|WBMN2474-YLAN": "C", "LXTF2店|WBON2611-YHEI": "C", "LXTF2店|WBON2624-YHL": "C", "LXTF2店|WBMN2474-YHEI": "C", "LXTF2店|WBMK2486-YHEI": "C", "LXTF2店|WBMK2486-YHUI": "C", "LXTF2店|WBMN2474-YHU": "C", "LXTF2店|WBON2694-YBS": "C", "LXTF2店|WBMN2469-YHEI": "C", "LXTF2店|WBMJ6040-YSHUI": "D", "LXTF2店|WBMC3993-YHEI": "D", "LXTF2店|WBMM4153-YYM": "D", "LXTF2店|WBL4115-YKA": "D", "LXTF2店|WBL4115-YXING": "D", "LXTF2店|WBMM4150-WXING": "D", "LXTF2店|WBMM4150-YSHUI": "D", "LXTF2店|WBMM4148-YKQ": "D", "LXTF2店|WBMM4150-YHUI": "D", "LXTF2店|WBMN2455-YHUI": "D", "LXTF2店|WBMM4153-YLV": "D", "LXTF2店|WBMN2468-YHEI": "C", "LXTF2店|WBK4097-YHEI": "D", "LXTF2店|WBMM4159-YHUI": "D", "LXTF2店|WBK4097-YBAI": "D", "LXTF2店|WBMC3993-YLAN": "D", "LXTF2店|WBL4115-YSHUI": "D", "LXTF2店|WBMN2469-YLAN": "C", "LXTF2店|WBMJ6040-YKAQI": "D", "LXTF2店|WBMN2455-YLAN": "D", "LXTF2店|WBMM4153-YHUI": "D", "LXTF2店|WBMJ6034-Y": "C", "LXTF2店|WB-ON2660-YHS": "C", "LXTF2店|WBOK2567-YSH": "D", "LXTF1店|WBMK2444-ZBAI": "C", "LXTF1店|WBOK2577-ZHUI": "C", "LXTF1店|WBMK2471-ZHEI": "C", "LXTF1店|WBMK2453-ZHHEI": "B", "LXTF1店|WBOC7240-ZHU": "C", "LXTF1店|WBMK2467-ZHL": "C", "LXTF1店|WBMK2453-ZZI": "C", "LXTF1店|WBMK2444-ZHUI": "C", "LXTF1店|WBMK2453-ZYHUI": "C", "LXTF1店|WBMK2467-ZHUI": "C", "LXTF1店|WBOK2579-ZHEI": "D", "LXTF1店|WBMK2467-ZHEI": "C", "LXTF1店|WBMM4151-ZHEI": "D", "LXTF1店|WBMC8003-ZBAI": "C", "LXTF1店|WBMM4154-ZX": "C", "LXTF1店|WBMM4146-ZZANG": "D", "LXTF1店|WBMM4144-ZHUI": "C", "LXTF1店|WBMM4156-ZZONG": "D", "LXTF1店|WBMM4144-ZHEI": "D", "LXTF1店|WBMC3969-ZLB": "C", "LXTF1店|WBMM4154-ZHUI": "D", "LXTF1店|WBMC3969-ZKA": "D", "LXTF1店|WBMM4154-ZHEI": "D", "LXTF1店|WBMC8003-ZKA": "C", "LXTF1店|WBMC3963-ZHEI": "D", "LXTF1店|WBMC3963-ZHONG": "D", "LXTF1店|WB-OK2568-WKA": "D", "LXTF1店|WBMK2471-ZHHE": "C", "LXTF1店|WBOK2567-YSH": "D", "LXTF1店|WBMM4151-ZYM": "C", "LXTF1店|WBMC8003-ZHEI": "D", "LXTF1店|WBOK2579-ZHUI": "D", "LXTF1店|WBMK2444-ZHEI": "C", "LXTF1店|WBOK2489-ZBAI": "D", "LXTF1店|WBMK2458-ZHEI": "C", "LXTF1店|WBMK2458-ZZONG": "C", "LXTF1店|WBMK2471-ZHUI": "C", "LXTF1店|WBMK2446-ZYM": "C", "LXTF1店|WBMK2446-ZHEI": "C", "LXTF1店|WBMK2446-ZHUI": "C", "LXTF1店|WBMK2458-ZKAQIL": "D", "KLTF3店|WBMK24626HH": "S", "KLTF3店|WBMK24626H": "A", "KLTF3店|WBOK26776KS": "B", "KLTF3店|WBOK26824XS": "C", "KLTF3店|WBMK24943H": "C", "KLTF3店|WBMK24936HH": "C", "KLTF3店|WBMK24026MH": "C", "KLTF3店|WBOK26776BS": "C", "KLTF3店|WBK22336H": "C", "KLTF3店|WBMK24026H": "C", "KLTF3店|WBMK24026K": "C", "KLTF3店|WBMK24866HZ": "C", "KLTF3店|WBOK27036MH": "C", "KLTF3店|WBRMK24626H": "C", "KLTF3店|WBMK24586MH": "C", "KLTF3店|WBON25826HU": "D", "KLTF3店|WBMN23836L": "C", "KLTF3店|WBMN23836H": "C", "KLTF3店|WBMK24866H": "C", "KLTF3店|WBMK24586H": "C", "KLTF3店|WBMK24356H": "C", "KLTF3店|WBMM41673KQ": "D", "KLTF3店|WBMK24446HH": "C", "KLTF3店|WBMN24983CH": "C", "KLTF3店|WBK22336HL": "C", "KLTF3店|WBMK24903H": "D", "KLTF3店|WBOK25436MH": "D", "KLTF3店|WBMK24446H": "C", "KLTF3店|WBMK24466H": "C", "KLTF3店|WBMK24466HU": "C", "KLTF3店|WBOK26026H": "D", "KLTF3店|WBMK24356HH": "C", "KLTF3店|WBOK25436H": "D", "KLTF2店|WBON26224B": "A", "KLTF2店|WBOK24894B": "B", "KLTF2店|WBOK25544HH": "B", "KLTF2店|WBOK2489DB": "C", "KLTF2店|WBMK2462DKH": "C", "KLTF2店|WBMK2462DHH": "C", "KLTF2店|WBMK2462DH": "C", "KLTF2店|WBMN2383DLAN": "C", "KLTF2店|WBON26254QL": "C", "KLTF2店|WBMW3971DBHH": "C", "KLTF2店|WBON2622DB": "C", "KLTF2店|WBON26794YH": "C", "KLTF2店|WBMK2462DKHH": "C", "KLTF2店|WBOK25714HU": "C", "KLTF2店|WBMW3971DHEI": "C", "KLTF2店|WBON26914BS": "C", "KLTF2店|WBOK2703DMH": "C", "KLTF2店|WBMM41474SH": "D", "KLTF2店|WBMM41484ZQ": "D", "KLTF2店|WBL41144HU": "C", "KLTF2店|WBMM41484HH": "D", "KLTF2店|WBMM41544H": "C", "KLTF2店|WBON26224HS": "D", "KLTF2店|WBMM41544B": "C", "KLTF2店|WBMM41474R": "D", "KLTF2店|WBL41144X": "C", "KLTF2店|WBMM41474L": "D", "KLTF2店|WBMN2383DHEI": "B", "KLTF2店|WBK40924B": "C", "KLTF2店|WBON26614HL": "C", "KLTF2店|WBK40924H": "C", "KLTF2店|WBMM41464MB": "D", "KLTF2店|WBMM41464ZQ": "C", "KLTF2店|WBK40924SH": "D", "KLTF2店|WBMM41544X": "C", "KLTF2店|WBOK2703DHS": "C", "KLTF2店|WBOK2710DHU": "D", "KLTF2店|WBOK25724K": "D", "KLTF1店|WBMK24273MB": "C", "KLTF1店|WBMN24303H": "A", "KLTF1店|WBMK24953HZ": "B", "KLTF1店|WBMK24273H": "A", "KLTF1店|WBMN24333L": "C", "KLTF1店|WBON26083LS": "C", "KLTF1店|WBMK24233HZ": "C", "KLTF1店|WBOT72763MB": "C", "KLTF1店|WBL23413HL": "C", "KLTF1店|WBL23413H": "C", "KLTF1店|WBMN24543H": "C", "KLTF1店|WBMK24243MB": "C", "KLTF1店|WBMK24243H": "C", "KLTF1店|WBMK24233MH": "C", "KLTF1店|WBMK24283M": "C", "KLTF1店|WBOC73003BS": "C", "KLTF1店|WBMN24333HU": "C", "KLTF1店|WBMK24233H": "C", "KLTF1店|WBMK24953H": "C", "KLTF1店|WBMK24283H": "C", "KLTF1店|WBMK24283SH": "C", "KLTF1店|WBMK24493Z": "C", "KLTF1店|WBMN24423H": "C", "KLTF1店|WBMK24233K": "C", "KLTF1店|WBMW80173YM": "C", "KLTF1店|WBMK2436HU": "C", "KLTF1店|WBMM41683B": "D", "KLTF1店|WBMW80173H": "C", "KLTF1店|WBMC80213B": "C", "KLTF1店|WBON26243QL": "D", "KLTF1店|WBMK2436H": "C", "KLKJ1店|WBMK2388HEI": "C", "KLKJ1店|WBMN2383HEI": "C", "KLKJ1店|WBK4092HEI": "C", "KLKJ1店|MM4155HEI": "D", "JDWB3店|WBMK24275H": "C", "JDWB3店|WBMK24025MH": "C", "JDWB3店|WBMK24275MB": "C", "JDWB3店|WBMK24025H": "C", "JDWB3店|WBMK24255K": "C", "JDWB3店|WBMN23835HU": "C", "JDWB3店|WBMN24335H": "C", "JDWB3店|WBG25345H": "D", "JDWB3店|WBMN23835H": "B", "JDWB3店|WBK22335SKQ": "C", "JDWB3店|WBK22335H": "C", "JDWB3店|WBMN23835L": "C", "JDWB3店|WBL22625HU": "D", "JDWB3店|WBL23655H": "C", "JDWB3店|WBL22625MB": "D", "JDWB3店|WBK22335HL": "C", "JDWB3店|WBMN24335L": "C", "JDWB3店|WBMK24025K": "C", "JDWB3店|WBMK24255H": "C", "JDTF2店|WBMN2469AL": "C", "JDTF2店|WBOK2669AHS": "C", "JDTF2店|WBOK2601AKQ": "C", "JDTF2店|WBOK2489AB": "C", "JDTF2店|WBMK2471AHU": "C", "JDTF2店|WBMN2469AH": "C", "JDTF2店|WBOK2569AHU": "C", "JDTF2店|WBK2233AH": "C", "JDTF2店|WBMN2383AHE": "B", "JDTF2店|WBON2624AQL": "C", "JDTF2店|WBMK2453AH": "C", "JDTF2店|WBMN2383ABL": "C", "JDTF2店|WBOK2542AHU": "D", "JDTF2店|WBON2622AB": "C", "JDTF2店|WBOK2601AZS": "C", "JDTF2店|WBMW8022AH": "C", "JDTF2店|WBMK2378AXHH": "C", "JDTF2店|WBON2611AH": "D", "JDTF2店|WBMM4161AM": "C", "JDTF2店|WBMK2446AH": "C", "JDTF2店|WBK2233AL": "C", "JDTF2店|WBMM4161AZ": "C", "JDTF2店|WBMM4162AK": "C", "JDTF2店|WBMM4161AH": "C", "JDTF2店|WBMM4162AH": "C", "JDTF2店|WBMK2378AH": "C", "JDTF2店|WBMN2383AL": "B", "JDTF2店|WBMK2446AHU": "C", "JDTF2店|WBMW8022ASH": "C", "JDTF2店|WBMK2462AHH": "C", "JDTF2店|WBMK2446AYM": "C", "JDTF2店|WBMM4162AM": "C", "JDTF1店|WBOK2632-A": "C", "JDTF1店|WBOK2594-A": "C", "JDTF1店|WB-ON2691-8BA": "C", "JDTF1店|WB-OK2709-8HE": "C", "JDTF1店|WBMM41548LV": "C", "JDTF1店|WBK40928SMH": "C", "JDTF1店|WBMM4168TB": "D", "JDTF1店|WBMM41548X": "C", "JDTF1店|WBMM41558H": "C", "JDTF1店|WBMM41558B": "C", "JDTF1店|WBMM41548B": "C", "JDTF1店|WBMM41548HUI": "C", "JDTF1店|WBMM41558LV": "C", "JDTF1店|WBK40928H": "C", "JDTF1店|WBMM4167TK": "D", "JDTF1店|WBL41148X": "D", "JDTF1店|WBMM4168TH": "D", "JDTF1店|WBK40928B": "D", "JDTF1店|WBK40928Z": "C", "JDTF1店|WBMM41548H": "C", "JDTF1店|WBOK2680-A": "C", "JDTF1店|WBMM41558SH": "C", "HZTF6店|WBOK2619-THH": "C", "HZTF6店|WBOK2628-10B": "B", "HZTF6店|WBOK2568-10KA": "B", "HZTF6店|WBMK2459-THKQ": "C", "HZTF6店|WBOK2687-10LV": "C", "HZTF6店|WBOK2619-THE": "C", "HZTF6店|WBMK2459-THEI": "C", "HZTF6店|WBMK2493-THH": "C", "HZTF6店|WB-OP7301-TMI": "C", "HZTF6店|WBMW8017-THEI": "C", "HZTF6店|WBMK2486-THEI": "C", "HZTF6店|WBMK2486-TZONG": "C", "HZTF6店|WBMW8019-TXING": "C", "HZTF6店|WBON2530-VLAN": "D", "HZTF6店|WBMK2466-THEI": "C", "HZTF6店|WBMN6044-T": "C", "HZTF6店|WBOK2588-TKQ": "B", "HZTF6店|WBMN2496-THEI": "C", "HZTF6店|WBON2584-TLAN": "C", "HZTF6店|WBMK2466-THLV": "C", "HZTF6店|WBON2530-VHEI": "C", "HZTF6店|WBMW8017-TX": "C", "HZTF6店|WBMW8016-TX": "C", "HZTF6店|WBMW8016-THEI": "C", "HZTF6店|WBMW3978-THH": "D", "HZTF6店|WBRMK2388-THEI": "C", "HZTF6店|WBRMK2388-THUI": "D", "HZTF6店|WBMK2466-TSH": "C", "G-NZTF1店|WBOK265611XS": "C", "G-NZTF1店|WBOK265111H": "C", "G-NZTF1店|WBOK264511F": "C", "G-NZTF1店|WBMN817711L": "C", "G-NZTF1店|WBMN855211B": "D", "G-NZTF1店|WBMK256311BS": "C", "G-NZTF1店|WBMK250311HU": "C", "G-NZTF1店|WBOK261011H": "D", "G-NZTF1店|WBMK258711H": "C", "G-NZTF1店|WBOK261611H": "D", "G-NZTF1店|WBMN253211H": "C", "G-NZTF1店|WBMK253911Z": "C", "G-NZTF1店|WBON265211X": "D", "G-NZTF1店|WBMK251411BH": "D", "G-NZTF1店|WBON272111QL": "C", "G-NZTF1店|WBOK261811HU": "C", "G-NZTF1店|WBMK250811B": "C", "G-NZTF1店|WBMK815111Z": "C", "G-NZTF1店|WBMN855211L": "D", "G-NZTF1店|WBMK251211ZQ": "D", "G-NZTF1店|WBMK251411H": "D", "G-NZTF1店|WBMK251311HU": "D", "G-NZTF1店|WBOK261711HU": "D", "G-NZTF1店|WBMK251411HU": "D", "G-NZTF1店|WBMN255111Z": "C", "G-NZTF1店|WBOK261311H": "C", "G-NZTF1店|WBOK261511LV": "D", "G-NZTF1店|WBMK250811H": "D", "G-NZTF1店|WBMK251111ZQ": "D", "G-NZTF1店|WBMK251111H": "D", "G-NZTF1店|WBMW804211HU": "D", "G-NZTF1店|WBMK251211SH": "D", "G-NZTF1店|WBMK251211H": "D", "G-NZTF1店|WBOQ264911LV": "D", "G-NZTF1店|WBMK256411H": "D", "G-NZTF1店|WBMK251111SH": "D", "G-NZTF1店|WBMK256311KQ": "C", "G-NZTF1店|WBMK251311H": "C", "G-NZTF1店|WBMK259111KQ": "D", "G-NZTF1店|WBMK252511H": "D", "G-NZTF1店|WBMK254011SH": "C", "G-NZTF1店|WBMK251311BH": "D", "G-NZTF1店|WBOK264811H": "D", "G-NZTF1店|WBOQ265711KQ": "C", "G-NZTF1店|WBMN815511HH": "C", "G-NZTF1店|WBMK252411Z": "D", "G-NZTF1店|WBOK263911QL": "C", "G-NZTF1店|WBMK254811B": "D", "G-NZTF1店|WBMK252311MB": "C", "G-NZTF1店|WBOK265311H": "D", "G-NZTF1店|WBMK815111X": "D", "G-NZTF1店|WBMK257611B": "D", "G-NZTF1店|WBOK261311HU": "C", "G-NZTF1店|WBOK263811QL": "D", "G-NZTF1店|WBMK252611LV": "C", "G-NZTF1店|WBMK815111H": "D", "G-NZTF1店|WBMK254911H": "D", "G-NZTF1店|WBMK254711H": "D", "G-NZTF1店|WBMN855911HH": "D", "G-NZTF1店|WBMK251811BH": "D", "G-NZTF1店|WBOQ264711H": "D", "G-NZTF1店|WBOK265011B": "C", "G-NZTF1店|WBMN817711B": "C", "WB1店|MK2388HEI": "C", "MYTF5店|WBMC8003-VBAI": "C", "MHWB2店|WBMK24361HU": "C", "MHWB2店|WBMN23981H": "C", "ZPTF2店|WBMM4153SYM": "D", "ZPTF2店|WBMM4150SHU": "D", "ZPTF2店|WBMM4150SX": "D", "ZPTF1店|WBMK2450XHKQ": "C", "ZPTF1店|WBK4097XH": "D", "WB1店|J2079KQI": "C", "WB1店|L3899HUI": "D", "MYTF1店|WBMN2474-10HEI": "C", "LXTF2店|WBK4097-YSHUI": "D", "KLKJ1店|WBMK2446HEI": "C", "WB1店|MK2424HEI": "C", "WB1店|MN2433HUI": "C", "WB1店|L2365LAN": "C", "WB1店|L4114SHUI": "D", "MHTF1店|WBK40872HU": "D", "LXTF1店|WBMM4156-ZHUI": "C", "LXTF1店|WBMM4146-ZBAI": "D", "LXTF1店|WBMM4151-ZHUI": "D", "JDWB3店|WBMN23835BL": "C", "WB1店|MK2423HZONG": "C", "WB1店|L2341HEI": "C", "WB1店|MK2424MBAI": "C", "WB1店|MK2427MBAI": "C", "LXTF2店|WBL4115-YHEI": "D", "LXTF2店|WBMM4159-YYM": "D", "WB1店|MK2429HEI": "C", "WB1店|K2233HL": "C", "WB1店|K2245HEI1": "D", "WB1店|MN2383HEI": "C", "WB1店|K2179HEI": "C", "WB1店|K2245HUIKQ1": "D", "MYTF1店|WBMW3990-10ZQING": "C", "MHWB2店|WBMK24341MC": "C", "MHWB2店|WBMK24021H": "C", "MHTF1店|WBK40872B": "D", "MHTF1店|WBL41142HU": "D", "LXTF2店|WBMM4148-YHH": "D", "LXTF2店|WBMM4148-YZQ": "D", "LXTF2店|WBK4097-YKA": "C", "LXTF2店|WBMM4150-YBAI": "D", "JDTF1店|WBMM41508B": "D", "MHWB2店|MN23851FKL": "C", "MHWB2店|WBL23651L": "C", "MHWB2店|WBMK24241MB": "C", "WB1店|MN2407HEI": "C", "WB1店|MN2382LAN": "C", "WB1店|MK2419BHUI": "C", "WB1店|MK2434": "C", "WB1店|L3899MI": "D", "MHWB2店|WBMK24031H": "C", "WB1店|MK2429MBAI": "C", "WB1店|L3844MI": "D", "MHWB2店|WBK22331HL": "C", "MHWB2店|MN23851HEI": "C", "LXTF1店|WBMK2447-ZHLV": "C", "LXTF1店|WBMK2447-ZMC": "C", "WB1店|LWB2363HEI": "C", "WB1店|K21482HEI": "C", "MHWB2店|WBL23571H": "C", "MHTF1店|WBL41142H": "D", "WB1店|MN2407SL": "C", "WB1店|L2343": "C", "MYTF1店|WBMW3990-10XING": "C", "MHWB2店|WBMK24031MH": "C", "WB1店|MN2382HEI": "C", "MHWB2店|WBMK24021MH": "C", "WB1店|L2341LV": "C", "WB1店|MN23835HU": "C", "WB1店|MK2388HUI": "C", "WB1店|MN23835BL": "C", "WB1店|L2365HEI": "C", "MHWB2店|WBK22141H": "C", "MHWB2店|WBMK24021KQ": "C", "LXTF4店|WBMM4147-WLV": "D", "WB1店|MN2384HEI": "C", "WB1店|K4092BAI1": "C", "WB1店|MK2428HEI": "C", "WB1店|WBMT7219": "C", "WB1店|J2079JLV": "D", "WB1店|K2148": "C", "WB1店|K21482KAIQ": "C", "WB1店|K21482KFEI": "C", "WB1店|K4092HEI1": "C", "WB1店|KS21511LAN": "C", "WB1店|L22831HEI": "C", "WB1店|L3840HEI": "C", "WB1店|L3840HUAHUI": "C", "WB1店|K4092SMH": "C", "WB1店|MN2433LAN": "C", "MYTF1店|WBK4097-10BAI": "D", "MHWB2店|WBMK24291H": "C", "MHWB2店|WBMK23901MH": "C", "WB1店|MN2385HEI": "C", "WB1店|MP7196HEI": "D", "WB1店|MP7196BAI": "D", "MHWB2店|WBMK23861H": "D", "WB1店|G2534": "C", "WB1店|K3776LV": "C", "WB1店|L1895": "C", "WB1店|MK2397HEI": "C", "WB1店|MK2428MBAI": "C", "WB1店|MT7184HEI": "D", "WB1店|MT7190BAI": "D", "WB1店|MT7190HEI": "D", "WB1店|WBMT7218": "D", "WB1店|WBMT7220": "C", "MHWB2店|WBMK23891H": "C", "MHWB2店|WBMK23901H": "C", "MHWB2店|WBMK24271MB": "C", "WB1店|K3776HEI": "C", "WB1店|MP7196KQI": "D"}; // pre-computed: avg weekly profit thresholds
+var manualOverrides = (function(){try{var d=localStorage.getItem('sabc_manual_overrides');var local=d?JSON.parse(d):{};var merged=Object.assign({},DEFAULT_MANUAL_GRADES,local);return merged;}catch(e){return Object.assign({},DEFAULT_MANUAL_GRADES);}})(); // key: "shop|SKU" → value: grade ('S'|'A'|'B'|'C'|'D'|'E'|'' for clear) | defaults from avg weekly profit
+
+// ── C/D/E split: resolve display grade for a C-grade product ──
+function resolveDisplayGrade(g, shop, sku, profitRate, totalMaoli) {
+  if (g === 'B+') g = 'B';
+  if (g !== 'C') return g;
+  // manual override takes priority
+  var mk = shop + '|' + sku;
+  if (manualOverrides[mk] && manualOverrides[mk] !== '') return manualOverrides[mk];
+  // auto split
+  var inv = SKU_INVENTORY[sku + '|' + shop];
+  if (inv != null && inv === 0) return 'E';
+  if (profitRate === null || profitRate <= 0 || (totalMaoli || 0) < 4000) return 'D';
+  return 'C';
+}
 
 function getSabcWindowWeeks(targetWeekNum) {
   var weeks = [];
@@ -5360,25 +5411,25 @@ function computeSabcGrade(shop, sku, targetWeekNum) {
   }
 
   if (hasProfit && profitRate !== null && profitRate < 0)
-    return { grade: 'C', reason: '亏损', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+    return { grade: 'C', reason: '亏损', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
 
   if (weekQtys.length >= 2) {
     var last2Qty = weekQtys[weekQtys.length-1] + weekQtys[weekQtys.length-2];
     var inv = typeof SKU_INVENTORY !== 'undefined' ? (SKU_INVENTORY[key] || 0) : 0;
     if (last2Qty === 0 && inv > 0)
-      return { grade: 'C', reason: '14天零销', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+      return { grade: 'C', reason: '14天零销', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
   }
 
   if (avgWeekly >= thresholds.S && profitRate !== null && profitRate >= SABC_PROFIT_THRESHOLDS.S)
-    return { grade: 'S', reason: '爆款-高销量+高利润', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+    return { grade: 'S', reason: '爆款-高销量+高利润', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
   if (avgWeekly >= thresholds.A && profitRate !== null && profitRate >= SABC_PROFIT_THRESHOLDS.A && growthRate >= 10)
-    return { grade: 'A', reason: '潜力款-高增长', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+    return { grade: 'A', reason: '潜力款-高增长', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
   if (avgWeekly >= thresholds.B && profitRate !== null && profitRate >= SABC_PROFIT_THRESHOLDS.BPlus)
-    return { grade: 'B+', reason: 'B+-高利润', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+    return { grade: 'B+', reason: 'B+-高利润', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
   if (avgWeekly >= thresholds.B && profitRate !== null && profitRate >= SABC_PROFIT_THRESHOLDS.B)
-    return { grade: 'B', reason: '常规款-达标', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+    return { grade: 'B', reason: '常规款-达标', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
 
-  return { grade: 'C', reason: avgWeekly >= thresholds.B ? '利润率不足' : '未达标', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys };
+  return { grade: 'C', reason: avgWeekly >= thresholds.B ? '利润率不足' : '未达标', weeklyQty: avgWeekly, profitRate: profitRate, growthRate: growthRate, weekQtys: weekQtys, totalMaoli: totalMaoli };
 }
 
 function computeAllSabcGrades() {
@@ -5416,6 +5467,8 @@ function getGradeColor(grade) {
     case 'A': return { bg: '#f59e0b', text: '#fff' };
     case 'B+': case 'B': return { bg: '#3b82f6', text: '#fff' };
     case 'C': return { bg: '#94a3b8', text: '#fff' };
+    case 'D': return { bg: '#f97316', text: '#fff' };
+    case 'E': return { bg: '#6b7280', text: '#fff' };
     default: return { bg: '#e2e8f0', text: '#64748b' };
   }
 }
@@ -5438,7 +5491,9 @@ function renderSabcPieChart(grades, total) {
     { grade: 'A', color: '#f59e0b' },
     { grade: 'B+', color: '#3b82f6' },
     { grade: 'B', color: '#60a5fa' },
-    { grade: 'C', color: '#94a3b8' }
+    { grade: 'C', color: '#94a3b8' },
+    { grade: 'D', color: '#f97316' },
+    { grade: 'E', color: '#6b7280' }
   ];
   var isAll = SABC_GRADE_FILTER === 'all';
   var html = '<div style="margin-bottom:10px">';
@@ -5461,7 +5516,7 @@ function renderSabcPieChart(grades, total) {
     var isActive = isAll || SABC_GRADE_FILTER === gd.grade || (SABC_GRADE_FILTER === 'B' && gd.grade === 'B+');
     var opacity = isActive ? '1' : '0.35';
     var cursor = isActive && !isAll ? 'default' : 'pointer';
-    var click = (isActive && !isAll) ? '' : ' onclick="setSabcFilter(\'' + gd.grade + '\')"';
+    var click = (isActive && !isAll) ? '' : ' onclick="setSabcFilter(\'' + (gd.grade === 'B+' ? 'B' : gd.grade) + '\')"';
     html += '<div' + click + ' style="flex:1 1 65px;min-width:52px;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;cursor:' + cursor + ';opacity:' + opacity + ';transition:opacity 0.2s;border:1px solid #e2e8f0" onmouseover="this.style.filter=\'brightness(1.05)\'" onmouseout="this.style.filter=\'none\'">';
     html += '<div style="flex:0 0 24px;background:' + gd.color + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden">' + gd.grade + ' ' + count + '</div>';
     html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#fff;color:#475569;font-size:10px;line-height:1">' + (count > 0 ? pct + '%' : '-') + '</div>';
@@ -5470,6 +5525,7 @@ function renderSabcPieChart(grades, total) {
   html += '</div></div>';
   wrap.innerHTML = html;
 }
+// ── Render SABC auto-grading table ──
 // ── Render SABC auto-grading table ──
 function renderSabcTable() {
   var container = document.getElementById('sabcTableBody');
@@ -5486,17 +5542,22 @@ function renderSabcTable() {
     return p.sku !== '无匹配ID费用' && selectedShops.has(p.shop) && productOwnerMatch(p.sku, p.shop);
   });
   var entries = [];
-  var grades = { S: 0, A: 0, B: 0, 'B+': 0, C: 0 };
+  var grades = { S: 0, A: 0, B: 0, 'B+': 0, C: 0, D: 0, E: 0 };
+  var rawBPlus = 0;
   var activeCount = 0;
 
   for (var i = 0; i < products.length; i++) {
     var p = products[i];
     var g = getProductGrade(p.shop, p.sku);
     if (!g) continue;
+    // count raw B+ before resolution for pie chart
+    var isBPlus = (g.grade === 'B+');
+    var displayGrade = resolveDisplayGrade(g.grade, p.shop, p.sku, g.profitRate, g.totalMaoli);
     var gTotalQty = 0;
     for (var j = 0; j < g.weekQtys.length; j++) { gTotalQty += g.weekQtys[j]; }
     if (gTotalQty > 0) {
-      grades[g.grade] = (grades[g.grade] || 0) + 1;
+      grades[displayGrade] = (grades[displayGrade] || 0) + 1;
+      if (isBPlus) rawBPlus++;
       activeCount++;
     }
     var imgUrl = '';
@@ -5511,7 +5572,7 @@ function renderSabcTable() {
     else if(SKU_IMG[key4]) imgUrl = SKU_IMG[key4];
     else { for(var _k in SKU_IMG){ if(_k.startsWith(p.sku+'|'+p.shop+'|') || _k.startsWith(p.sku+'|'+p.shop)){ imgUrl = SKU_IMG[_k]; break; } } }
     entries.push({
-      grade: g.grade, reason: g.reason, sku: p.sku, shop: p.shop,
+      grade: displayGrade, reason: g.reason, sku: p.sku, shop: p.shop,
       category: p.cat || '', weeklyQty: g.weeklyQty, profitRate: g.profitRate,
       growthRate: g.growthRate, weekQtys: g.weekQtys,
       imgUrl: imgUrl,
@@ -5519,12 +5580,13 @@ function renderSabcTable() {
     });
   }
 
+  grades['B+'] = rawBPlus; // restore raw B+ count for pie chart card
   renderSabcPieChart(grades, activeCount);
 
   if (SABC_GRADE_FILTER !== 'all')
-    entries = entries.filter(function(e) { return e.grade === SABC_GRADE_FILTER || (SABC_GRADE_FILTER === 'B' && e.grade === 'B+'); });
+    entries = entries.filter(function(e) { return e.grade === SABC_GRADE_FILTER; });
 
-  var gradeOrder = { S: 0, A: 1, 'B+': 2, B: 3, C: 4 };
+  var gradeOrder = { S: 0, A: 1, 'B+': 2, B: 3, C: 4, D: 5, E: 6 };
   entries.sort(function(a, b) {
     if (gradeOrder[a.grade] !== gradeOrder[b.grade]) return gradeOrder[a.grade] - gradeOrder[b.grade];
     return b.weeklyQty - a.weeklyQty;
@@ -5559,15 +5621,285 @@ function renderSabcTable() {
   }
   container.innerHTML = rows || '<tr><td colspan="14" style="text-align:center;color:#94a3b8;padding:20px">无匹配数据</td></tr>';
   renderGradeChanges();
+  renderPersonTierBreakdown();
+}
+
+// ── Person Tier Tracking (calcPlan from sabc-tracker.html) ──
+function calcPersonTargets() {
+  // Hardcoded profit targets from sabc-tracker.html PERSONS data
+  var RAW = [
+    { name:'江凯伦', target:8392422, done:2911252 },
+    { name:'陈敏华', target:5904690, done:1776765 },
+    { name:'包家豪', target:1844131, done:128504  },
+    { name:'陈欣诺', target:5395134, done:51321   },
+    { name:'林梓蕾', target:5397380, done:100442  },
+    { name:'张梦瑶', target:8755270, done:2618965 },
+    { name:'毛立新', target:6720000, done:1727728 }
+  ];
+  var S_PER = 6.0, A_PER = 3.2, B_PER = 1.2, C_PER = 0.4;
+  var out = {};
+  for (var i = 0; i < RAW.length; i++) {
+    var p = RAW[i];
+    var remain = p.target - p.done;
+    var monthlyNeedWan = (remain / 8) / 10000; // 8 months remain
+    var cContrib = monthlyNeedWan * 0.3;
+    var sabNeed = monthlyNeedWan * 0.7;
+    var sTarget = Math.ceil((sabNeed * 0.4) / S_PER);
+    var aTarget = Math.ceil((sabNeed * 0.35) / A_PER);
+    var bTarget = Math.ceil((sabNeed * 0.25) / B_PER);
+    // Safety: S<=30, A<=50, B<=80
+    while (sTarget * S_PER + aTarget * A_PER + bTarget * B_PER + cContrib < monthlyNeedWan) {
+      if (sTarget < 30) sTarget++;
+      else if (aTarget < 50) aTarget++;
+      else if (bTarget < 80) bTarget++;
+      else break;
+    }
+    out[p.name] = { S: sTarget, A: aTarget, B: bTarget, C: Math.ceil(cContrib / C_PER) };
+  }
+  return out;
+}
+
+function renderPersonTierBreakdown() {
+  var container = document.getElementById('personTierBreakdown');
+  if (!container) return;
+  computeAllSabcGrades();
+  var selWeeks = getSelectedWeeks();
+  if (selWeeks.length === 0 || !SABC_GRADE_CACHE || Object.keys(SABC_GRADE_CACHE).length === 0) {
+    var sc = document.getElementById('tierSummaryCard');
+    var pc = document.getElementById('tierPersonCards');
+    if (sc) sc.innerHTML = '';
+    if (pc) pc.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:16px">请选择周次</div>';
+    return;
+  }
+
+  var WOMEN_SHOPS = ['Z-NZTF1店', 'G-NZTF1店'];
+  var PERSONS = ['江凯伦','陈敏华','包家豪','陈欣诺','林梓蕾','张梦瑶','毛立新'];
+  var DEPTS = { '江凯伦':'运营一部','陈敏华':'运营一部','包家豪':'运营一部','陈欣诺':'运营一部','林梓蕾':'运营一部','张梦瑶':'运营二部','毛立新':'运营二部' };
+  var TIERS = ['S','A','B','C','D','E'];
+  var COLORS = { 'S':'#dc2626', 'A':'#f59e0b', 'B':'#3b82f6', 'C':'#94a3b8', 'D':'#f97316', 'E':'#6b7280' };
+  var targets = calcPersonTargets();
+
+  // 1. System counts — deduplicate by shop|SKU
+  var seen = {};
+  var sys = {};
+  for (var ck in SABC_GRADE_CACHE) {
+    var g = SABC_GRADE_CACHE[ck];
+    var parts = ck.split('|');
+    if (parts.length < 3) continue;
+    var shop = parts[1], sku = parts[2];
+    var dedupeKey = shop + '|' + sku;
+    if (seen[dedupeKey]) continue;
+    seen[dedupeKey] = true;
+    var owner = (SKU_OWNER_LOOKUP[sku + '|' + shop]) || SKU_OWNER_LOOKUP[sku] || null;
+    if (!owner) continue;
+    var gender = WOMEN_SHOPS.indexOf(shop) !== -1 ? '女装' : '男装';
+    var grade = g.grade; if (grade === 'B+') grade = 'B';
+    if (grade === 'C') {
+      var inv = SKU_INVENTORY[sku + '|' + shop];
+      if (inv != null && inv === 0) { grade = 'E'; }
+      else if (g.profitRate === null || g.profitRate <= 0 || (g.totalMaoli || 0) < 4000) { grade = 'D'; }
+    }
+    if (!sys[owner]) sys[owner] = { '女装':{S:0,A:0,B:0,C:0,D:0,E:0}, '男装':{S:0,A:0,B:0,C:0,D:0,E:0} };
+    sys[owner][gender][grade] = (sys[owner][gender][grade] || 0) + 1;
+  }
+
+  // 2. Manual overrides counts
+  var man = {};
+  for (var key in manualOverrides) {
+    var mv = manualOverrides[key];
+    if (!mv || mv === '') continue;
+    var mparts = key.split('|');
+    if (mparts.length < 2) continue;
+    var mshop = mparts[0], msku = mparts[1];
+    var mowner = (SKU_OWNER_LOOKUP[msku + '|' + mshop]) || SKU_OWNER_LOOKUP[msku] || null;
+    if (!mowner) continue;
+    var mgender = WOMEN_SHOPS.indexOf(mshop) !== -1 ? '女装' : '男装';
+    if (mv === 'B+') mv = 'B';
+    if (!man[mowner]) man[mowner] = { '女装':{S:0,A:0,B:0,C:0,D:0,E:0}, '男装':{S:0,A:0,B:0,C:0,D:0,E:0} };
+    man[mowner][mgender][mv] = (man[mowner][mgender][mv] || 0) + 1;
+  }
+
+  var DEPT1 = ['江凯伦','陈敏华','包家豪','陈欣诺','林梓蕾'];
+  var DEPT2 = ['张梦瑶','毛立新'];
+
+  // Aggregate totals
+  var aggF = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var aggM = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var dept1F = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var dept1M = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var dept2F = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var dept2M = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var tgtTotalAgg = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var tgtDept1 = {S:0,A:0,B:0,C:0,D:0,E:0};
+  var tgtDept2 = {S:0,A:0,B:0,C:0,D:0,E:0};
+
+  for (var pi = 0; pi < PERSONS.length; pi++) {
+    var pn = PERSONS[pi];
+    var psF = (sys[pn] && sys[pn]['女装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+    var psM = (sys[pn] && sys[pn]['男装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+    var pmF = (man[pn] && man[pn]['女装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+    var pmM = (man[pn] && man[pn]['男装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+    var ptgt = targets[pn] || {S:0,A:0,B:0,C:0,D:0,E:0};
+    var isDept1 = DEPT1.indexOf(pn) !== -1;
+    for (var tt = 0; tt < TIERS.length; tt++) {
+      var ttk = TIERS[tt];
+      aggF[ttk] += (psF[ttk] || 0) + (pmF[ttk] || 0);
+      aggM[ttk] += (psM[ttk] || 0) + (pmM[ttk] || 0);
+      if (isDept1) { dept1F[ttk] += (psF[ttk] || 0) + (pmF[ttk] || 0); dept1M[ttk] += (psM[ttk] || 0) + (pmM[ttk] || 0); }
+      else { dept2F[ttk] += (psF[ttk] || 0) + (pmF[ttk] || 0); dept2M[ttk] += (psM[ttk] || 0) + (pmM[ttk] || 0); }
+    }
+    for (var tt = 0; tt < TIERS.length; tt++) {
+      var ttk = TIERS[tt];
+      tgtTotalAgg[ttk] += (ptgt[ttk] || 0);
+      if (isDept1) tgtDept1[ttk] += (ptgt[ttk] || 0); else tgtDept2[ttk] += (ptgt[ttk] || 0);
+    }
+  }
+
+  function totalRow(d) { return d.S + d.A + d.B + d.C + (d.D || 0) + (d.E || 0); }
+  function tgtTotalRow(d) { return d.S + d.A + d.B + d.C; }
+
+  var tableStyle = 'border-collapse:collapse;font-size:11px;width:100%';
+  var thStyle = 'padding:3px 6px;border-bottom:1px solid #e2e8f0;font-size:10px;color:#64748b;text-align:center';
+
+  // ===== Summary table =====
+  var sumHtml = '<table style="' + tableStyle + '">';
+  sumHtml += '<thead><tr><th style="' + thStyle + ';text-align:left;min-width:80px">分类</th>';
+  for (var t = 0; t < TIERS.length; t++) { sumHtml += '<th style="' + thStyle + '"><span style="padding:0 4px;border-radius:2px;font-size:9px;font-weight:700;color:#fff;background:' + COLORS[TIERS[t]] + '">' + TIERS[t] + '</span></th>'; }
+  sumHtml += '<th style="' + thStyle + '">计</th></tr></thead><tbody>';
+
+  function addSummaryRow(label, css, data, isTarget) {
+    var total = isTarget ? tgtTotalRow(data) : totalRow(data);
+    var row = '<tr>';
+    row += '<td style="padding:2px 6px;font-size:10px;' + css + '">' + label + '</td>';
+    for (var t = 0; t < TIERS.length; t++) {
+      var tk = TIERS[t];
+      if (isTarget && (tk === 'D' || tk === 'E')) { row += '<td style="text-align:center;color:#cbd5e1">—</td>'; }
+      else {
+        var v = data[tk] || 0;
+        row += '<td style="text-align:center;font-weight:600;font-size:10px;color:' + (v > 0 ? (isTarget ? '#6366f1' : '#0f172a') : '#cbd5e1') + '">' + (v > 0 ? v : '—') + '</td>';
+      }
+    }
+    row += '<td style="text-align:center;font-weight:600;font-size:10px;color:' + (isTarget ? '#6366f1' : '#64748b') + '">' + total + '</td></tr>';
+    return row;
+  }
+
+  sumHtml += '<tr><td colspan="8" style="padding:4px 6px;font-weight:700;font-size:11px;color:#334155;border-bottom:2px solid #e2e8f0">运营一部（江凯伦/陈敏华/包家豪/陈欣诺/林梓蕾）</td></tr>';
+  sumHtml += addSummaryRow('女装合计', 'padding-left:12px;color:#ec4899', dept1F, false);
+  sumHtml += addSummaryRow('男装合计', 'padding-left:12px;color:#2563eb', dept1M, false);
+  sumHtml += addSummaryRow('目标', 'padding-left:12px;color:#6366f1', tgtDept1, true);
+
+  sumHtml += '<tr><td colspan="8" style="padding:4px 6px;font-weight:700;font-size:11px;color:#334155;border-bottom:2px solid #e2e8f0">运营二部（张梦瑶/毛立新）</td></tr>';
+  sumHtml += addSummaryRow('女装合计', 'padding-left:12px;color:#ec4899', dept2F, false);
+  sumHtml += addSummaryRow('男装合计', 'padding-left:12px;color:#2563eb', dept2M, false);
+  sumHtml += addSummaryRow('目标', 'padding-left:12px;color:#6366f1', tgtDept2, true);
+
+  sumHtml += '<tr><td colspan="8" style="padding:4px 6px;font-weight:700;font-size:11px;color:#0f172a;border-bottom:2px solid #e2e8f0">全部合计</td></tr>';
+  sumHtml += addSummaryRow('女装合计', 'padding-left:12px;color:#ec4899;font-weight:600', aggF, false);
+  sumHtml += addSummaryRow('男装合计', 'padding-left:12px;color:#2563eb;font-weight:600', aggM, false);
+  sumHtml += addSummaryRow('目标', 'padding-left:12px;color:#6366f1;font-weight:600', tgtTotalAgg, true);
+  sumHtml += '</tbody></table>';
+
+  sumHtml = '<div style="background:#f8fafc;border:2px solid #3b5cf6;border-radius:6px;padding:10px 14px">' +
+    '<div style="font-weight:700;font-size:13px;color:#0f172a;margin-bottom:6px">汇总 <span style="font-size:10px;color:#94a3b8;font-weight:400">系统+手动 / 目标</span></div>' +
+    sumHtml + '</div>';
+
+  var summaryCard = document.getElementById('tierSummaryCard');
+  if (summaryCard) summaryCard.innerHTML = sumHtml;
+
+  // ===== Person table =====
+  // Filter by selectedOwners from global owner filter
+  var filteredPersons = [];
+  for (var i = 0; i < PERSONS.length; i++) {
+    if (selectedOwners.has(PERSONS[i])) filteredPersons.push(PERSONS[i]);
+  }
+  if (filteredPersons.length === 0 || filteredPersons.length === PERSONS.length) {
+    filteredPersons = PERSONS.slice();
+  }
+
+  var personHtml = '';
+  if (filteredPersons.length === 0) {
+    personHtml = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:16px">请在负责人筛选中选择人员</div>';
+  } else {
+    personHtml = '<table style="' + tableStyle + ';margin-top:10px">';
+    personHtml += '<thead><tr><th style="' + thStyle + ';text-align:left;min-width:60px">负责人</th><th style="' + thStyle + ';text-align:left;min-width:50px">类型</th>';
+    for (var t = 0; t < TIERS.length; t++) { personHtml += '<th style="' + thStyle + '"><span style="padding:0 4px;border-radius:2px;font-size:9px;font-weight:700;color:#fff;background:' + COLORS[TIERS[t]] + '">' + TIERS[t] + '</span></th>'; }
+    personHtml += '<th style="' + thStyle + '">计</th></tr></thead><tbody>';
+
+    var currentDept = '';
+    for (var i = 0; i < filteredPersons.length; i++) {
+      var name = filteredPersons[i];
+      var dept = DEPTS[name] || '';
+      var tgt = targets[name] || {S:0,A:0,B:0,C:0,D:0,E:0};
+      var sF = (sys[name] && sys[name]['女装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+      var sM = (sys[name] && sys[name]['男装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+      var mF = (man[name] && man[name]['女装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+      var mM = (man[name] && man[name]['男装']) || {S:0,A:0,B:0,C:0,D:0,E:0};
+
+      if (dept !== currentDept) {
+        currentDept = dept;
+        personHtml += '<tr><td colspan="8" style="padding:4px 6px;font-weight:700;font-size:11px;color:#334155;border-bottom:2px solid #e2e8f0">' + dept + '</td></tr>';
+      }
+
+      var dataRows = [];
+      dataRows.push({type:'女装系统', sys:sF, man:null, tgt:null, color:'#ec4899'});
+      if (totalRow(mF) > 0) dataRows.push({type:'女装手动', sys:null, man:mF, tgt:null, color:'#ec4899'});
+      dataRows.push({type:'男装系统', sys:sM, man:null, tgt:null, color:'#2563eb'});
+      if (totalRow(mM) > 0) dataRows.push({type:'男装手动', sys:null, man:mM, tgt:null, color:'#2563eb'});
+      dataRows.push({type:'目标', sys:null, man:null, tgt:tgt, color:'#6366f1'});
+
+      for (var dr = 0; dr < dataRows.length; dr++) {
+        var row = dataRows[dr];
+        personHtml += '<tr>';
+        if (dr === 0) {
+          personHtml += '<td rowspan="' + dataRows.length + '" style="padding:2px 6px;font-weight:700;font-size:12px;color:#0f172a;border-bottom:1px solid #f1f5f9;vertical-align:middle">' + name + '</td>';
+        }
+        if (row.tgt) {
+          var tgtTot = tgtTotalRow(row.tgt);
+          personHtml += '<td style="padding:2px 6px;font-size:10px;color:#6366f1;font-weight:500;border-bottom:1px solid #f1f5f9">目标</td>';
+          for (var t = 0; t < TIERS.length; t++) {
+            var tk = TIERS[t];
+            if (tk === 'D' || tk === 'E') { personHtml += '<td style="text-align:center;color:#cbd5e1">—</td>'; }
+            else personHtml += '<td style="text-align:center;font-weight:600;font-size:10px;color:#6366f1">' + (row.tgt[tk] || 0) + '</td>';
+          }
+          personHtml += '<td style="text-align:center;font-weight:600;font-size:10px;color:#6366f1">' + tgtTot + '</td>';
+        } else {
+          var label = row.type.replace('女装','女').replace('男装','男').replace('系统','系').replace('手动','手');
+          personHtml += '<td style="padding:2px 6px;font-size:10px;color:' + row.color + ';font-weight:500;border-bottom:1px solid #f1f5f9">' + label + '</td>';
+          for (var t = 0; t < TIERS.length; t++) {
+            var tk = TIERS[t];
+            var sv = row.sys ? (row.sys[tk] || 0) : 0;
+            var mv = row.man ? (row.man[tk] || 0) : 0;
+            var v = sv + mv;
+            if (v > 0) {
+              var c = '';
+              if (sv > 0) c += '<span style="font-weight:600">' + sv + '</span>';
+              if (mv > 0) c += (sv > 0 ? '<span style="color:#94a3b8">/</span>' : '') + '<span style="color:#64748b">' + mv + '</span>';
+              personHtml += '<td style="text-align:center;font-size:10px;border-bottom:1px solid #f1f5f9">' + c + '</td>';
+            } else {
+              personHtml += '<td style="text-align:center;color:#cbd5e1;font-size:10px;border-bottom:1px solid #f1f5f9">—</td>';
+            }
+          }
+          var rowTot = row.sys ? totalRow(row.sys) : (row.man ? totalRow(row.man) : 0);
+          personHtml += '<td style="text-align:center;font-weight:600;font-size:10px;color:#64748b">' + rowTot + '</td>';
+        }
+        personHtml += '</tr>';
+      }
+    }
+    personHtml += '</tbody></table>';
+  }
+
+  var personCards = document.getElementById('tierPersonCards');
+  if (personCards) personCards.innerHTML = personHtml;
 }
 
 // ── Grade change tracking ──
 function toggleGradeChanges() {
   gradeChangesExpanded = !gradeChangesExpanded;
-  var content = document.getElementById('gradeChangesContent');
+  var container = document.getElementById('sabcGradeChanges');
   var hint = document.getElementById('gradeChangesHint');
-  if (content) content.style.display = gradeChangesExpanded ? 'flex' : 'none';
-  if (hint) hint.textContent = gradeChangesExpanded ? '点击收起' : '点击展开';
+  if (container) container.style.display = gradeChangesExpanded ? 'block' : 'none';
+  if (hint) hint.textContent = gradeChangesExpanded ? '收起' : '展开';
+  if (gradeChangesExpanded && typeof renderGradeChanges === 'function') renderGradeChanges();
 }
 
 function gradeChangeJump(sku, shop) {
@@ -5589,28 +5921,27 @@ function renderGradeChanges() {
   var products = getMultiWeekProducts().filter(function(p) {
     return p.sku !== '无匹配ID费用' && selectedShops.has(p.shop) && productOwnerMatch(p.sku, p.shop);
   });
-  var gradeRank = { 'S': 4, 'A': 3, 'B+': 2.5, 'B': 2, 'C': 1 };
+  var gradeRank = { 'S': 7, 'A': 6, 'B+': 5, 'B': 4, 'C': 3, D: 2, E: 1 };
   var ups = [], downs = [];
   for (var i = 0; i < products.length; i++) {
     var p = products[i];
     var cg = computeSabcGrade(p.shop, p.sku, targetNum);
     var pg = computeSabcGrade(p.shop, p.sku, prevNum);
-    if (!cg || !pg || cg.grade === pg.grade) continue;
-    var cr = gradeRank[cg.grade] || 0;
-    var pr = gradeRank[pg.grade] || 0;
-    var item = { shop: p.shop, sku: p.sku, from: pg.grade, to: cg.grade };
+    if (!cg || !pg) continue;
+    var cdg = resolveDisplayGrade(cg.grade, p.shop, p.sku, cg.profitRate, cg.totalMaoli);
+    var pdg = resolveDisplayGrade(pg.grade, p.shop, p.sku, pg.profitRate, pg.totalMaoli);
+    if (cdg === pdg) continue;
+    var cr = gradeRank[cdg] || 0;
+    var pr = gradeRank[pdg] || 0;
+    var item = { shop: p.shop, sku: p.sku, from: pdg, to: cdg };
     if (cr > pr) ups.push(item);
     else if (cr < pr) downs.push(item);
   }
 
-  // ── Title bar with toggle ──
-  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer" onclick="toggleGradeChanges()">';
-  html += '<span style="font-size:13px;font-weight:700;color:#334155">等级变化</span>';
-  html += '<span id="gradeChangesHint" style="font-size:11px;font-weight:400;color:#64748b;cursor:pointer;user-select:none">'+(gradeChangesExpanded?'点击收起':'点击展开')+'</span>';
-  html += '</div>';
-
+  // ── Content ──
+  var html = '';
   if (ups.length === 0 && downs.length === 0) {
-    html += '<div id="gradeChangesContent" style="display:'+(gradeChangesExpanded?'block':'none')+';text-align:center;padding:16px 10px;color:#94a3b8;font-size:12px">本周无等级变化</div>';
+    html = '<div style="text-align:center;padding:16px 10px;color:#94a3b8;font-size:12px">本周无等级变化</div>';
     container.innerHTML = html;
     return;
   }
@@ -5666,10 +5997,12 @@ function renderGradeChanges() {
     return h;
   }
 
-  html += '<div id="gradeChangesContent" style="display:'+(gradeChangesExpanded?'flex':'none')+';gap:14px;flex-wrap:wrap">';
-  if (ups.length > 0) html += _renderCard('↑ 升级（'+ups.length+'个）', '#16a34a', '#f0fdf4', '#bbf7d0', '#dcfce7', ups);
-  if (downs.length > 0) html += _renderCard('↓ 降级（'+downs.length+'个）', '#dc2626', '#fef2f2', '#fecaca', '#fee2e2', downs);
-  html += '</div>';
+  if (ups.length > 0 || downs.length > 0) {
+    html += '<div style="display:flex;gap:10px">';
+    if (ups.length > 0) html += _renderCard('↑ 升级（'+ups.length+'个）', '#16a34a', '#f0fdf4', '#bbf7d0', '#dcfce7', ups);
+    if (downs.length > 0) html += _renderCard('↓ 降级（'+downs.length+'个）', '#dc2626', '#fef2f2', '#fecaca', '#fee2e2', downs);
+    html += '</div>';
+  }
   container.innerHTML = html;
 }
 
@@ -5729,7 +6062,9 @@ function editManualGrade(shop, sku, event) {
     { v: 'S', label: 'S \u2605\u2605\u2605' },
     { v: 'A', label: 'A \u2605\u2605' },
     { v: 'B', label: 'B \u2605' },
-    { v: 'C', label: 'C' }
+    { v: 'C', label: 'C' },
+    { v: 'D', label: 'D' },
+    { v: 'E', label: 'E' }
   ];
   for (var i = 0; i < opts.length; i++) {
     var o = opts[i];
@@ -5775,8 +6110,8 @@ function renderManualGradeButtons() {
   if (!container) return;
   var hasAny = Object.keys(manualOverrides).length > 0;
   container.style.display = hasAny ? '' : 'none';
-  var grades = ['all', 'S', 'A', 'B', 'C'];
-  var labels = { all: '全部', S: 'S', A: 'A', B: 'B', C: 'C' };
+  var grades = ['all', 'S', 'A', 'B', 'C', 'D', 'E'];
+  var labels = { all: '全部', S: 'S', A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' };
   var html = '';
   for (var i = 0; i < grades.length; i++) {
     var g = grades[i];
@@ -5790,15 +6125,28 @@ var _origRenderTargetBoard = renderTargetBoard;
 renderTargetBoard = function() {
   _origRenderTargetBoard();
   renderSabcTable();
+  
   if (SABC_GRADE_FILTER !== 'all') renderProdTable();
 };
 
-// ── Hook into tglWk to clear cache ──
+// ── Hook into tglWk to clear cache & auto-track months ──
 var _origTglWk = tglWk;
 tglWk = function(w) {
   _origTglWk(w);
   SABC_GRADE_CACHE = {};
   renderSabcTable();
+
+  // Auto-track months based on currently selected weeks
+  if (WEEK_TO_MONTH && selectedWeeks.size > 0) {
+    selectedMonths = new Set();
+    selectedWeeks.forEach(function(sw) {
+      var m = WEEK_TO_MONTH[sw];
+      if (m) selectedMonths.add(m);
+    });
+    if (selectedMonths.size === 0) selectedMonths = new Set(['5']);
+    renderMonthTags();
+    renderTargetBoard();
+  }
 };
 
 // ── Hook into tglS for SABC sync ──
@@ -5806,7 +6154,7 @@ var _origTglS = tglS;
 tglS = function(s) {
   _origTglS(s);
   SABC_GRADE_CACHE = {};
-  setTimeout(function() { renderSabcTable(); }, 80);
+  setTimeout(function() { renderSabcTable();  }, 80);
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5814,326 +6162,6 @@ tglS = function(s) {
 // ═══════════════════════════════════════════════════════════════════
 
 
-// ========== 销量分层占比分析 ==========
-var NEW_CUTOFF = (function(){ var d = new Date(); d.setDate(d.getDate() - 45); var y = d.getFullYear(); var m = String(d.getMonth() + 1).padStart(2, '0'); var dd = String(d.getDate()).padStart(2, '0'); return y + '-' + m + '-' + dd; })();
-var ALL_TIERS = [350, 175, 105];
-var NEW_TIERS = [175, 84, 56];
-
-function classifyByTier(products, tiers) {
-  var result = {};
-  tiers.forEach(function(t){ result[t] = 0; });
-  products.forEach(function(p){
-    var qty = p.qty || 0;
-    for (var i = 0; i < tiers.length; i++) {
-      if (qty >= tiers[i]) { result[tiers[i]]++; break; }
-    }
-  });
-  return result;
-}
-
-function renderTierTable(title, products, allTiers, newTiers, newCutoff, prevProducts) {
-  // All products - current week
-  var allWithSales = products.filter(function(p){ return (p.qty||0) > 0; });
-  var allSalesCnt = allWithSales.length;
-  var allTierResult = classifyByTier(allWithSales, allTiers);
-
-  // New products - current week
-  var newProducts = products.filter(function(p){
-    var sku = p.sku || '';
-    var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
-    // 优先尝试 SKU+店铺+WB商品ID 组合
-    var fd = null;
-    if (wbId && p.shop) {
-      fd = SKU_FIRST_DATE[sku+'|'+p.shop+'|'+wbId];
-    }
-    // 其次尝试 SKU+WB商品ID 组合
-    if (!fd && wbId) {
-      fd = SKU_FIRST_DATE[sku+'|'+wbId];
-    }
-    // 再次尝试 SKU+店铺 组合（向后兼容）
-    if (!fd && p.shop) {
-      fd = SKU_FIRST_DATE[sku+'|'+p.shop];
-    }
-    // 最后尝试 SKU 单独
-    if (!fd) {
-      fd = SKU_FIRST_DATE[sku] || '';
-    }
-    return fd >= newCutoff;
-  });
-  var newWithSales = newProducts.filter(function(p){ return (p.qty||0) > 0; });
-  var newSalesCnt = newWithSales.length;
-  var newSalesTier = classifyByTier(newWithSales, newTiers);
-
-  // Last week data
-  var hasPrev = prevProducts && prevProducts.length > 0;
-  var prevAllSalesCnt = 0, prevNewSalesCnt = 0;
-  var prevAllTier = {}, prevNewTier = {};
-  if (hasPrev) {
-    var prevAllWithSales = prevProducts.filter(function(p){ return (p.qty||0) > 0; });
-    prevAllSalesCnt = prevAllWithSales.length;
-    prevAllTier = classifyByTier(prevAllWithSales, allTiers);
-    var prevNewProducts = prevProducts.filter(function(p){
-      var sku = p.sku || '';
-      var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
-      // 优先尝试 SKU+店铺+WB商品ID 组合
-      var fd = null;
-      if (wbId && p.shop) {
-        fd = SKU_FIRST_DATE[sku+'|'+p.shop+'|'+wbId];
-      }
-      // 其次尝试 SKU+WB商品ID 组合
-      if (!fd && wbId) {
-        fd = SKU_FIRST_DATE[sku+'|'+wbId];
-      }
-      // 再次尝试 SKU+店铺 组合（向后兼容）
-      if (!fd && p.shop) {
-        fd = SKU_FIRST_DATE[sku+'|'+p.shop];
-      }
-      // 最后尝试 SKU 单独
-      if (!fd) {
-        fd = SKU_FIRST_DATE[sku] || '';
-      }
-      return fd >= newCutoff;
-    });
-    var prevNewWithSales = prevNewProducts.filter(function(p){ return (p.qty||0) > 0; });
-    prevNewSalesCnt = prevNewWithSales.length;
-    prevNewTier = classifyByTier(prevNewWithSales, newTiers);
-  }
-
-  function wowHtml(curPct, prevPct) {
-    if (!hasPrev) return '<span class="tier-wow" style="color:#94a3b8">-</span>';
-    var diff = curPct - prevPct;
-    if (diff > 0) return '<span class="tier-wow up">↑' + diff + 'pp</span>';
-    if (diff < 0) return '<span class="tier-wow down">↓' + diff + 'pp</span>';
-    return '<span class="tier-wow" style="color:#94a3b8">→0</span>';
-  }
-
-  function cellHtml(count, denom, wow) {
-    var pct = denom > 0 ? Math.round(count / denom * 100) + '%' : '0%';
-    var w = wow || '';
-    return '<span class="tier-cell-val">' + count + '</span><span class="tier-cell-pct">' + pct + w + '</span>';
-  }
-
-  function makeRow(label, curAllVal, curAllDenom, prevAllVal, prevAllDenom, curNewVal, curNewDenom, prevNewVal, prevNewDenom) {
-    var cls = label === 'S级' ? ' tier-high' : (label === 'A级' ? ' tier-mid' : (label === 'B级' ? ' tier-low' : ''));
-    var curAllPct = curAllDenom > 0 ? Math.round(curAllVal / curAllDenom * 100) : 0;
-    var prevAllPct = hasPrev && prevAllDenom > 0 ? Math.round(prevAllVal / prevAllDenom * 100) : 0;
-    var allWow = wowHtml(curAllPct, prevAllPct);
-    var curNewPct = curNewDenom > 0 ? Math.round(curNewVal / curNewDenom * 100) : 0;
-    var prevNewPct = hasPrev && prevNewDenom > 0 ? Math.round(prevNewVal / prevNewDenom * 100) : 0;
-    var newWow = wowHtml(curNewPct, prevNewPct);
-
-    return '<tr class="' + cls + '"><td class="tier-label">' + label + '</td>' +
-      '<td>' + cellHtml(curAllVal, curAllDenom) + '</td>' +
-      '<td>' + cellHtml(prevAllVal, prevAllDenom, allWow) + '</td>' +
-      '<td>' + cellHtml(curNewVal, curNewDenom) + '</td>' +
-      '<td>' + cellHtml(prevNewVal, prevNewDenom, newWow) + '</td></tr>';
-  }
-
-  var rows = '';
-
-  rows += makeRow('S级',
-    allTierResult[allTiers[0]] || 0, allSalesCnt,
-    prevAllTier[allTiers[0]] || 0, prevAllSalesCnt,
-    newSalesTier[newTiers[0]] || 0, newSalesCnt,
-    prevNewTier[newTiers[0]] || 0, prevNewSalesCnt);
-
-  rows += makeRow('A级',
-    allTierResult[allTiers[1]] || 0, allSalesCnt,
-    prevAllTier[allTiers[1]] || 0, prevAllSalesCnt,
-    newSalesTier[newTiers[1]] || 0, newSalesCnt,
-    prevNewTier[newTiers[1]] || 0, prevNewSalesCnt);
-
-  rows += makeRow('B级',
-    allTierResult[allTiers[2]] || 0, allSalesCnt,
-    prevAllTier[allTiers[2]] || 0, prevAllSalesCnt,
-    newSalesTier[newTiers[2]] || 0, newSalesCnt,
-    prevNewTier[newTiers[2]] || 0, prevNewSalesCnt);
-
-  rows += makeRow('汇总',
-    allSalesCnt, allSalesCnt,
-    prevAllSalesCnt, prevAllSalesCnt,
-    newSalesCnt, newSalesCnt,
-    prevNewSalesCnt, prevNewSalesCnt);
-
-  return '<div class="tier-card">' +
-    '<div class="tier-card-title">' + title + '</div>' +
-    '<table class="tier-table">' +
-    '<thead><tr>' +
-    '<th width="50">分层</th>' +
-    '<th colspan="2">全部产品(有销量)</th>' +
-    '<th colspan="2">新品(有销量)</th>' +
-    '</tr><tr class="tier-subhead">' +
-    '<th></th>' +
-    '<th>本周</th><th>上周</th>' +
-    '<th>本周</th><th>上周</th>' +
-    '</tr></thead>' +
-    '<tbody>' + rows + '</tbody>' +
-    '</table></div>';
-}
-
-function renderSabcTierCard(title, products) {
-  var grades = { S: 0, A: 0, 'B+': 0, B: 0, C: 0 };
-  var manGrades = { S: 0, A: 0, 'B+': 0, B: 0, C: 0 };
-  var manTotal = 0;
-  var total = 0;
-  for (var i = 0; i < products.length; i++) {
-    var p = products[i];
-    var g = getProductGrade(p.shop, p.sku);
-    if (!g) continue;
-    var gTotalQty = 0;
-    for (var jj = 0; jj < g.weekQtys.length; jj++) { gTotalQty += g.weekQtys[jj]; }
-    if (gTotalQty === 0) continue;
-    total++;
-    grades[g.grade] = (grades[g.grade] || 0) + 1;
-    // Manual grade count
-    var mKey = p.shop + '|' + p.sku;
-    if (manualOverrides.hasOwnProperty(mKey)) {
-      var mg = manualOverrides[mKey];
-      manGrades[mg] = (manGrades[mg] || 0) + 1;
-      manTotal++;
-    }
-  }
-  if (total === 0) return '<div class="tier-card"><div class="tier-card-title">'+title+'</div><div style="text-align:center;color:#94a3b8;padding:12px">无分级数据</div></div>';
-
-  var pct = function(n) { return (n/total*100).toFixed(1)+'%'; };
-  var manPct = function(n) { return manTotal > 0 ? (n/manTotal*100).toFixed(1)+'%' : '-'; };
-
-  var rows = '';
-  var manCell = function(grade) {
-    if (manTotal === 0) return '<td style="color:#94a3b8">-</td>';
-    var c = manGrades[grade] || 0;
-    return '<td>'+c+'个 ('+manPct(c)+')</td>';
-  };
-  rows += '<tr><td class="tier-label" style="color:#dc2626;font-weight:600">S</td><td>'+(grades.S||0)+'个 ('+pct(grades.S||0)+')</td>'+manCell('S')+'</tr>';
-  rows += '<tr><td class="tier-label" style="color:#f59e0b;font-weight:600">A</td><td>'+(grades.A||0)+'个 ('+pct(grades.A||0)+')</td>'+manCell('A')+'</tr>';
-  rows += '<tr><td class="tier-label" style="color:#3b82f6;font-weight:600">B+</td><td>'+(grades['B+']||0)+'个 ('+pct(grades['B+']||0)+')</td>'+manCell('B+')+'</tr>';
-  rows += '<tr><td class="tier-label" style="color:#3b82f6">B</td><td>'+(grades.B||0)+'个 ('+pct(grades.B||0)+')</td>'+manCell('B')+'</tr>';
-  rows += '<tr><td class="tier-label" style="color:#94a3b8">C</td><td>'+(grades.C||0)+'个 ('+pct(grades.C||0)+')</td>'+manCell('C')+'</tr>';
-  rows += '<tr><td class="tier-label" style="font-weight:600;color:#475569">合计</td><td style="font-weight:600">'+total+'个</td><td style="font-weight:600;'+(manTotal===0?'color:#94a3b8':'')+'">'+(manTotal>0?manTotal+'个':'-')+'</td></tr>';
-
-  return '<div class="tier-card">'+
-    '<div class="tier-card-title">'+title+' <span style="font-size:10px;color:#94a3b8;font-weight:400">SABC</span></div>'+
-    '<table class="tier-table">'+
-    '<thead><tr><th>等级</th><th>系统(数量/占比)</th><th>手动(数量/占比)</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table>'+
-    '</div>';
-}
-
-
-function renderTierAnalysis(){
-  var container = document.getElementById('tierContent');
-  if (!container) return;
-
-  var curProducts = getMultiWeekProducts();
-  if (curProducts.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">暂无数据</div>';
-    return;
-  }
-
-  // Get previous week products
-  var prevWeek = getSelectedWeeks().length === 1 ? getPrevWeek(getSelectedWeeks()[0]) : null;
-  var prevProducts = [];
-  if (prevWeek && WEEK_DATA[prevWeek] && WEEK_DATA[prevWeek].allProducts) {
-    prevProducts = WEEK_DATA[prevWeek].allProducts;
-  }
-
-  var womenShops = ['Z-NZTF1店', 'G-NZTF1店'];
-
-  var menProducts = curProducts.filter(function(p){ return womenShops.indexOf(p.shop) === -1; });
-  var womenProducts = curProducts.filter(function(p){ return womenShops.indexOf(p.shop) !== -1; });
-  var prevMenProducts = prevProducts.filter(function(p){ return womenShops.indexOf(p.shop) === -1; });
-  var prevWomenProducts = prevProducts.filter(function(p){ return womenShops.indexOf(p.shop) !== -1; });
-
-  var html = '';
-
-  // === 男装 + 女装 + 负责人 合并到同一行 ===
-  // 先收集负责人卡数量以确定列数
-  var ownerCards = [];
-  if (selectedOwners.size < OWNERS.length) {
-    var ownerMenProducts = {}, ownerPrevMenProducts = {};
-    OWNERS.forEach(function(o) {
-      if (selectedOwners.has(o)) {
-        var oProducts = menProducts.filter(function(p) {
-          var skuOwner = SKU_OWNER_LOOKUP[p.sku + '|' + p.shop] || SKU_OWNER_LOOKUP[p.sku];
-          return skuOwner === o;
-        });
-        if (oProducts.length > 0) ownerMenProducts[o] = oProducts;
-        var oPrevProducts = prevMenProducts.filter(function(p) {
-          var skuOwner = SKU_OWNER_LOOKUP[p.sku + '|' + p.shop] || SKU_OWNER_LOOKUP[p.sku];
-          return skuOwner === o;
-        });
-        if (oPrevProducts.length > 0) ownerPrevMenProducts[o] = oPrevProducts;
-      }
-    });
-    Object.keys(ownerMenProducts).forEach(function(o) {
-      ownerCards.push({ name: o, products: ownerMenProducts[o], prev: ownerPrevMenProducts[o] || [] });
-    });
-  }
-  var combinedGridStyle = 'grid-template-columns:repeat(auto-fill,minmax(320px,1fr))';
-
-  html += '<div style="margin-bottom:14px">';
-  html += '<div class="tier-card-grid" style="' + combinedGridStyle + '">';
-  html += renderSabcTierCard('男装', menProducts);
-  html += renderSabcTierCard('女装', womenProducts);
-  ownerCards.forEach(function(oc) {
-    html += renderSabcTierCard(oc.name, oc.products);
-  });
-  html += '</div></div>';
-
-  // === 店铺层：一行 5 个，不足 5 个自适应 ===
-  var shopCards = '';
-  var shopDisplayed = 0;
-  if (selectedShops && selectedShops.size > 0) {
-    selectedShops.forEach(function(shop){
-      var shopProducts = curProducts.filter(function(p){ return p.shop === shop; });
-      var prevShopProducts = prevProducts.filter(function(p){ return p.shop === shop; });
-      var owners = SHOP_OWNERS[shop] || {};
-      var ownerList = Object.keys(owners).filter(function(o){ return selectedOwners.has(o); });
-      if (ownerList.length <= 1) {
-        if (shopProducts.length > 0) {
-          shopCards += renderSabcTierCard(shop, shopProducts);
-          shopDisplayed++;
-        }
-      } else {
-        ownerList.forEach(function(o) {
-          var oProds = shopProducts.filter(function(p) {
-            var so = SKU_OWNER_LOOKUP[p.sku + '|' + p.shop] || SKU_OWNER_LOOKUP[p.sku];
-            return so === o;
-          });
-          var prevOProds = prevShopProducts.filter(function(p) {
-            var so = SKU_OWNER_LOOKUP[p.sku + '|' + p.shop] || SKU_OWNER_LOOKUP[p.sku];
-            return so === o;
-          });
-          if (oProds.length > 0) {
-            shopCards += renderSabcTierCard(shop + '-' + o, oProds);
-            shopDisplayed++;
-          }
-        });
-      }
-    });
-  } else {
-    var allShops = {};
-    curProducts.forEach(function(p){ allShops[p.shop] = true; });
-    Object.keys(allShops).sort().forEach(function(shop){
-      var shopProducts = curProducts.filter(function(p){ return p.shop === shop; });
-      var prevShopProducts = prevProducts.filter(function(p){ return p.shop === shop; });
-      if (shopProducts.length > 0) {
-        shopCards += renderSabcTierCard(shop, shopProducts);
-        shopDisplayed++;
-      }
-    });
-  }
-  var shopGridStyle = 'grid-template-columns:repeat(auto-fill,minmax(320px,1fr))';
-  html += '<div class="tier-section-title" style="margin-top:16px">按店铺</div>';
-  html += '<div class="tier-card-grid" style="' + shopGridStyle + '">';
-  html += shopCards;
-  html += '</div>';
-  if (shopDisplayed === 0) {
-    html += '<div style="text-align:center;color:#94a3b8;padding:10px;width:100%">暂无店铺数据</div>';
-  }
-
-  container.innerHTML = html;
-}
 
 // ========== 拖拽悬浮窗功能 ==========
 (function initDragPanels() {
