@@ -79,7 +79,7 @@ tr:hover td{background:#f8fafc}
 <div class="page-wrap">
 
 <h1>SABC 达标追踪 <span style="font-size:12px;color:#8b5cf6;font-weight:600">V2 · V3 实时分级驱动</span></h1>
-<p class="subtitle">基于全年利润目标 + WEEK_DATA 实时 SABC 分级 → 动态推算达标方案 · 数据截止 2026年5月 · 剩余8个月（6月-1月）</p>
+<p class="subtitle">基于全年利润目标 + WEEK_DATA 实时 SABC 分级 → 动态推算达标方案 · 数据截止 2026年6月（W46·06.01-06.07） · 剩余8个月（6月-1月）</p>
 
 <!-- Summary Cards -->
 <div class="summary-row">
@@ -159,6 +159,11 @@ tr:hover td{background:#f8fafc}
 <script src="output/data.js"></script>
 
 <script>
+// Map DATA namespace to global variables expected by computeDynamicTiers()
+if (typeof DATA !== 'undefined') {
+  var WEEK_DATA = DATA.WEEK_DATA;
+  var SKU_OWNER = DATA.SKU_OWNER;
+}
 // ========== DATA ==========
 var REMAINING_MONTHS = 8;
 var WEEKS_PER_MONTH = 4;
@@ -217,8 +222,9 @@ function computeDynamicTiers() {
   // Collect all products across selected weeks
   var productMap = {}; // key: "shop|sku"
   latestWeeks.forEach(function(wk) {
-    var products = WEEK_DATA[wk];
-    if (!Array.isArray(products)) return;
+    var weekObj = WEEK_DATA[wk];
+    if (!weekObj || !weekObj.allProducts || !Array.isArray(weekObj.allProducts)) return;
+    var products = weekObj.allProducts;
     products.forEach(function(p) {
       if (!p.sku || p.sku === '无匹配ID费用') return;
       var key = (p.shop || '') + '|' + p.sku;
