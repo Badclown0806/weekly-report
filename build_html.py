@@ -98,6 +98,25 @@ def main():
 
     new_html = html[:idx_start] + new_block + html[idx_end + len(end_marker):]
 
+    # ── 替换 CORE_DETAIL 块（DATA_DETAIL_START ~ DATA_DETAIL_END） ──
+    detail_start_marker = '/* ===DATA_DETAIL_START=== */'
+    detail_end_marker = '/* ===DATA_DETAIL_END=== */'
+
+    idx_ds = new_html.find(detail_start_marker)
+    idx_de = new_html.find(detail_end_marker)
+
+    if idx_ds >= 0 and idx_de >= 0:
+        detail_block = (
+            f"{detail_start_marker}\n"
+            f"var CORE_DETAIL = {detail_json};\n"
+            f"{detail_end_marker}\n"
+            f"var DETAIL_DATA = null;"
+        )
+        new_html = new_html[:idx_ds] + detail_block + new_html[idx_de + len(detail_end_marker):]
+        print(f"  CORE_DETAIL 块已更新 (WEEK_DATA + TRAFFIC_WEEKLY)")
+    else:
+        print(f"  [WARNING] 未找到 CORE_DETAIL 标记 (start={idx_ds}, end={idx_de})，跳过内嵌更新")
+
     with open(HTML_PATH, 'w', encoding='utf-8') as f:
         f.write(new_html)
 
