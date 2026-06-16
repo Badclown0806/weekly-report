@@ -8,7 +8,8 @@ build_html.py - 一键从 Excel 生成带内嵌数据的 product-weekly-report.h
     1. 运行 build_data.py 生成 data.js
     2. 读取 data.js 并解析 JSON
     3. 将数据拆分为 CORE_DATA（轻量元数据）和 DETAIL_DATA（周数据+流量数据）
-    4. 替换 HTML 中标记块 /* ===DATA_START=== */ ~ /* ===DATA_END=== */
+    3.5 从 WEEK_DATA 生成 RAW_SALES_DATA / RAW_PROFIT_DATA
+    4. 替换 HTML 中三个标记块（CORE_DATA / CORE_DETAIL / SABC）
     5. 输出最终 HTML
 """
 
@@ -72,6 +73,32 @@ def main():
     print(f"  CORE_DATA: {len(core_data)} 字段, {len(core_json)} 字符")
     print(f"  DETAIL_DATA: {len(detail_data)} 字段, {len(detail_json)} 字符")
 
+    # ── Step 3.5: 从 WEEK_DATA 生成 RAW_SALES_DATA / RAW_PROFIT_DATA ──
+    print("\n[3.5/4] 从 WEEK_DATA 生成 SABC 数据 ...")
+    week_data = data.get('WEEK_DATA', {})
+    raw_sales = {}
+    raw_profit = {}
+    for week, wd in week_data.items():
+        products = wd.get('allProducts', [])
+        raw_sales[week] = {}
+        raw_profit[week] = {}
+        for p in products:
+            shop = p.get('shop', '')
+            sku = p.get('sku', '')
+            if not shop or not sku:
+                continue
+            key = f"{shop}|{sku}"
+            raw_sales[week][key] = int(p.get('qty', 0) or 0)
+            raw_profit[week][key] = [
+                round(float(p.get('profit', 0) or 0), 2),
+                round(float(p.get('gsv', 0) or 0), 2),
+                round(float(p.get('margin', 0) or 0), 4)
+            ]
+    raw_sales_json = json.dumps(raw_sales, ensure_ascii=False, separators=(',', ':'))
+    raw_profit_json = json.dumps(raw_profit, ensure_ascii=False, separators=(',', ':'))
+    print(f"  RAW_SALES_DATA: {len(raw_sales)} 周, {len(raw_sales_json)} 字符")
+    print(f"  RAW_PROFIT_DATA: {len(raw_profit)} 周, {len(raw_profit_json)} 字符")
+
     # ── Step 4: 替换 HTML ──
     print("\n[4/4] 替换 HTML 内嵌数据 ...")
     with open(HTML_PATH, 'r', encoding='utf-8') as f:
@@ -117,6 +144,26 @@ def main():
     else:
         print(f"  [WARNING] 未找到 CORE_DETAIL 标记 (start={idx_ds}, end={idx_de})，跳过内嵌更新")
 
+    # ── 替换 SABC 块 (RAW_SALES_DATA + RAW_PROFIT_DATA) ──
+    sabc_start = '// ========== SABC AUTO-GRADING DATA =========='
+    sabc_end = '// ========== END SABC DATA =========='
+
+    idx_ss = new_html.find(sabc_start)
+    idx_se = new_html.find(sabc_end, idx_ss)
+
+    if idx_ss >= 0 and idx_se >= 0:
+        idx_se += len(sabc_end)
+        sabc_block = (
+            f"{sabc_start}\n"
+            f"var RAW_SALES_DATA = {raw_sales_json};\n"
+            f"var RAW_PROFIT_DATA = {raw_profit_json};\n"
+            f"{sabc_end}"
+        )
+        new_html = new_html[:idx_ss] + sabc_block + new_html[idx_se:]
+        print(f"  SABC 块已更新 (RAW_SALES + RAW_PROFIT)")
+    else:
+        print(f"  [WARNING] 未找到 SABC 标记 (start={idx_ss}, end={idx_se})，跳过 RAW 数据更新")
+
     with open(HTML_PATH, 'w', encoding='utf-8') as f:
         f.write(new_html)
 
@@ -135,7 +182,8 @@ def main():
 
     # ── 验证：JS 语法自检（括号平衡） ──
     print("\n验证 JS 语法...")
-    for name, json_part in [("CORE_DATA", core_json), ("DETAIL_DATA", detail_json)]:
+    for name, json_part in [("CORE_DATA", core_json), ("DETAIL_DATA", detail_json),
+                              ("RAW_SALES_DATA", raw_sales_json), ("RAW_PROFIT_DATA", raw_profit_json)]:
         braces = 0
         brackets = 0
         in_str = False
