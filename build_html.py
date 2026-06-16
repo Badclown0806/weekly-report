@@ -99,6 +99,24 @@ def main():
     print(f"  RAW_SALES_DATA: {len(raw_sales)} 周, {len(raw_sales_json)} 字符")
     print(f"  RAW_PROFIT_DATA: {len(raw_profit)} 周, {len(raw_profit_json)} 字符")
 
+    # ── 生成期验证：RAW 数据周数与 data.js 一致 ──
+    def week_sort_key(w):
+        """按周数字排序：W1, W2, ..., W10, W47"""
+        try:
+            return int(w[1:])
+        except (ValueError, IndexError):
+            return 0
+
+    source_weeks = sorted(week_data.keys(), key=week_sort_key)
+    source_count = len(source_weeks)
+    if len(raw_sales) != source_count:
+        print(f"[FATAL] RAW_SALES_DATA 周数 ({len(raw_sales)}) != data.js WEEK_DATA ({source_count})")
+        return 1
+    if len(raw_profit) != source_count:
+        print(f"[FATAL] RAW_PROFIT_DATA 周数 ({len(raw_profit)}) != data.js WEEK_DATA ({source_count})")
+        return 1
+    print(f"  生成期验证通过: {source_count} 周一致")
+
     # ── Step 4: 替换 HTML ──
     print("\n[4/4] 替换 HTML 内嵌数据 ...")
     with open(HTML_PATH, 'r', encoding='utf-8') as f:
@@ -164,24 +182,76 @@ def main():
     else:
         print(f"  [WARNING] 未找到 SABC 标记 (start={idx_ss}, end={idx_se})，跳过 RAW 数据更新")
 
-    with open(HTML_PATH, 'w', encoding='utf-8') as f:
-        f.write(new_html)
+    # ── Step 5: 输出前验证 ──
+    print("\n[5/4] 输出前验证 ...")
+    errors = []
 
-    file_size = os.path.getsize(HTML_PATH)
-    print(f"  输出: {HTML_PATH}")
-    print(f"  大小: {file_size / 1024:.0f} KB")
+    def extract_json_from_html(html_str, var_name):
+        """从 HTML 中提取 var NAME = {...}; 并解析"""
+        marker = f'var {var_name} = '
+        idx = html_str.find(marker)
+        if idx < 0:
+            return None, f"未找到 {var_name}"
+        json_start = idx + len(marker)
+        brace_count = 0
+        in_str = False
+        escape = False
+        for i in range(json_start, len(html_str)):
+            ch = html_str[i]
+            if escape:
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                continue
+            if ch == '"' and not escape:
+                in_str = not in_str
+                continue
+            if in_str:
+                continue
+            if ch == '{':
+                brace_count += 1
+            elif ch == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    try:
+                        return json.loads(html_str[json_start:i + 1]), None
+                    except json.JSONDecodeError as e:
+                        return None, f"JSON 解析失败: {e}"
+        return None, "未找到闭合的大括号"
 
-    # ── 生成 data-detail.js（外置异步加载） ──
-    detail_js_path = os.path.join(SRC_DIR, "data-detail.js")
-    detail_js_content = f"var DETAIL_DATA = {detail_json};"
-    with open(detail_js_path, 'w', encoding='utf-8') as f:
-        f.write(detail_js_content)
-    detail_size = os.path.getsize(detail_js_path)
-    print(f"  生成: {detail_js_path}")
-    print(f"  大小: {detail_size / 1024:.0f} KB")
+    # 验证 5.1: CORE_DETAIL 周数与 data.js 一致
+    cd_data, cd_err = extract_json_from_html(new_html, 'CORE_DETAIL')
+    if cd_err:
+        errors.append(f"CORE_DETAIL: {cd_err}")
+    else:
+        cd_week_data = cd_data.get('WEEK_DATA', {})
+        cd_weeks = sorted(cd_week_data.keys(), key=week_sort_key)
+        cd_count = len(cd_weeks)
+        if cd_count != source_count:
+            errors.append(
+                f"CORE_DETAIL WEEK_DATA 周数 ({cd_count}) != data.js ({source_count})"
+            )
+        else:
+            print(f"  OK CORE_DETAIL: {cd_count} 周匹配 data.js")
 
-    # ── 验证：JS 语法自检（括号平衡） ──
-    print("\n验证 JS 语法...")
+    # 验证 5.2: RAW_PROFIT_DATA / RAW_SALES_DATA 最大周与 data.js 一致
+    source_max_week = source_weeks[-1] if source_weeks else ''
+    for name in ['RAW_PROFIT_DATA', 'RAW_SALES_DATA']:
+        rd_data, rd_err = extract_json_from_html(new_html, name)
+        if rd_err:
+            errors.append(f"{name}: {rd_err}")
+        else:
+            rd_weeks = sorted(rd_data.keys(), key=week_sort_key)
+            rd_max = rd_weeks[-1] if rd_weeks else ''
+            if rd_max != source_max_week:
+                errors.append(
+                    f"{name} 最大周 ({rd_max}) != data.js ({source_max_week})"
+                )
+            else:
+                print(f"  OK {name}: {len(rd_weeks)} 周, 最大 {rd_max} 匹配")
+
+    # 验证 5.3: JS 语法括号平衡
     for name, json_part in [("CORE_DATA", core_json), ("DETAIL_DATA", detail_json),
                               ("RAW_SALES_DATA", raw_sales_json), ("RAW_PROFIT_DATA", raw_profit_json)]:
         braces = 0
@@ -209,9 +279,33 @@ def main():
             elif ch == ']':
                 brackets -= 1
         if braces != 0 or brackets != 0:
-            print(f"  FAIL {name}: braces={braces}, brackets={brackets}")
-            return 1
-        print(f"  OK   {name}: braces={braces}, brackets={brackets}")
+            errors.append(f"JS语法 {name}: braces={braces}, brackets={brackets}")
+        else:
+            print(f"  OK JS语法 {name}: braces=0, brackets=0")
+
+    if errors:
+        print(f"\n验证失败 ({len(errors)} 项)，拒绝输出:")
+        for e in errors:
+            print(f"  ❌ {e}")
+        return 1
+
+    print("\n所有验证通过，写入输出文件...")
+
+    with open(HTML_PATH, 'w', encoding='utf-8') as f:
+        f.write(new_html)
+
+    file_size = os.path.getsize(HTML_PATH)
+    print(f"  输出: {HTML_PATH}")
+    print(f"  大小: {file_size / 1024:.0f} KB")
+
+    # ── 生成 data-detail.js（外置异步加载） ──
+    detail_js_path = os.path.join(SRC_DIR, "data-detail.js")
+    detail_js_content = f"var DETAIL_DATA = {detail_json};"
+    with open(detail_js_path, 'w', encoding='utf-8') as f:
+        f.write(detail_js_content)
+    detail_size = os.path.getsize(detail_js_path)
+    print(f"  生成: {detail_js_path}")
+    print(f"  大小: {detail_size / 1024:.0f} KB")
     
     print("\n完成!")
     return 0
