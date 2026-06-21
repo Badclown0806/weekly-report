@@ -137,8 +137,7 @@ def main():
     new_block = (
         f"{start_marker}\n"
         f"var CORE_DATA = {core_json};\n"
-        f"{end_marker}\n"
-        f"var DETAIL_DATA = null;"
+        f"{end_marker}"
     )
 
     new_html = html[:idx_start] + new_block + html[idx_end + len(end_marker):]
@@ -154,8 +153,7 @@ def main():
         detail_block = (
             f"{detail_start_marker}\n"
             f"var CORE_DETAIL = {detail_json};\n"
-            f"{detail_end_marker}\n"
-            f"var DETAIL_DATA = null;"
+            f"{detail_end_marker}"
         )
         new_html = new_html[:idx_ds] + detail_block + new_html[idx_de + len(detail_end_marker):]
         print(f"  CORE_DETAIL 块已更新 (WEEK_DATA + TRAFFIC_WEEKLY)")
