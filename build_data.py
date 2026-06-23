@@ -651,6 +651,21 @@ def main():
     print("\n[5/5] 读取年规进度...")
     person_targets = read_person_targets()
 
+    # ── 构建 SKU_OWNER_LOOKUP 映射表 ──
+    # 将 SKU_OWNER 的原始 key（sku|shop|wb_id 或 sku|wb_id）映射为
+    # JS 端可直接查询的扁平格式：sku|shop → owner, sku → owner
+    sku_owner_lookup = {}
+    for key, owner in sku_owner.items():
+        parts = key.split('|')
+        # 3-part key: sku|shop_name|id → map as sku|shop_name → owner
+        if len(parts) == 3:
+            lookup_key = f"{parts[0]}|{parts[1]}"
+            sku_owner_lookup[lookup_key] = owner
+        # 2-part key: sku|id → map as sku → owner (only if no shop-level mapping yet)
+        if parts[0] not in sku_owner_lookup:
+            sku_owner_lookup[parts[0]] = owner
+    print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries")
+
     # ── 组装 data.json ──
     print("\n" + "=" * 60)
     print("组装 data.json...")
@@ -666,6 +681,7 @@ def main():
         "SKU_IMG": sku_img,
         "SKU_FIRST_DATE": merged_sku_first_date,
         "SKU_OWNER": sku_owner,
+        "SKU_OWNER_LOOKUP": sku_owner_lookup,
         "SHOP_OWNERS": shop_owners,
         "SKU_WB_ID": sku_wb_id,
         "PRODUCT_NOTES": {},
