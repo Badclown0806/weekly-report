@@ -438,16 +438,5 @@
     "text": "\u67e5\u672c\u5730\u5316\u7cfb\u6570\u3001\u5c3e\u7a0b\u6d3e\u9001\uff0c\u538b\u5305\u53d1\u8d27",
     "author": "\u6bdb\u7acb\u65b0",
     "created_at": "2026-06-11 01:39:39.829097+00"
-  },
-  {
-    "id": "_test_gh_api_",
-    "date": "2026-06-23",
-    "week": "",
-    "sku": "_TEST_",
-    "shop": "TEST",
-    "text": "API test - removing",
-    "comment_text": "API test - removing",
-    "author": "test",
-    "created_at": "2026-06-23T00:00:00Z"
   }
 ]
