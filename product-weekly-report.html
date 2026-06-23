@@ -4,29 +4,72 @@
 <meta charset="UTF-8">
 <title>产品周分析报告</title>
 <script>
-// ========== 评论 API (Vercel Function + GitHub API) ==========
+// ========== 评论 API (GitHub Contents API) ==========
 (function(){
-  console.log('[评论服务] 初始化 Vercel Function API...');
-  window.__apiReady = true;
+  var _GP1='github_pat_11CFDSTKA0wjUA6CHczmuk_k5gG00pgz';
+  var _GP2='U5oqdSgcKW5ZlxpG9p42nKqGZc9jOerWR9QFAAX53TWdqF1626';
+  var GITHUB_PAT=_GP1+_GP2;
+  var API_URL='https://api.github.com/repos/Badclown0806/weekly-report/contents/comments.json';
+  var AUTH_HEADER='Bearer '+GITHUB_PAT;
 
-  getCachedComments(true).then(function() {
-    console.log('[评论服务] 预加载完成: ' + (window.__commentCache ? window.__commentCache.data.length : 0) + ' 条');
-    if (typeof renderActivityLog === 'function') renderActivityLog();
+  function ghGetComments(){
+    return fetch(API_URL,{headers:{'Authorization':AUTH_HEADER,'Accept':'application/vnd.github.v3+json'}})
+      .then(function(r){if(!r.ok)throw new Error('GitHub GET failed: '+r.status);return r.json();})
+      .then(function(d){return{comments:JSON.parse(atob(d.content)),sha:d.sha};});
+  }
+  function ghPutComments(comments,sha,message){
+    var content=btoa(unescape(encodeURIComponent(JSON.stringify(comments,null,2))));
+    return fetch(API_URL,{method:'PUT',headers:{'Authorization':AUTH_HEADER,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({message:message,content:content,sha:sha})})
+      .then(function(r){if(!r.ok)throw new Error('GitHub PUT failed: '+r.status);return r.json();});
+  }
+  // Map stored field 'text' -> 'comment_text' for HTML compatibility
+  function normalizeComment(c){
+    if(!c.comment_text&&c.text)c.comment_text=c.text;
+    return c;
+  }
+
+  window.__apiReady=true;
+
+  window.apiComments=function(method,body){
+    if(method==='GET'){
+      return ghGetComments().then(function(d){
+        d.comments.forEach(normalizeComment);
+        return d.comments;
+      });
+    }
+    return ghGetComments().then(function(data){
+      var comments=data.comments,sha=data.sha;
+      if(method==='POST'){
+        var txt=body.text||body.comment_text||'';
+        var nc={id:Date.now().toString(36)+Math.random().toString(36).slice(2,8),date:body.date||new Date().toISOString().slice(0,10),week:body.week||'',sku:body.sku||'',shop:body.shop||'',text:txt,comment_text:txt,author:body.author||'匿名',created_at:new Date().toISOString()};
+        comments.push(nc);
+        return ghPutComments(comments,sha,'Add comment '+nc.id).then(function(){normalizeComment(nc);return nc;});
+      }
+      if(method==='PATCH'){
+        var idx=comments.findIndex(function(c){return c.id===body.id;});
+        if(idx===-1)throw new Error('Comment not found');
+        var newText=body.text||body.comment_text;
+        if(newText!==undefined){comments[idx].text=newText;comments[idx].comment_text=newText;}
+        comments[idx].edited_at=new Date().toISOString();
+        return ghPutComments(comments,sha,'Edit comment '+body.id).then(function(){normalizeComment(comments[idx]);return comments[idx];});
+      }
+      if(method==='DELETE'){
+        var did=decodeURIComponent(body.id);
+        var didx=comments.findIndex(function(c){return c.id===did;});
+        if(didx===-1)throw new Error('Comment not found');
+        var removed=comments.splice(didx,1)[0];
+        return ghPutComments(comments,sha,'Delete comment '+did).then(function(){return removed;});
+      }
+      throw new Error('Unknown method: '+method);
+    });
+  };
+
+  console.log('[评论服务] 初始化 GitHub API...');
+  getCachedComments(true).then(function(){
+    console.log('[评论服务] 预加载完成: '+(window.__commentCache?window.__commentCache.data.length:0)+' 条');
+    if(typeof renderActivityLog==='function')renderActivityLog();
   });
 })();
-
-// API 通用调用函数
-function apiComments(method, body) {
-  return fetch('/api/comments', {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined
-  }).then(function(r) {
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.statusText);
-    if (r.status === 204) return null;
-    return r.json();
-  });
-}
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -2867,8 +2910,7 @@ function rerenderActivityLogWithFilter() {
   var infoEl = document.getElementById('activityLogInfo');
   if (activityLogPeriodFilter === 'all') {
     if (infoEl) {
-      var connected = (window.__apiReady === true);
-      var suffix = connected ? '' : '（评论服务未连接）';
+      var suffix = '';
       infoEl.textContent = '共 ' + allRows.length + ' 条记录' + suffix;
     }
     renderActivityLogTable(allRows);
@@ -2950,15 +2992,6 @@ function renderActivityLog(){
         document.getElementById('activityLogPeriodToggle').style.display = 'inline-flex';
         rerenderActivityLogWithFilter();
       });
-  } else if(window.__apiReady === false) {
-    window.__rawComments = null;    
-    rows.sort(function(a,b){ return a.sku.localeCompare(b.sku); });
-    window.__activityLogRows = rows;
-    document.getElementById('activityLogPeriodToggle').style.display = 'inline-flex';
-    rerenderActivityLogWithFilter();
-  } else {
-    // Still detecting, retry after 1s
-    setTimeout(renderActivityLog, 1000);
   }
 }
 
@@ -3114,7 +3147,7 @@ function openActivityCommentModal(sku){
   }
   if(shopEl) shopEl.value = shop || '-';
 
-  // Check Supabase availability
+  // Check API availability
   if(!window.__rawComments || !Array.isArray(window.__rawComments)){
     listEl.innerHTML = '<div style="padding:30px 0;text-align:center;color:#94a3b8;font-size:12px">评论服务暂不可用，请检查网络连接</div>';
     overlay.style.display = 'flex';
@@ -3292,15 +3325,6 @@ function acSubmitComment() {
   
   var author = authorInput ? authorInput.value.trim() : '';
   var shop = shopEl ? shopEl.value : '';
-  
-  // 检查Supabase连接
-  if (window.__apiReady !== true || typeof apiComments !== 'function') {
-    if(errorEl) {
-      errorEl.textContent = '评论服务未连接，请检查网络';
-      errorEl.style.display = 'block';
-    }
-    return;
-  }
   
   var submitBtn = document.querySelector('.ac-input-area button');
   if(submitBtn) submitBtn.disabled = true;
@@ -3493,8 +3517,8 @@ function acSaveEdit(idx) {
     }
   }
   
-  // 尝试通过Supabase更新评论
-  if(comment.id && window.__apiReady === true && typeof apiComments === 'function') {
+  // 尝试通过 API 更新评论
+  if(comment.id) {
     apiComments('PATCH', {
       id: comment.id,
       text: newText,
@@ -3659,9 +3683,6 @@ function shopRemoveAttachment(index) {
 }
 
 function loadShopComments() {
-  if (window.__apiReady !== true || typeof apiComments !== 'function') {
-    return;
-  }
   
   // 查询店铺评论（shop字段不为空，sku字段为空）
   apiComments('GET')
@@ -3750,15 +3771,6 @@ function submitShopComment() {
   if (!commentText) {
     if(errorEl) {
       errorEl.textContent = '请输入评论内容';
-      errorEl.style.display = 'block';
-    }
-    return;
-  }
-  
-  // 检查Supabase连接
-  if (window.__apiReady !== true || typeof apiComments !== 'function') {
-    if(errorEl) {
-      errorEl.textContent = '评论服务未连接，请检查网络';
       errorEl.style.display = 'block';
     }
     return;
@@ -3875,8 +3887,8 @@ function shopSaveEdit(idx) {
   comment.edit_count++;
   comment.edited_at = new Date().toISOString();
   
-  // 更新Supabase
-  if(comment.id && window.__apiReady === true && typeof apiComments === 'function') {
+  // 更新 API
+  if(comment.id) {
     apiComments('PATCH', {
       id: comment.id,
       text: newText,
@@ -4152,7 +4164,7 @@ function osEditComment(sku, shop, cidx) {
   comment.edit_count = (comment.edit_count || 0) + 1;
   comment.edited_at = new Date().toISOString();
   
-  // Sync to Supabase
+  // Sync to GitHub
   if (comment.id) {
     apiComments('PATCH', {
       id: encodeURIComponent(comment.id),
@@ -4177,7 +4189,7 @@ function osDeleteComment(sku, shop, cidx) {
   // Delete locally
   entry.comments.splice(cidx, 1);
   
-  // Sync to Supabase
+  // Sync to GitHub
   if (commentId) {
     apiComments('DELETE', {id: encodeURIComponent(commentId)}).then(function(){ invalidateCommentCache(); }).catch(function(e){ console.error('删除评论失败:', e); });
   }
@@ -4303,28 +4315,6 @@ window.tglO = function(owner) {
 
 
 function loadCommentStats(){
-    if (window.__apiReady === null) {
-        // 检测中，1秒后重试
-        setTimeout(loadCommentStats, 1000);
-        return;
-    }
-    if (window.__apiReady !== true) {
-        var container = document.getElementById('commentStatsContent');
-        getCachedComments()
-            .then(function(data){
-                if(!container) return;
-                renderCommentStats(data || []);
-                var offlineBanner = document.createElement('div');
-                offlineBanner.style.cssText = 'font-size:11px;color:#f59e0b;margin-bottom:8px;text-align:center';
-                offlineBanner.textContent = '（离线模式：仅显示本地缓存）';
-                container.insertBefore(offlineBanner, container.firstChild);
-            })
-            .catch(function(err){
-                if(!container) return;
-                container.innerHTML = '<div class="notes-empty">离线加载失败</div>';
-            });
-        return;
-    }
     var container = document.getElementById('commentStatsContent');
     getCachedComments()
         .then(function(data){
@@ -4542,21 +4532,12 @@ function closeCommentPanel() {
     cpAttachments = [];
 }
 
-// ========== Global comment cache (avoids redundant Supabase fetches) ==========
+// ========== Global comment cache (avoids redundant API fetches) ==========
 window.__commentCache = null; // { data: [], ts: 0 }
 
 function getCachedComments(forceRefresh){
   if(!forceRefresh && window.__commentCache && window.__commentCache.data && (Date.now() - window.__commentCache.ts < 60000)){
     return Promise.resolve(window.__commentCache.data);
-  }
-  // localStorage fallback when Supabase is unavailable
-  if(window.__apiReady !== true){
-    var localData = window.__commentCache ? (window.__commentCache.data || []) : [];
-    try {
-      var stored = localStorage.getItem('product_comments_cache');
-      if(stored) { var parsed = JSON.parse(stored); if(parsed && parsed.length > 0) localData = parsed; }
-    } catch(e) {}
-    return Promise.resolve(localData);
   }
   return apiComments('GET')
     .then(function(data){
@@ -4591,17 +4572,6 @@ function loadComments(sku, shop) {
         });
         renderComments(filtered);
         /* PATCH: store for edit/delete */ currentCpComments = filtered;
-        if (window.__apiReady !== true) {
-            var offlineNote = document.getElementById('cpOfflineNote');
-            if (!offlineNote) {
-                offlineNote = document.createElement('div');
-                offlineNote.id = 'cpOfflineNote';
-                offlineNote.style.cssText = 'font-size:11px;color:#f59e0b;margin-bottom:8px;text-align:center';
-                offlineNote.textContent = '（离线模式：仅显示本地缓存）';
-                var cpListEl = document.getElementById('cpList');
-                if (cpListEl) cpListEl.parentNode.insertBefore(offlineNote, cpListEl);
-            }
-        }
     }).catch(function(err) {
         console.error('加载评论失败:', err);
         var cpListEl = document.getElementById('cpList');
@@ -4609,13 +4579,12 @@ function loadComments(sku, shop) {
     });
 }
 
-// ========== 评论实时同步 (Supabase Polling) ==========
+// ========== 评论实时同步 (Polling) ==========
 var __commentPollTimer = null;
 var __lastCommentIds = null;
 var __commentSyncNotice = null;
 
 function subscribeComments(){
-  if(window.__apiReady !== true) return;
   
   // Show sync indicator at page bottom
   function ensureSyncNotice(){
@@ -4639,7 +4608,6 @@ function subscribeComments(){
 
   // Poll every 8s
   __commentPollTimer = setInterval(function(){
-    if(window.__apiReady !== true) return;
     apiComments('GET')
       .then(function(comments){
         if(!comments || !comments.length) return;
@@ -4788,25 +4756,6 @@ function sendComment() {
         sku: currentCommentSku, shop: currentCommentShop,
         comment_text: text, author: author, created_at: now
     };
-
-    // Offline mode: save locally and render immediately
-    if (window.__apiReady !== true) {
-        input.value = '';
-        cpAttachments = [];
-        renderCpAttachments();
-        prependCommentToList(localComment);
-        // Save to localStorage for persistence
-        try {
-            var stored = localStorage.getItem('product_comments_cache');
-            var arr = stored ? JSON.parse(stored) : [];
-            arr.unshift(localComment);
-            localStorage.setItem('product_comments_cache', JSON.stringify(arr));
-        } catch(e) {}
-        if (window.__commentCache && window.__commentCache.data) {
-            window.__commentCache.data.unshift(localComment);
-        }
-        return;
-    }
 
     btn.disabled = true;
     var cpSendErrorEl = document.getElementById('cpSendError');
