@@ -53,7 +53,7 @@ async function saveComments(comments, sha, message) {
   return res.json();
 }
 
-export default async function handler(req) {
+async function handler(req) {
   try {
     // CORS preflight
     if (req.method === 'OPTIONS') {
