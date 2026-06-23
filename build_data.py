@@ -231,7 +231,7 @@ def read_lx_profit(weeks_iso):
     #     5=WB商品ID, 6=卖家SKU, 7=主图, 8=毛利量CNY, 9=毛利率CNY,
     #     10=GSV(后台价), 11=周订单量售完天数, 12=每周日库存量, 13=货值CNY,
     #     14=销售数量, 15=退款数量, 16=财报净销量, ..., 21=送达退货率,
-    #     36=AK列(广告花费)
+    #     35=AJ列(广告花费)
 
     week_data_raw = defaultdict(list)
 
@@ -249,7 +249,7 @@ def read_lx_profit(weeks_iso):
         gsv = vals[10]       # GSV(后台价)
         qty = vals[14]       # 销售数量
         return_rate = vals[21] if len(vals) > 21 else None  # 送达退货率
-        ad_spend = vals[36] if len(vals) > 36 else None  # AK列 广告花费
+        ad_spend = vals[35] if len(vals) > 35 else None  # AJ列 广告花费
 
         if not week_end or not sku:
             continue
