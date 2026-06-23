@@ -150,13 +150,14 @@ def main():
     idx_de = new_html.find(detail_end_marker)
 
     if idx_ds >= 0 and idx_de >= 0:
+        # CORE_DETAIL 不再内嵌（体积 4.8MB+），改为异步加载 data-detail.js
         detail_block = (
             f"{detail_start_marker}\n"
-            f"var CORE_DETAIL = {detail_json};\n"
+            f"var CORE_DETAIL = {{}}; /* loaded async from data-detail.js */\n"
             f"{detail_end_marker}"
         )
         new_html = new_html[:idx_ds] + detail_block + new_html[idx_de + len(detail_end_marker):]
-        print(f"  CORE_DETAIL 块已更新 (WEEK_DATA + TRAFFIC_WEEKLY)")
+        print(f"  CORE_DETAIL 块已替换为异步加载占位 (4.9MB 数据外置到 data-detail.js)")
     else:
         print(f"  [WARNING] 未找到 CORE_DETAIL 标记 (start={idx_ds}, end={idx_de})，跳过内嵌更新")
 
@@ -218,20 +219,22 @@ def main():
                         return None, f"JSON 解析失败: {e}"
         return None, "未找到闭合的大括号"
 
-    # 验证 5.1: CORE_DETAIL 周数与 data.js 一致
+    # 验证 5.1: CORE_DETAIL 周数与 data.js 一致（仅当非空时验证）
     cd_data, cd_err = extract_json_from_html(new_html, 'CORE_DETAIL')
     if cd_err:
         errors.append(f"CORE_DETAIL: {cd_err}")
     else:
         cd_week_data = cd_data.get('WEEK_DATA', {})
-        cd_weeks = sorted(cd_week_data.keys(), key=week_sort_key)
-        cd_count = len(cd_weeks)
-        if cd_count != source_count:
-            errors.append(
-                f"CORE_DETAIL WEEK_DATA 周数 ({cd_count}) != data.js ({source_count})"
-            )
+        cd_count = len(cd_week_data)
+        if cd_count > 0:  # 仅当数据内嵌时才验证
+            if cd_count != source_count:
+                errors.append(
+                    f"CORE_DETAIL WEEK_DATA 周数 ({cd_count}) != data.js ({source_count})"
+                )
+            else:
+                print(f"  OK CORE_DETAIL: {cd_count} 周匹配 data.js")
         else:
-            print(f"  OK CORE_DETAIL: {cd_count} 周匹配 data.js")
+            print(f"  OK CORE_DETAIL: 空占位（异步加载 data-detail.js，跳过周数验证）")
 
     # 验证 5.2: RAW_PROFIT_DATA / RAW_SALES_DATA 最大周与 data.js 一致
     source_max_week = source_weeks[-1] if source_weeks else ''
