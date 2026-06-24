@@ -2,10 +2,19 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>产品周分析报告</title>
 <script>
 // ========== 评论 API (GitHub Contents API) ==========
 (function(){
+  // Failsafe: force-hide loading overlay after 3s
+  setTimeout(function(){
+    var o = document.getElementById('loadingOverlay');
+    if(o && o.style.display !== 'none'){ o.style.display = 'none'; console.warn('[Failsafe] Overlay force-hidden'); }
+  }, 3000);
+
   var _GP1='github_pat_11CFDSTKA0wjUA6CHczmuk_k5gG00pgz';
   var _GP2='U5oqdSgcKW5ZlxpG9p42nKqGZc9jOerWR9QFAAX53TWdqF1626';
   var GITHUB_PAT=_GP1+_GP2;
@@ -664,7 +673,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202606061558';
+  var ver = '202606232200';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
