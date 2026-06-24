@@ -567,6 +567,254 @@ def read_person_targets():
     return all_targets
 
 
+# ── 阶段 5.5: 全量预计算新品等级和销售等级 ──────────────
+
+def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
+    """全量预计算新品等级：遍历 WEEK_DATA 中所有 SKU，取首次库存日期后45天内累计利润"""
+    # 收集所有 shop|sku
+    all_products = set()
+    for wk, wd in week_data.items():
+        for p in wd.get("allProducts", []):
+            shop = p.get("shop", "")
+            sku = p.get("sku", "")
+            if shop and sku and sku != "无匹配ID费用":
+                all_products.add(f"{shop}|{sku}")
+
+    # 构建 iso_week → date range
+    iso_to_dates = {}
+    for iso in weeks_iso:
+        start, end = iso_week_to_date_range(iso)
+        iso_to_dates[iso] = (start, end)
+
+    # 构建 week_key → iso
+    w_to_iso = {f"W{i+1}": iso for i, iso in enumerate(weeks_iso)}
+
+    today = date.today()
+    new_product_grades = {}
+
+    for key in all_products:
+        parts = key.split("|", 1)
+        shop = parts[0]
+        sku = parts[1] if len(parts) > 1 else ""
+
+        # 查找首次库存日期（多级 key 回退）
+        fd = None
+        for lk in [key, f"{sku}|{shop}", sku]:
+            if lk in sku_first_date:
+                fd = sku_first_date[lk]
+                break
+
+        if not fd:
+            new_product_grades[key] = None
+            continue
+
+        try:
+            parts_fd = fd.split("-")
+            first_date = date(int(parts_fd[0]), int(parts_fd[1]), int(parts_fd[2]))
+        except (ValueError, IndexError):
+            new_product_grades[key] = None
+            continue
+
+        cutoff_date = first_date + timedelta(days=45)
+
+        # 不在45天窗口内
+        if today > cutoff_date or first_date > today:
+            new_product_grades[key] = None
+            continue
+
+        # 累加45天窗口内的利润
+        total_profit = 0.0
+        for iso in weeks_iso:
+            ws, we = iso_to_dates[iso]
+            if we >= first_date and ws <= cutoff_date:
+                w_key = w_to_iso.get(iso)
+                if w_key and w_key in week_data:
+                    for p in week_data[w_key].get("allProducts", []):
+                        if p.get("shop") == shop and p.get("sku") == sku:
+                            total_profit += p.get("profit", 0) or 0
+
+        # S/A/B 阈值
+        if total_profit >= 50000:
+            new_product_grades[key] = "S"
+        elif total_profit >= 30000:
+            new_product_grades[key] = "A"
+        elif total_profit >= 10000:
+            new_product_grades[key] = "B"
+        else:
+            new_product_grades[key] = None
+
+    s_count = sum(1 for v in new_product_grades.values() if v == "S")
+    a_count = sum(1 for v in new_product_grades.values() if v == "A")
+    b_count = sum(1 for v in new_product_grades.values() if v == "B")
+    print(f"  NEW_PRODUCT_GRADE: {len(new_product_grades)} SKUs (S={s_count}, A={a_count}, B={b_count})")
+    return new_product_grades
+
+
+def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
+    """全量预计算销售等级：遍历每个 SKU 在所有历史周中的 SABC 等级，取最高"""
+    # 收集所有 shop|sku
+    all_products = set()
+    for wk, wd in week_data.items():
+        for p in wd.get("allProducts", []):
+            shop = p.get("shop", "")
+            sku = p.get("sku", "")
+            if shop and sku and sku != "无匹配ID费用":
+                all_products.add(f"{shop}|{sku}")
+
+    # 构建 RAW_SALES 和 RAW_PROFIT（与 JS computeSabcGrade 对齐）
+    raw_sales = {}
+    raw_profit = {}
+    for wk, wd in week_data.items():
+        raw_sales[wk] = {}
+        raw_profit[wk] = {}
+        for p in wd.get("allProducts", []):
+            shop = p.get("shop", "")
+            sku = p.get("sku", "")
+            if not shop or not sku:
+                continue
+            key = f"{shop}|{sku}"
+            raw_sales[wk][key] = int(p.get("qty", 0) or 0)
+            raw_profit[wk][key] = [
+                round(float(p.get("profit", 0) or 0), 2),
+                round(float(p.get("gsv", 0) or 0), 2),
+                round(float(p.get("margin", 0) or 0), 4),
+            ]
+
+    # SABC 阈值（与 JS 一致）
+    SALES_THRESHOLDS = {"S": 350, "A": 175, "B": 105}
+    NEW_THRESHOLDS = {"S": 175, "A": 84, "B": 56}
+    PROFIT_THRESHOLDS = {"S": 20, "A": 10, "B": 10, "BPlus": 25}
+    E_INVENTORY = 10
+
+    # 构建 iso_week → end_date（用于计算 listed_days）
+    iso_to_end = {}
+    for iso in weeks_iso:
+        _, end = iso_week_to_date_range(iso)
+        iso_to_end[iso] = end
+    w_to_iso = {f"W{i+1}": iso for i, iso in enumerate(weeks_iso)}
+
+    grade_order = {"S": 5, "A": 4, "B+": 3.5, "B": 3, "C": 2, "D": 1, "E": 0}
+
+    sales_grades = {}
+
+    for key in all_products:
+        parts = key.split("|", 1)
+        shop = parts[0]
+        sku = parts[1] if len(parts) > 1 else ""
+
+        # 查找首次库存日期
+        fd = None
+        for lk in [key, f"{sku}|{shop}", sku]:
+            if lk in sku_first_date:
+                fd = sku_first_date[lk]
+                break
+        first_date = None
+        if fd:
+            try:
+                pfd = fd.split("-")
+                first_date = date(int(pfd[0]), int(pfd[1]), int(pfd[2]))
+            except (ValueError, IndexError):
+                pass
+
+        highest_grade = None
+
+        for target_wn in range(1, 53):
+            w_key = f"W{target_wn}"
+            # 检查该周是否在数据中
+            if w_key not in week_data:
+                continue
+
+            # 计算该周时的 listed_days
+            iso = w_to_iso.get(w_key)
+            if iso and iso in iso_to_end and first_date:
+                week_end = iso_to_end[iso]
+                listed_days = (week_end - first_date).days
+            else:
+                listed_days = 999
+
+            is_new = listed_days <= 45 if listed_days >= 0 else False
+            thresholds = NEW_THRESHOLDS if is_new else SALES_THRESHOLDS
+
+            # 4-week window
+            window_weeks = [f"W{target_wn - i}" for i in range(3, -1, -1) if target_wn - i >= 1]
+
+            week_qtys = []
+            total_qty = 0
+            for w in window_weeks:
+                qty = raw_sales.get(w, {}).get(key, 0)
+                week_qtys.append(qty)
+                total_qty += qty
+            avg_weekly = total_qty / max(1, len(window_weeks))
+
+            total_maoli = 0.0
+            total_gsv = 0.0
+            has_profit = False
+            for w in window_weeks:
+                w_data = raw_profit.get(w, {}).get(key)
+                if w_data and w_data[2] != -1:
+                    total_maoli += w_data[0]
+                    total_gsv += w_data[1]
+                    has_profit = True
+
+            profit_rate = (total_maoli / total_gsv * 100) if (has_profit and total_gsv > 0) else None
+
+            # 销量增长率
+            growth_rate = 0
+            if len(week_qtys) >= 4:
+                recent2 = week_qtys[2] + week_qtys[3]
+                prior2 = week_qtys[0] + week_qtys[1]
+                if prior2 > 0:
+                    growth_rate = ((recent2 - prior2) / prior2) * 100
+                elif recent2 > 0:
+                    growth_rate = 999
+
+            # 库存（SKU 级）
+            inv = sku_inventory.get(key, sku_inventory.get(sku, 0))
+
+            grade = None
+
+            # E 级
+            if inv > 0 and inv <= E_INVENTORY:
+                grade = "E"
+            # D 级（亏损）
+            elif has_profit and profit_rate is not None and profit_rate < 0:
+                grade = "D"
+            # D 级（14天零销）
+            elif len(week_qtys) >= 2:
+                last2 = week_qtys[-1] + week_qtys[-2]
+                if last2 == 0 and inv > E_INVENTORY:
+                    grade = "D"
+
+            if grade is None:
+                if avg_weekly >= thresholds["S"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["S"]:
+                    grade = "S"
+                elif avg_weekly >= thresholds["A"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["A"] and growth_rate >= 10:
+                    grade = "A"
+                elif avg_weekly >= thresholds["B"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["BPlus"]:
+                    grade = "B+"
+                elif avg_weekly >= thresholds["B"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["B"]:
+                    grade = "B"
+                else:
+                    grade = "C"
+
+            if grade:
+                gv = grade_order.get(grade, -1)
+                if highest_grade is None or gv > grade_order.get(highest_grade, -1):
+                    highest_grade = grade
+
+        sales_grades[key] = highest_grade
+
+    s_count = sum(1 for v in sales_grades.values() if v == "S")
+    a_count = sum(1 for v in sales_grades.values() if v == "A")
+    bp_count = sum(1 for v in sales_grades.values() if v == "B+")
+    b_count = sum(1 for v in sales_grades.values() if v == "B")
+    c_count = sum(1 for v in sales_grades.values() if v == "C")
+    d_count = sum(1 for v in sales_grades.values() if v == "D")
+    e_count = sum(1 for v in sales_grades.values() if v == "E")
+    print(f"  SALES_GRADE: {len(sales_grades)} SKUs (S={s_count}, A={a_count}, B+={bp_count}, B={b_count}, C={c_count}, D={d_count}, E={e_count})")
+    return sales_grades
+
+
 # ── 主函数 ────────────────────────────────────────────
 
 def main():
@@ -666,6 +914,15 @@ def main():
             sku_owner_lookup[parts[0]] = owner
     print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries")
 
+    # ── 阶段 5.5: 预计算新品等级和销售等级 ──
+    print("\n[5.5] 预计算新品等级和销售等级...")
+    new_product_grades = compute_new_product_grades(
+        week_data, merged_sku_first_date, weeks_iso
+    )
+    sales_grades = compute_sales_grades(
+        week_data, merged_sku_first_date, weeks_iso, sku_inventory
+    )
+
     # ── 组装 data.json ──
     print("\n" + "=" * 60)
     print("组装 data.json...")
@@ -687,6 +944,8 @@ def main():
         "PRODUCT_NOTES": {},
         "NEW_PRODUCT_CREATED": [],
         "SKU_INVENTORY": sku_inventory,
+        "NEW_PRODUCT_GRADE": new_product_grades,
+        "SALES_GRADE": sales_grades,
     }
 
     # ── 写入 data.js ──
