@@ -693,7 +693,7 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
         iso_to_end[iso] = end
     w_to_iso = {f"W{i+1}": iso for i, iso in enumerate(weeks_iso)}
 
-    grade_order = {"S": 5, "A": 4, "B+": 3.5, "B": 3, "C": 2, "D": 1, "E": 0}
+    grade_order = {"S": 5, "A": 4, "B": 3}
 
     sales_grades = {}
 
@@ -773,17 +773,17 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
 
             grade = None
 
-            # E 级
+            # E 级 → 不标记
             if inv > 0 and inv <= E_INVENTORY:
-                grade = "E"
-            # D 级（亏损）
+                grade = None
+            # D 级（亏损）→ 不标记
             elif has_profit and profit_rate is not None and profit_rate < 0:
-                grade = "D"
-            # D 级（14天零销）
+                grade = None
+            # D 级（14天零销）→ 不标记
             elif len(week_qtys) >= 2:
                 last2 = week_qtys[-1] + week_qtys[-2]
                 if last2 == 0 and inv > E_INVENTORY:
-                    grade = "D"
+                    grade = None
 
             if grade is None:
                 if avg_weekly >= thresholds["S"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["S"]:
@@ -791,11 +791,11 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
                 elif avg_weekly >= thresholds["A"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["A"] and growth_rate >= 10:
                     grade = "A"
                 elif avg_weekly >= thresholds["B"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["BPlus"]:
-                    grade = "B+"
+                    grade = "B"
                 elif avg_weekly >= thresholds["B"] and profit_rate is not None and profit_rate >= PROFIT_THRESHOLDS["B"]:
                     grade = "B"
                 else:
-                    grade = "C"
+                    grade = None
 
             if grade:
                 gv = grade_order.get(grade, -1)
@@ -806,12 +806,9 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
 
     s_count = sum(1 for v in sales_grades.values() if v == "S")
     a_count = sum(1 for v in sales_grades.values() if v == "A")
-    bp_count = sum(1 for v in sales_grades.values() if v == "B+")
     b_count = sum(1 for v in sales_grades.values() if v == "B")
-    c_count = sum(1 for v in sales_grades.values() if v == "C")
-    d_count = sum(1 for v in sales_grades.values() if v == "D")
-    e_count = sum(1 for v in sales_grades.values() if v == "E")
-    print(f"  SALES_GRADE: {len(sales_grades)} SKUs (S={s_count}, A={a_count}, B+={bp_count}, B={b_count}, C={c_count}, D={d_count}, E={e_count})")
+    none_count = sum(1 for v in sales_grades.values() if v is None)
+    print(f"  SALES_GRADE: {len(sales_grades)} SKUs (S={s_count}, A={a_count}, B={b_count}, None={none_count})")
     return sales_grades
 
 
@@ -886,7 +883,37 @@ def main():
         if key not in merged_sku_first_date:
             merged_sku_first_date[key] = date_str
     
-    print(f"  SKU_FIRST_DATE: {len(merged_sku_first_date)} 个 (合并产品列表+运营日数据)")
+    # 补充 shop|sku 格式的 key，供 compute_new_product_grades 使用
+    # compute_new_product_grades 的 all_products key 格式为 shop|sku
+    shop_sku_added = 0
+    for wk, wd in week_data.items():
+        for p in wd.get("allProducts", []):
+            shop = p.get("shop", "")
+            sku = p.get("sku", "")
+            if not shop or not sku or sku == "无匹配ID费用":
+                continue
+            shop_sku_key = f"{shop}|{sku}"
+            if shop_sku_key in merged_sku_first_date:
+                continue
+            # 尝试从已有 key 中匹配日期
+            fd = None
+            for candidate in [sku, f"{sku}|{shop}"]:
+                if candidate in merged_sku_first_date:
+                    fd = merged_sku_first_date[candidate]
+                    break
+            if not fd and sku in sku_to_wb_ids:
+                for wb_id in sku_to_wb_ids[sku]:
+                    for candidate in [f"{sku}|{wb_id}", f"{sku}|{shop}|{wb_id}"]:
+                        if candidate in merged_sku_first_date:
+                            fd = merged_sku_first_date[candidate]
+                            break
+                    if fd:
+                        break
+            if fd:
+                merged_sku_first_date[shop_sku_key] = fd
+                shop_sku_added += 1
+
+    print(f"  SKU_FIRST_DATE: {len(merged_sku_first_date)} 个 (合并产品列表+运营日数据), 新增 shop|sku 映射 {shop_sku_added} 个")
     print(f"    无库存记录的SKU将不显示上架天数（显示为 '-'）")
 
     # SKU_INVENTORY: 每个SKU最新日期的可售数量
