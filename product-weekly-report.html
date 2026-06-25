@@ -149,7 +149,7 @@ tr:hover td:first-child{background:#f1f5f9}
 
 /* Target Board */
 .tgt-board{display:flex;flex-wrap:nowrap;gap:12px;margin-bottom:8px}
-.tgt-item{flex:1;min-width:0;background:#f0f4ff;border-radius:10px;padding:12px 14px;border:1px solid #dae2fc}
+.tgt-item{flex:1;min-width:0;background:#f0f4ff;border-radius:10px;padding:12px 14px;border:1px solid #dae2fc;max-width:100%;box-sizing:border-box;overflow-wrap:break-word}
 .tgt-item .tlbl{font-size:12px;color:#64748b;margin-bottom:2px}
 .tgt-item .tval{font-size:14px;font-weight:700;color:#1e40af;margin-bottom:4px}
 .tgt-item .ttgt{font-size:11px;color:#94a3b8}
@@ -341,12 +341,25 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <div><h1>男装周报分析</h1></div>
 </div>
 
-<!-- Row 1: Week + Month selector -->
+<!-- Row 1: Week quick buttons -->
 <div class="frow">
-<span class="lb">周选择</span>
-<span class="clr" id="weekExpandBtn" onclick="toggleWeekExpand()" style="cursor:pointer;color:#3b5cf6;margin-left:4px;font-weight:500">展开</span>
-<div class="tags" id="weekSel"></div>
-<span class="lb" style="margin-left:24px">目标月份</span>
+<span class="lb">周范围</span>
+<span class="shop-cat-btn on" id="wbtn0" onclick="selectWeekPreset('this')">本周</span>
+<span class="shop-cat-btn" id="wbtn1" onclick="selectWeekPreset('4w')">近4周</span>
+<span class="shop-cat-btn" id="wbtn2" onclick="selectWeekPreset('month')">本月</span>
+<span class="shop-cat-btn" id="wbtn3" onclick="selectWeekPreset('all')">全部</span>
+<span class="shop-cat-btn" id="wbtn4" onclick="selectWeekPreset('custom')">自定义</span>
+</div>
+
+<!-- Row 1b: Week tags (visible only in custom mode) -->
+<div class="frow" id="weekTagsRow" style="display:none">
+<div class="tags" id="weekTags"></div>
+<span class="clr" onclick="selectAllWeeks()" style="cursor:pointer;color:#3b5cf6;margin-left:8px;font-weight:500;text-decoration:none">全选</span>
+</div>
+
+<!-- Row 1c: Month selection for target board -->
+<div class="frow">
+<span class="lb">目标月份</span>
 <div class="tags" id="monthTags"></div>
 </div>
 
@@ -437,9 +450,7 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <option value="all">全部</option>
 <option value="S">销售S</option>
 <option value="A">销售A</option>
-<option value="B+">销售B+</option>
 <option value="B">销售B</option>
-<option value="C">销售C</option>
 <option value="unmarked">未标记</option>
 </select>
 <span style="margin-left:12px;font-size:11px;color:#64748b">产品:</span>
@@ -808,11 +819,8 @@ var PRODUCT_NOTES;
 
 // ── State variables (global scope) ──
 var curWeek, selectedShops, OWNERS, selectedOwners, selectedWeeks;
-var curProdTab, prodExpanded, allProducts, selectedMonths, sortState;
+var curProdTab, prodExpanded, allProducts;
 var SHOPS, COLORS, WB_ID_OWNER, DEPARTMENT_OWNERS, YEARLY_PROFIT_TARGETS;
-var weekExpanded = false;
-selectedMonths = new Set([String(new Date().getMonth() + 1)]);
-sortState = {key: '', dir: 'desc'};
 
 // ── Initialize from data.js (called after async loading completes) ──
 function initFromDataJs() {
@@ -835,12 +843,12 @@ function initFromDataJs() {
     YEARLY_PROFIT_TARGETS = (function(){
       var result = {};
       for (var person in PERSON_TARGETS) {
-        var tt = 0, td = 0;
+        var tt = 0, td = 0, gt = 0, gd = 0;
         for (var m = 1; m <= 12; m++) {
           var t = PERSON_TARGETS[person][String(m)];
-          if (t) { tt += t.profit_target || 0; td += t.profit_done || 0; }
+          if (t) { tt += t.profit_target || 0; td += t.profit_done || 0; gt += t.gsv_target || 0; gd += t.gsv_done || 0; }
         }
-        result[person] = {target: tt, done: td};
+        result[person] = {target: tt, done: td, gsv_target: gt, gsv_done: gd};
       }
       return result;
     })();
@@ -1140,42 +1148,109 @@ function getDaysOnSale(sku, shop, wbId){
   var diff = Math.floor((today - firstDate) / (1000*60*60*24));
   return diff >= 0 ? diff : 0;
 }
-function renderWeekTags(){
-  var container = document.getElementById('weekSel');
-  if (!container) return;
-  if (!selectedWeeks || typeof selectedWeeks.has !== 'function') {
-    selectedWeeks = new Set([WEEKS[WEEKS.length - 1]]);
+// ── Week quick button presets ──
+var currentWeekPreset = 'this';
+
+function renderWeekRange(){
+  var presets = ['this','4w','month','all','custom'];
+  for (var i = 0; i < presets.length; i++) {
+    var btn = document.getElementById('wbtn'+i);
+    if (btn) {
+      btn.classList.toggle('on', currentWeekPreset === presets[i]);
+    }
   }
-  var weeks = weekExpanded ? WEEKS : Array.from(selectedWeeks).sort(function(a,b){return WEEKS.indexOf(a)-WEEKS.indexOf(b);});
-  container.innerHTML = weeks.map(function(w){
-    var idx = WEEKS.indexOf(w);
-    return '<span class="tag '+(selectedWeeks.has(w)?'on':'')+'" onclick="tglWk(\x27'+w+'\x27)">'+WEEK_LABELS[idx]+'</span>';
+  var tagsRow = document.getElementById('weekTagsRow');
+  if (tagsRow) {
+    tagsRow.style.display = (currentWeekPreset === 'custom') ? 'flex' : 'none';
+  }
+  if (currentWeekPreset === 'custom') renderWeekTags();
+  if (!selectedWeeks || typeof selectedWeeks.has !== 'function') {
+    selectedWeeks = new Set([getLatestDataWeek()]);
+  }
+}
+
+function getLatestDataWeek(){
+  // Find the latest week that has actual data, not just the last element
+  for (var i = WEEKS.length - 1; i >= 0; i--) {
+    if (WEEK_DATA && WEEK_DATA[WEEKS[i]]) return WEEKS[i];
+  }
+  return WEEKS[WEEKS.length - 1];
+}
+
+function selectWeekPreset(mode){
+  currentWeekPreset = mode;
+  if (!selectedWeeks || typeof selectedWeeks.has !== 'function') {
+    selectedWeeks = new Set();
+  }
+  var n = WEEKS.length;
+  if (mode === 'this') {
+    selectedWeeks = new Set([getLatestDataWeek()]);
+  } else if (mode === '4w') {
+    selectedWeeks = new Set();
+    var start = Math.max(0, n - 4);
+    for (var i = start; i < n; i++) selectedWeeks.add(WEEKS[i]);
+  } else if (mode === 'month') {
+    selectedWeeks = new Set();
+    var now = new Date();
+    var cm = now.getMonth() + 1;
+    var cy = now.getFullYear();
+    for (var i = 0; i < n; i++) {
+      var dr = getWeekDateRange(WEEKS[i]);
+      if (dr) {
+        var ds = dr.start, de = dr.end;
+        if ((ds.getMonth()+1 === cm && ds.getFullYear() === cy) ||
+            (de.getMonth()+1 === cm && de.getFullYear() === cy)) {
+          selectedWeeks.add(WEEKS[i]);
+        }
+      }
+    }
+    if (selectedWeeks.size === 0) selectedWeeks = new Set([getLatestDataWeek()]);
+  } else if (mode === 'all') {
+    selectedWeeks = new Set();
+    for (var i = 0; i < n; i++) selectedWeeks.add(WEEKS[i]);
+  }
+  // 'custom' mode: keep current selection, UI handled in renderWeekRange
+  renderAll();
+}
+
+function renderWeekTags(){
+  var container = document.getElementById('weekTags');
+  if (!container) return;
+  var html = WEEKS.map(function(w){
+    var on = selectedWeeks.has(w) ? ' on' : '';
+    var label = w;
+    var dr = getWeekDateRange(w);
+    if (dr) {
+      var monday = dr.start;
+      var year = monday.getFullYear();
+      var jan1 = new Date(year, 0, 1);
+      var jan1Day = jan1.getDay();
+      var firstMonday = new Date(year, 0, 1 + (jan1Day === 0 ? 1 : 8 - jan1Day));
+      var weekNum = Math.floor((monday - firstMonday) / (1000*60*60*24*7)) + 1;
+      label = year+'-W'+weekNum+' ('+(monday.getMonth()+1)+'.'+monday.getDate()+'-'+(dr.end.getMonth()+1)+'.'+dr.end.getDate()+')';
+    }
+    return '<span class="tag'+on+'" onclick="tglWk(\''+w+'\')">'+label+'</span>';
   }).join('');
-  var btn = document.getElementById('weekExpandBtn');
-  if(btn) btn.textContent = weekExpanded ? '收起' : '展开';
+  container.innerHTML = html;
 }
 
-function toggleWeekExpand(){
-  weekExpanded = !weekExpanded;
-  renderWeekTags();
+function selectAllWeeks(){
+  selectedWeeks = new Set();
+  for (var i = 0; i < WEEKS.length; i++) selectedWeeks.add(WEEKS[i]);
+  currentWeekPreset = 'custom';
+  renderAll();
 }
 
+// Keep tglWk for backward compatibility
 function tglWk(w){
   if(selectedWeeks.has(w)) selectedWeeks.delete(w); else selectedWeeks.add(w);
   if(selectedWeeks.size === 0) selectedWeeks.add(w);
-  // Auto-update month based on selected week
-  var range = getWeekDateRange(w);
-  if (range) {
-    var weekMonth = String(range.end.getMonth() + 1);
-    selectedMonths.clear();
-    selectedMonths.add(weekMonth);
-    // Also auto-select adjacent months for context
-    if (range.end.getDate() <= 7 && range.end.getMonth() > 0) {
-      selectedMonths.add(String(range.end.getMonth()));
-    }
-    renderMonthTags();
-  }
-  renderWeekTags();
+  currentWeekPreset = 'custom';
+  renderAll();
+}
+
+function renderAll(){
+  renderWeekRange();
   renderShopGrid();
   renderProdTable();
   drawCharts();
@@ -1318,7 +1393,6 @@ function tglS(s){
   }
   
   renderOwnerTags();
-  renderMonthTags();
   renderShopGrid();
   renderProdTable();
   drawCharts();
@@ -1351,7 +1425,6 @@ function setShopCategory(cat){
   }
   renderShopTags();
   renderOwnerTags();
-  renderMonthTags();
   renderShopGrid();
   renderProdTable();
   drawCharts();
@@ -1517,27 +1590,9 @@ function getTargetPersons(){
 
 
 // ========== TARGET BOARD ==========
-// selectedMonths initialized above with state variables
-function renderMonthTags(){
-  var container = document.getElementById('monthTags');
-  if (!container) return;
-  if (!selectedMonths || typeof selectedMonths.has !== 'function') {
-    selectedMonths = new Set([String(new Date().getMonth() + 1)]);
-  }
-  var months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-  container.innerHTML = months.map(function(m){
-    return '<span class="tag '+(selectedMonths.has(m)?'on':'')+'" onclick="tglM(\''+m+'\')">'+m+'月</span>';
-  }).join('');
-}
-function tglM(m){
-  if(selectedMonths.has(m)) selectedMonths.delete(m); else selectedMonths.add(m);
-  renderMonthTags();
-  renderTargetBoard();
-  renderProductTargetBoard();
-}
 function getSelectedMonths(){
   var months = Array.from(selectedMonths);
-  if(months.length === 0) months.push('5');
+  if(months.length === 0) months.push(String(new Date().getMonth() + 1));
   return months;
 }
 
@@ -1570,8 +1625,31 @@ function renderTargetBoard(){
     }
   }
   
+  // Yearly GSV banner
+  var yearlyGsvHtml = '';
+  if(persons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
+    var yGsvTotalTarget = 0, yGsvTotalDone = 0;
+    for(var yi = 0; yi < persons.length; yi++){
+      var yt = YEARLY_PROFIT_TARGETS[persons[yi]];
+      if(yt){ yGsvTotalTarget += yt.gsv_target || 0; yGsvTotalDone += yt.gsv_done || 0; }
+    }
+    if(yGsvTotalTarget > 0){
+      var yGsvPct = (yGsvTotalDone / yGsvTotalTarget * 100);
+      var yGsvCls = yGsvPct >= 100 ? 'ok' : (yGsvPct >= 70 ? 'warn' : 'low');
+      var yGsvLabel = persons.length === 1 ? persons[0] : '合计';
+      yearlyGsvHtml = '<div class="tgt-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px">'+
+        '<div><span style="font-weight:700;font-size:13px;color:#0f172a">全年GSV目标</span><span style="font-size:10px;color:#94a3b8;margin-left:8px">'+yGsvLabel+'</span></div>'+
+        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+        '<span style="font-size:13px;font-weight:700;color:#0f172a">'+fmtK(yGsvTotalDone)+'</span>'+
+        '<span style="font-size:11px;color:#64748b">目标 '+fmtK(yGsvTotalTarget)+'</span>'+
+        '<span style="font-size:12px;font-weight:600;color:'+(yGsvPct>=100?'#16a34a':(yGsvPct>=70?'#d97706':'#dc2626'))+'">'+yGsvPct.toFixed(2)+'%</span>'+
+        '<div class="tgt-bar-wrap" style="width:120px;margin:0"><div class="tgt-bar-fill '+yGsvCls+'" style="width:'+Math.min(100,yGsvPct)+'%"></div></div>'+
+        '</div></div>';
+    }
+  }
+  
   if(persons.length === 0 || !PERSON_TARGETS) {
-    tgtGrid.innerHTML = yearlyBannerHtml || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
+    tgtGrid.innerHTML = (yearlyBannerHtml + yearlyGsvHtml) || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
     return;
   }
   
@@ -1618,8 +1696,26 @@ function renderTargetBoard(){
   }
   
   if(!hasData){
-    tgtGrid.innerHTML = yearlyBannerHtml || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无选中月份的数据</div>';
+    tgtGrid.innerHTML = (yearlyBannerHtml + yearlyGsvHtml) || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无选中月份的数据</div>';
     return;
+  }
+  
+  // Compute monthly time progress from selected weeks
+  var timePct = 0, dayOfMonth = 0, monthLastDay = 0;
+  var sws = getSelectedWeeks();
+  if(sws.length > 0){
+    var latestWk = sws[sws.length - 1];
+    var range = getWeekDateRange(latestWk);
+    if(range){
+      var sunday = range.end;
+      monthLastDay = new Date(sunday.getFullYear(), sunday.getMonth() + 1, 0).getDate();
+      dayOfMonth = sunday.getDate();
+      timePct = (dayOfMonth / monthLastDay * 100);
+    }
+  }
+  var completionPct = 0;
+  if(timePct > 0 && agg.profit_target > 0){
+    completionPct = (agg.profit_done / agg.profit_target) / (dayOfMonth / monthLastDay) * 100;
   }
   
   var items = [
@@ -1627,43 +1723,30 @@ function renderTargetBoard(){
     {lbl: 'GMV(G)', val: agg.gmv_done, tgt: agg.gmv_target, fmt: 'money'},
     {lbl: '销量', val: agg.sales_done, tgt: agg.sales_target, fmt: 'num'},
     {lbl: '利润率', val: profitRate, tgt: 15, fmt: 'pct2'},
-    {lbl: '利润(G)', val: agg.profit_done, tgt: agg.profit_target, fmt: 'money2'}
+    {lbl: '利润(G)', val: agg.profit_done, tgt: agg.profit_target, fmt: 'money2'},
+    {lbl: '时间进度', val: timePct, tgt: 100, fmt: 'pct'},
+    {lbl: '完成进度', val: completionPct, tgt: 100, fmt: 'pct_completion'}
   ];
   
   var monthLabel = months.length === 1 ? months[0]+'月' : months.join(',')+'月（合计）';
   
-  // Compute monthly time progress from selected weeks
-  var timeProgressStr = '';
-  var sws = getSelectedWeeks();
-  if(sws.length > 0){
-    var latestWk = sws[sws.length - 1];
-    var range = getWeekDateRange(latestWk);
-    if(range){
-      var sunday = range.end;
-      var monthLastDay = new Date(sunday.getFullYear(), sunday.getMonth() + 1, 0).getDate();
-      var dayOfMonth = sunday.getDate();
-      var timePct = (dayOfMonth / monthLastDay * 100);
-      var monthName = (sunday.getMonth() + 1);
-      timeProgressStr = '<div style="margin-top:6px;font-size:10px;color:#64748b">时间进度 '+timePct.toFixed(1)+'%（已过'+dayOfMonth+'天/共'+monthLastDay+'天）</div>'+
-        '<div class="tgt-bar-wrap" style="margin-top:3px"><div class="tgt-bar-fill" style="width:'+Math.min(100,timePct)+'%;background:#8b5cf6"></div></div>';
-    }
-  }
-  
-  tgtGrid.innerHTML = yearlyBannerHtml + items.map(function(item){
+  tgtGrid.innerHTML = yearlyBannerHtml + yearlyGsvHtml + items.map(function(item){
     var isMoney = item.fmt === 'money' || item.fmt === 'money2';
+    var isPct = item.fmt === 'pct' || item.fmt === 'pct_completion';
     var pct = item.tgt > 0 ? (item.val / item.tgt * 100) : 0;
     var cls = pct >= 100 ? 'ok' : (pct >= 70 ? 'warn' : 'low');
-    var valStr = isMoney ? fmtK(item.val) : (item.fmt === 'pct2' ? Number(item.val).toFixed(2)+'%' : Number(item.val).toLocaleString());
+    var valStr = isMoney ? fmtK(item.val) : (item.fmt === 'pct2' ? Number(item.val).toFixed(2)+'%' : (isPct ? Number(item.val).toFixed(1)+'%' : Number(item.val).toLocaleString()));
     var tgtStr = isMoney ? ('目标 '+fmtK(item.tgt)) : ('目标 '+item.tgt.toLocaleString());
     if(item.fmt === 'pct2') tgtStr = '目标 ≥15%';
-    var pctStr = item.fmt !== 'pct2' ? '<span style="font-size:11px;color:#64748b"> '+pct.toFixed(2)+'%</span>' : '';
+    else if(item.fmt === 'pct') tgtStr = '本月已过 '+dayOfMonth+'天/共'+monthLastDay+'天';
+    else if(item.fmt === 'pct_completion') tgtStr = '目标 ≥100%';
+    var pctStr = (item.fmt !== 'pct2' && !isPct) ? '<span style="font-size:11px;color:#64748b"> '+pct.toFixed(2)+'%</span>' : '';
     var extraHtml = '';
-    if(item.lbl === 'GSV(G)') extraHtml = timeProgressStr;
     return '<div class="tgt-item">'+
       '<div class="tlbl">'+item.lbl+' <span style="font-size:10px;color:#94a3b8">'+monthLabel+'</span></div>'+
       '<div class="tval">'+valStr+pctStr+'</div>'+
       '<div class="ttgt">'+tgtStr+'</div>'+
-      (item.fmt !== 'pct2' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill '+cls+'" style="width:'+Math.min(100,pct)+'%"></div></div>' : '')+
+      (item.fmt === 'pct2' ? '' : (item.fmt === 'pct' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:#8b5cf6"></div></div>' : (item.fmt === 'pct_completion' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:'+(pct>=100?'#16a34a':'#dc2626')+'"></div></div>' : '<div class="tgt-bar-wrap"><div class="tgt-bar-fill '+cls+'" style="width:'+Math.min(100,pct)+'%"></div></div>')))+
       extraHtml+
     '</div>';
   }).join('');
@@ -1673,7 +1756,25 @@ function onMonthChange(){
   renderTargetBoard();
   renderProductTargetBoard();
 }
-// onMonthChange kept for backward compatibility, now using renderMonthTags+tglM
+
+function renderMonthTags(){
+  var container = document.getElementById('monthTags');
+  if (!container) return;
+  var html = '';
+  for (var m = 1; m <= 12; m++) {
+    var on = selectedMonths.has(String(m)) ? ' on' : '';
+    html += '<span class="tag'+on+'" onclick="tglM(\''+m+'\')">'+m+'月</span>';
+  }
+  container.innerHTML = html;
+}
+
+function tglM(m){
+  if(selectedMonths.has(m)) selectedMonths.delete(m); else selectedMonths.add(m);
+  if(selectedMonths.size === 0) selectedMonths.add(m);
+  renderMonthTags();
+  renderTargetBoard();
+  renderProductTargetBoard();
+}
 
 // ========== SHOP GRID ==========
 function getPrevWeek(w){
@@ -4555,10 +4656,10 @@ function bootstrap(){
 
   var initList = [
     {fn:initImgFloat, name:'initImgFloat'},
-    {fn:renderWeekTags, name:'renderWeekTags'},
+    {fn:renderWeekRange, name:'renderWeekRange'},
+    {fn:renderMonthTags, name:'renderMonthTags'},
     {fn:renderShopTags, name:'renderShopTags'},
     {fn:renderOwnerTags, name:'renderOwnerTags'},
-    {fn:renderMonthTags, name:'renderMonthTags'},
     {fn:renderShopGrid, name:'renderShopGrid'},
     {fn:renderProdTable, name:'renderProdTable'},
     {fn:drawCharts, name:'drawCharts'},
@@ -5372,7 +5473,7 @@ function renderProductTargetBoard() {
     var p = lastWeekProducts[pi];
     if (!p.shop || !p.sku) continue;
     if (!selectedShops.has(p.shop)) continue;
-    if (!productOwnerMatch(p.sku, p.shop)) continue;
+    // 不按 productOwnerMatch 过滤，让无负责人产品也能通过店铺归属到对应负责人
     var owner = (SKU_OWNER_LOOKUP[p.sku + '|' + p.shop] || SKU_OWNER_LOOKUP[p.sku]);
     if (!owner || owner === '无负责人') {
       var shopOwners = SHOP_OWNERS[p.shop];
@@ -5506,11 +5607,17 @@ function renderProductTargetBoard() {
     html += '</tr>';
   }
 
+  // 合计已实现
+  var totalRealized = 0;
+  for (var rk = 0; rk < activeOwners.length; rk++) {
+    totalRealized += (ownerRealized[activeOwners[rk]] || 0);
+  }
+
   html += '<tr style="background:#f1f5f9;font-weight:600">';
   html += '<td style="padding:6px 8px;border:1px solid #e2e8f0">合计</td>';
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0">' + Math.round(filteredMonthTotal / 10000) + '万</td>';
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px;color:#64748b">' + fmtK(filteredMonthTotal / 4) + '</td>';
-  html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">-</td>';
+  html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">' + fmtK(totalRealized) + '</td>';
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">-</td>';
   html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap">总 <b>' + totalR.blue + '</b></td>';
   html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap">总 <b>' + totalR.green + '</b></td>';
