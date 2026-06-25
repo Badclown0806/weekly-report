@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-build_data.py - 从源Excel文件生成 data.json
+build_data_women.py - 女装版：从源Excel文件生成 data_women.js
 源文件:
   - D:/周汇报文件/运营日数据.xlsx
   - D:/周汇报文件/产品列表.xlsx
   - D:/周汇报文件/LX利润表.xlsx
-  - D:/周汇报文件/2026WB年规进度.xlsx
-输出: output/data.json
+  - D:/周汇报文件/2026WB年规进度 - 女装.xlsx
+输出: data_women.js
 """
 
 import json
@@ -22,7 +22,7 @@ import openpyxl
 # ── 配置 ──────────────────────────────────────────────
 SRC_DIR = r"D:\周汇报文件"
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_PATH = os.path.join(OUTPUT_DIR, "data.js")
+OUTPUT_PATH = os.path.join(OUTPUT_DIR, "data_women.js")
 
 # ── 工具函数 ──────────────────────────────────────────
 
@@ -33,14 +33,12 @@ def sanitize_value(v):
     if isinstance(v, float):
         if math.isnan(v) or math.isinf(v):
             return None
-        # Python float → JSON number, round to 4 decimals for rates
         return round(v, 6) if abs(v) < 10 else round(v, 2)
     if isinstance(v, bool):
         return v
     if isinstance(v, int):
         return v
     if isinstance(v, str):
-        # Excel 可能将数值读为字符串，尝试转换
         v_stripped = v.strip()
         if not v_stripped:
             return None
@@ -116,17 +114,16 @@ def read_product_list():
     if wb is None:
         return {}, {}, {}, {}, {}
 
-    ws = wb[wb.sheetnames[0]]  # '产品列表'
+    ws = wb[wb.sheetnames[0]]
     sku_img = {}
     sku_owner = {}
     sku_first_date = {}
     sku_wb_id = {}
     shop_owner_set = defaultdict(set)
 
-    # 列: 0=WB商品ID, 1=卖家SKU, ..., 9=主图, 10=店铺名称, 13=负责人, 14=创建时间
     for i, row in enumerate(ws.iter_rows(min_row=2)):
         if i > 2000:
-            break  # safety limit
+            break
         vals = [cell.value for cell in row[:15]]
         wb_id = vals[0]
         sku = vals[1]
@@ -140,7 +137,6 @@ def read_product_list():
 
         wb_id_str = str(int(wb_id)) if isinstance(wb_id, float) else str(wb_id)
         
-        # 关键修改：使用 SKU+WB商品ID 组合作为唯一标识
         sku_wb_key = f"{sku}|{wb_id_str}"
         if shop:
             sku_wb_key_shop = f"{sku}|{shop}|{wb_id_str}"
@@ -165,12 +161,10 @@ def read_product_list():
                 if shop:
                     sku_first_date[sku_wb_key_shop] = fd_str
         
-        # 存储 WB商品ID 映射
         sku_wb_id[sku_wb_key] = wb_id_str
         if shop:
             sku_wb_id[sku_wb_key_shop] = wb_id_str
 
-    # 转换 shop_owner_set → dict
     shop_owners = {s: {o: True for o in owners} for s, owners in shop_owner_set.items()}
 
     wb.close()
@@ -190,7 +184,6 @@ def read_lx_profit(weeks_iso):
 
     iso_to_w = {iso: f"W{i+1}" for i, iso in enumerate(weeks_iso)}
 
-    # ─── 店铺分周利润表 → SHOP_WEEKLY ───
     ws_shop = wb["店铺分周利润表"]
     shop_weekly = defaultdict(dict)
 
@@ -198,10 +191,10 @@ def read_lx_profit(weeks_iso):
         if i > 5000:
             break
         vals = [cell.value for cell in row[:10]]
-        week_end = vals[1]  # 星期结束值
+        week_end = vals[1]
         shop_name = vals[2]
-        margin_val = vals[4]  # 毛利率CNY
-        gsv_val = vals[6]    # 后台价GSV.CNY
+        margin_val = vals[4]
+        gsv_val = vals[6]
 
         if not week_end or not shop_name:
             continue
@@ -214,25 +207,15 @@ def read_lx_profit(weeks_iso):
         margin = sanitize_value(margin_val)
         gsv = sanitize_value(gsv_val)
 
-        # 只保留 margin >= 0 的有效周数据
         if margin is not None and gsv is not None:
-            # margin 在SHOP_WEEKLY中是百分比形式 (如 6.05 表示 6.05%)
             shop_weekly[str(shop_name)][w_key] = {
                 "gsv": gsv,
                 "margin": round(margin * 100, 4) if isinstance(margin, float) and margin < 1 else margin
             }
 
-    # 转换为普通dict
     shop_weekly = {k: dict(v) for k, v in shop_weekly.items()}
 
-    # ─── 分周SKU → WEEK_DATA ───
     ws_sku = wb["分周SKU"]
-    # 列: 0=数据范围, 1=星期结束值, 2=店铺名称, 3=负责人, 4=类目,
-    #     5=WB商品ID, 6=卖家SKU, 7=主图, 8=毛利量CNY, 9=毛利率CNY,
-    #     10=GSV(后台价), 11=周订单量售完天数, 12=每周日库存量, 13=货值CNY,
-    #     14=销售数量, 15=退款数量, 16=财报净销量, ..., 21=送达退货率,
-    #     35=AJ列(广告花费)
-
     week_data_raw = defaultdict(list)
 
     sku_count = 0
@@ -244,12 +227,12 @@ def read_lx_profit(weeks_iso):
         shop = vals[2]
         cat = vals[4]
         sku = vals[6]
-        profit = vals[8]     # 毛利量CNY
-        margin_rate = vals[9]  # 毛利率CNY (as decimal e.g., 0.2507)
-        gsv = vals[10]       # GSV(后台价)
-        qty = vals[14]       # 销售数量
-        return_rate = vals[21] if len(vals) > 21 else None  # 送达退货率
-        ad_spend = vals[35] if len(vals) > 35 else None  # AJ列 广告花费
+        profit = vals[8]
+        margin_rate = vals[9]
+        gsv = vals[10]
+        qty = vals[14]
+        return_rate = vals[21] if len(vals) > 21 else None
+        ad_spend = vals[35] if len(vals) > 35 else None
 
         if not week_end or not sku:
             continue
@@ -273,25 +256,19 @@ def read_lx_profit(weeks_iso):
             "ad_spend": sanitize_value(ad_spend) or 0
         }
 
-        # margin是小数, 转为百分比
         if isinstance(product["margin"], float) and product["margin"] < 1:
             product["margin"] = round(product["margin"] * 100, 2)
-        # return_rate 也是小数, 同样转为百分比
         if isinstance(product["return_rate"], float) and product["return_rate"] < 1:
             product["return_rate"] = round(product["return_rate"] * 100, 2)
 
         week_data_raw[w_key].append(product)
         sku_count += 1
 
-    # 构建最终的 WEEK_DATA
     week_data = {}
     for w_key in sorted(week_data_raw.keys(), key=lambda x: int(x[1:])):
         products = week_data_raw[w_key]
-
-        # 按 profit 降序排列
         products.sort(key=lambda p: p["profit"], reverse=True)
 
-        # 计算店铺汇总
         shop_summary = defaultdict(lambda: {"gsv": 0, "profit": 0, "margin": 0, "products": 0, "ad_spend": 0})
         for p in products:
             s = shop_summary[p["shop"]]
@@ -300,14 +277,12 @@ def read_lx_profit(weeks_iso):
             s["products"] += 1
             s["ad_spend"] += p.get("ad_spend", 0) or 0
 
-        # 计算 weighted margin
         for s in shop_summary.values():
             if s["gsv"] > 0:
                 s["margin"] = round(s["profit"] / s["gsv"] * 100, 2)
             else:
                 s["margin"] = 0
 
-        # top10 by profit
         top10 = [p for p in products if p["sku"] != "无匹配ID费用"][:10]
 
         week_data[w_key] = {
@@ -332,21 +307,16 @@ def read_traffic_weekly(weeks_iso):
         return {}
 
     iso_to_w = {iso: f"W{i+1}" for i, iso in enumerate(weeks_iso)}
-    ws = wb[wb.sheetnames[0]]  # Export
+    ws = wb[wb.sheetnames[0]]
 
-    # 列: 0=日期, 2=店铺名称, 3=卖家SKU, 7=访客, 10=加购数, 11=加购转化, 12=销量, 19=转化率,
-    #     22=财报退货率, 26=广告点击率
-    # 按 ISO周 + SKU 汇总: visitors, add_to_cart_count, sales_qty, click_cnt, return_qty, total_qty
     weekly_agg = defaultdict(lambda: defaultdict(lambda: {
         "visitors": 0, "atc": 0, "qty": 0,
         "click_cnt": 0, "click_impressions": 0,
         "return_qty": 0, "total_qty_ref": 0
     }))
 
-    # 同时追踪每个SKU首次出现库存的日期（用于上架天数计算）
     sku_first_inventory_date = {}
-    # 追踪每个SKU最新日期的可售数量（E列）
-    sku_latest_inventory = {}  # sku -> {'date': date, 'value': float}
+    sku_latest_inventory = {}
 
     for i, row in enumerate(ws.iter_rows(min_row=2)):
         if i > 200000:
@@ -354,14 +324,14 @@ def read_traffic_weekly(weeks_iso):
         if not row:
             continue
 
-        d_val = row[0].value if len(row) > 0 else None  # 日期
-        sku = row[3].value if len(row) > 3 else None     # 卖家SKU
-        inventory = row[4].value if len(row) > 4 else None  # E列 可售数量
-        visitors = row[7].value if len(row) > 7 else None  # 访客
-        atc = row[10].value if len(row) > 10 else None     # 加购数
-        qty = row[12].value if len(row) > 12 else None     # 销量
-        click_rate_val = row[26].value if len(row) > 26 else None  # 广告点击率 (decimal)
-        return_rate_raw = row[22].value if len(row) > 22 else None  # 财报退货率 (decimal)
+        d_val = row[0].value if len(row) > 0 else None
+        sku = row[3].value if len(row) > 3 else None
+        inventory = row[4].value if len(row) > 4 else None
+        visitors = row[7].value if len(row) > 7 else None
+        atc = row[10].value if len(row) > 10 else None
+        qty = row[12].value if len(row) > 12 else None
+        click_rate_val = row[26].value if len(row) > 26 else None
+        return_rate_raw = row[22].value if len(row) > 22 else None
 
         if not d_val or not sku:
             continue
@@ -389,41 +359,34 @@ def read_traffic_weekly(weeks_iso):
         agg["atc"] += float(atc) if atc else 0
         agg["qty"] += float(qty) if qty else 0
 
-        # 追踪每个SKU首次出现库存>0的日期（E列可售数量>0）
         if inventory is not None:
             try:
                 inv_val = float(inventory)
                 if inv_val > 0:
                     if sku_str not in sku_first_inventory_date or d_date < sku_first_inventory_date[sku_str]:
                         sku_first_inventory_date[sku_str] = d_date
-                # 追踪最新日期的可售数量
                 if sku_str not in sku_latest_inventory or d_date > sku_latest_inventory[sku_str]['date']:
                     sku_latest_inventory[sku_str] = {'date': d_date, 'value': inv_val}
             except (ValueError, TypeError):
                 pass
 
-        # 广告点击率: 累积每天的点击率值, 用于后续计算加权平均
         if click_rate_val is not None and visitors:
             click_rate_f = float(click_rate_val)
             if not (math.isnan(click_rate_f) or math.isinf(click_rate_f)):
                 agg["click_cnt"] += click_rate_f * float(visitors)
                 agg["click_impressions"] += float(visitors)
 
-    # 转换为 TRAFFIC_WEEKLY 格式
-    # [click_rate, add_to_cart_rate, conversion_rate, return_rate, sales_qty]
     traffic_weekly = {}
     for w_key, sku_data in sorted(weekly_agg.items(), key=lambda x: int(x[0][1:])):
         traffic_weekly[w_key] = {}
         for sku, agg in sku_data.items():
             v = agg["visitors"]
-            # click_rate: 加权平均 (sum(click_rate * visitors) / sum(visitors))
             if agg["click_impressions"] > 0:
                 click_rate = round(agg["click_cnt"] / agg["click_impressions"], 6)
             else:
                 click_rate = None
             atc_rate = round(agg["atc"] / v, 6) if v > 0 else 0.0
             conv_rate = round(agg["qty"] / v, 6) if v > 0 else 0.0
-            # 财报退货率暂不在 TRAFFIC_WEEKLY 中, 用 null 占位
             return_rate = None
             sales_qty = round(agg["qty"], 0)
             traffic_weekly[w_key][sku] = [click_rate, atc_rate, conv_rate, return_rate, sales_qty]
@@ -438,106 +401,98 @@ def read_traffic_weekly(weeks_iso):
 
 # ── 阶段 5: 读取年规进度 → PERSON_TARGETS ─────────────
 
+# 女装版店铺→负责人映射（只保留两人）
+WOMEN_SHOP_TO_OWNER = {
+    "Z-NZTF1店": "毛立新",
+    "G-NZTF1店": "陈欣诺",
+}
+
 def read_person_targets():
-    """从2026WB年规进度.xlsx 生成 PERSON_TARGETS"""
-    path = os.path.join(SRC_DIR, "2026WB年规进度.xlsx")
+    """从2026WB年规进度 - 女装.xlsx 生成 PERSON_TARGETS（仅输出毛立新/陈欣诺）"""
+    path = os.path.join(SRC_DIR, "2026WB年规进度 - 女装.xlsx")
     wb = load_workbook_safe(path)
     if wb is None:
         return {}
 
-    # 列映射: Excel列 → 月份
-    # Col 2=2月, 3=3月, 4=4月, 5=5月, 6=6月, 7=7月, 8=8月,
-    # 9=9月, 10=10月, 11=11月, 12=12月, 13=1月
     col_to_month = {2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8,
                     9: 9, 10: 10, 11: 11, 12: 12, 13: 1}
 
-    # 行到字段的映射（不同sheet可能有不同结构）
-    # 我们需要从列B识别
     all_targets = {}
 
     for sheet_name in wb.sheetnames:
+        # 只处理映射表中的店铺
+        owner_name = WOMEN_SHOP_TO_OWNER.get(sheet_name)
+        if owner_name is None:
+            continue
         ws = wb[sheet_name]
-        person_name = sheet_name.strip()
 
-        # 读取所有行
         rows_data = {}
         for i, row in enumerate(ws.iter_rows(min_row=1, max_row=100)):
             vals = [cell.value for cell in row[:16]]
             rows_data[i+1] = vals
 
-        # 从B列识别指标
         targets_by_month = defaultdict(dict)
 
         shop_section_started = False
         for row_num, vals in rows_data.items():
-            # 遇到第一个店铺名行后，停止处理（后续都是逐店明细）
             a_val = vals[0] if len(vals) > 0 else None
             if a_val and isinstance(a_val, str) and "店" in a_val:
                 shop_section_started = True
                 continue
             if shop_section_started:
-                continue  # 已进入逐店排分区，跳过所有后续行
+                continue
             label = str(vals[1]).strip() if vals[1] is not None else ""
             if not label:
                 continue
 
-            # 月度目标 利润 → profit_target
             if "月度目标" in label and "利润" in label:
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["profit_target"] = sanitize_value(v) or 0
 
-            # 实际利润 → profit_done（排除 "利润率" 行）
             elif "实际利润" in label and "率" not in label:
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["profit_done"] = sanitize_value(v) or 0
 
-            # 销量目标 → sales_target（排除 "销量完成进度"）
             elif label == "销量目标":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["sales_target"] = sanitize_value(v) or 0
 
-            # 销量完成 → sales_done（排除 "销量完成进度"）
             elif label == "销量完成":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["sales_done"] = sanitize_value(v) or 0
 
-            # GMV目标
             elif label == "GMV目标":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gmv_target"] = sanitize_value(v) or 0
 
-            # GMV完成
             elif label == "GMV完成":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gmv_done"] = sanitize_value(v) or 0
 
-            # GSV目标
             elif label == "GSV目标":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_target"] = sanitize_value(v) or 0
 
-            # GSV完成
             elif label == "GSV完成":
                 for col, month in col_to_month.items():
                     v = vals[col]
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_done"] = sanitize_value(v) or 0
 
-        # 计算 profit_rate
         for month in targets_by_month:
             t = targets_by_month[month]
             gsv_done = t.get("gsv_done", 0)
@@ -547,7 +502,6 @@ def read_person_targets():
             else:
                 t["profit_rate"] = 0
 
-        # 确保所有12个月都有数据
         for m in range(1, 13):
             if m not in targets_by_month:
                 targets_by_month[m] = {
@@ -558,9 +512,8 @@ def read_person_targets():
                     "profit_rate": 0
                 }
 
-        # 转换 key 为字符串
         person_data = {str(m): dict(targets_by_month[m]) for m in range(1, 13)}
-        all_targets[person_name] = person_data
+        all_targets[owner_name] = person_data
 
     wb.close()
     print(f"  PERSON_TARGETS: {len(all_targets)} people")
@@ -570,10 +523,6 @@ def read_person_targets():
 # ── 阶段 5.5: 全量预计算新品等级和销售等级 ──────────────
 
 def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
-    """全量预计算新品等级（45天规则，按销量）：
-    对每个 SKU，取首次库存日期后 45 天内累计 qty（销量）。
-    阈值：S≥175, A≥84, B≥56。不满足不打标签。
-    """
     all_products = set()
     for wk, wd in week_data.items():
         for p in wd.get("allProducts", []):
@@ -587,7 +536,6 @@ def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
         start, end = iso_week_to_date_range(iso)
         iso_to_dates[iso] = (start, end)
 
-    # iso → W-key 映射（修复：原 w_to_iso 方向反了）
     iso_to_w = {iso: f"W{i+1}" for i, iso in enumerate(weeks_iso)}
 
     today = date.today()
@@ -621,7 +569,6 @@ def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
             new_product_grades[key] = None
             continue
 
-        # 累加45天窗口内的销量（qty）
         total_qty = 0.0
         for iso in weeks_iso:
             ws, we = iso_to_dates[iso]
@@ -632,7 +579,6 @@ def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
                         if p.get("shop") == shop and p.get("sku") == sku:
                             total_qty += p.get("qty", 0) or 0
 
-        # 按销量阈值：S≥175, A≥84, B≥56
         if total_qty >= 175:
             new_product_grades[key] = "S"
         elif total_qty >= 84:
@@ -650,10 +596,6 @@ def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
 
 
 def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
-    """全量预计算销售等级（历史最高周，按销量）：
-    对每个 SKU，遍历所有历史周找出单周最高销量。
-    阈值：S≥350, A≥175, B≥105。不满足不打标签。
-    """
     all_products = set()
     for wk, wd in week_data.items():
         for p in wd.get("allProducts", []):
@@ -669,7 +611,6 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
         shop = parts[0]
         sku = parts[1] if len(parts) > 1 else ""
 
-        # 遍历所有周，找单周最高销量
         max_weekly_qty = 0.0
         for wk, wd in week_data.items():
             for p in wd.get("allProducts", []):
@@ -678,7 +619,6 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
                     if qty > max_weekly_qty:
                         max_weekly_qty = qty
 
-        # 按单周最高销量阈值：S≥350, A≥175, B≥105
         if max_weekly_qty >= 350:
             sales_grades[key] = "S"
         elif max_weekly_qty >= 175:
@@ -700,7 +640,7 @@ def compute_sales_grades(week_data, sku_first_date, weeks_iso, sku_inventory):
 
 def main():
     print("=" * 60)
-    print("build_data.py - 生成 data.json")
+    print("build_data_women.py - 生成 data_women.js (女装版)")
     print("=" * 60)
 
     # 阶段 1: 基础周数组
@@ -720,23 +660,21 @@ def main():
     print("\n[4/5] 读取运营日数据...")
     traffic_weekly, sku_first_inventory_date, sku_latest_inventory = read_traffic_weekly(weeks_iso)
 
-    # 阶段 4.5: 将运营日数据 M列(销量) 合并到 WEEK_DATA.qty
     print("  合并运营日数据 M列(销量) 到 WEEK_DATA...")
     qty_merged = 0
     for w_key in week_data:
         if w_key not in traffic_weekly:
             continue
-        sku_qty = traffic_weekly[w_key]  # dict: sku -> [click_rate, atc_rate, conv_rate, return_rate, sales_qty]
+        sku_qty = traffic_weekly[w_key]
         for p in week_data[w_key]["allProducts"]:
             sku = p["sku"]
             if sku in sku_qty and len(sku_qty[sku]) > 4:
-                new_qty = sku_qty[sku][4]  # index 4 = sales_qty from 运营日数据 M列
+                new_qty = sku_qty[sku][4]
                 if new_qty and new_qty > 0:
                     p["qty"] = new_qty
                     qty_merged += 1
     print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 M列)")
 
-    # 构建 SKU 到 WB_IDs 的映射
     sku_to_wb_ids = {}
     for key in sku_wb_id:
         parts = key.split('|')
@@ -747,28 +685,19 @@ def main():
                 sku_to_wb_ids[sku] = set()
             sku_to_wb_ids[sku].add(wb_id)
     
-    # SKU_FIRST_DATE: 合并两个来源
-    # 1. 产品列表中的创建时间（已有 SKU+WB_ID 组合 key）
-    # 2. 运营日数据首次库存>0的日期（仅 SKU key，作为补充/优先数据）
     merged_sku_first_date = {}
     
-    # 先从运营日数据获取首次库存>0日期（优先级更高，因为反映真实上架）
     for sku, d in sku_first_inventory_date.items():
         date_str = d.strftime("%Y-%m-%d") if isinstance(d, date) else str(d)[:10]
-        # 仅 SKU 级别 key
         merged_sku_first_date[sku] = date_str
-        # 同时为每个 WB_ID 变体设置相同日期（因为运营日数据没有 WB_ID 区分）
         if sku in sku_to_wb_ids:
             for wb_id in sku_to_wb_ids[sku]:
                 merged_sku_first_date[f"{sku}|{wb_id}"] = date_str
     
-    # 再从产品列表补充（仅补充运营日数据中没有的）
     for key, date_str in sku_first_date.items():
         if key not in merged_sku_first_date:
             merged_sku_first_date[key] = date_str
     
-    # 补充 shop|sku 格式的 key，供 compute_new_product_grades 使用
-    # compute_new_product_grades 的 all_products key 格式为 shop|sku
     shop_sku_added = 0
     for wk, wd in week_data.items():
         for p in wd.get("allProducts", []):
@@ -779,7 +708,6 @@ def main():
             shop_sku_key = f"{shop}|{sku}"
             if shop_sku_key in merged_sku_first_date:
                 continue
-            # 尝试从已有 key 中匹配日期
             fd = None
             for candidate in [sku, f"{sku}|{shop}"]:
                 if candidate in merged_sku_first_date:
@@ -800,32 +728,36 @@ def main():
     print(f"  SKU_FIRST_DATE: {len(merged_sku_first_date)} 个 (合并产品列表+运营日数据), 新增 shop|sku 映射 {shop_sku_added} 个")
     print(f"    无库存记录的SKU将不显示上架天数（显示为 '-'）")
 
-    # SKU_INVENTORY: 每个SKU最新日期的可售数量
     sku_inventory = {}
     for sku, info in sku_latest_inventory.items():
         sku_inventory[sku] = int(info['value'])
     print(f"  SKU_INVENTORY: {len(sku_inventory)} 个SKU (最新日期可售数量)")
 
-    # 阶段 5: 年规进度
-    print("\n[5/5] 读取年规进度...")
+    # 阶段 5: 年规进度 (女装版)
+    print("\n[5/5] 读取年规进度 (女装)...")
     person_targets = read_person_targets()
 
-    # ── 构建 SKU_OWNER_LOOKUP 映射表 ──
-    # 将 SKU_OWNER 的原始 key（sku|shop|wb_id 或 sku|wb_id）映射为
-    # JS 端可直接查询的扁平格式：sku|shop → owner, sku → owner
     sku_owner_lookup = {}
     for key, owner in sku_owner.items():
         parts = key.split('|')
-        # 3-part key: sku|shop_name|id → map as sku|shop_name → owner
         if len(parts) == 3:
             lookup_key = f"{parts[0]}|{parts[1]}"
             sku_owner_lookup[lookup_key] = owner
-        # 2-part key: sku|id → map as sku → owner (only if no shop-level mapping yet)
         if parts[0] not in sku_owner_lookup:
             sku_owner_lookup[parts[0]] = owner
     print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries")
 
-    # ── 阶段 5.5: 预计算新品等级和销售等级 ──
+    # 女装版：G-NZTF1店 负责人重映射 陈敏华 → 陈欣诺
+    remap_count = 0
+    for key in list(sku_owner_lookup.keys()):
+        if 'G-NZTF1店' in key and sku_owner_lookup[key] == '陈敏华':
+            sku_owner_lookup[key] = '陈欣诺'
+            remap_count += 1
+    # 同步修正 SHOP_OWNERS
+    if 'G-NZTF1店' in shop_owners:
+        shop_owners['G-NZTF1店'] = {'陈欣诺': True}
+    print(f"  G-NZTF1店 负责人重映射: {remap_count} 条 (陈敏华 → 陈欣诺)")
+
     print("\n[5.5] 预计算新品等级和销售等级...")
     new_product_grades = compute_new_product_grades(
         week_data, merged_sku_first_date, weeks_iso
@@ -834,9 +766,8 @@ def main():
         week_data, merged_sku_first_date, weeks_iso, sku_inventory
     )
 
-    # ── 组装 data.json ──
     print("\n" + "=" * 60)
-    print("组装 data.json...")
+    print("组装 data_women.js...")
 
     data = {
         "WEEKS": weeks,
@@ -859,11 +790,8 @@ def main():
         "SALES_GRADE": sales_grades,
     }
 
-    # ── 写入 data.js ──
-    # 确保 output 目录存在
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
-    # 自定义 JSON encoder 处理特殊值
     class SanitizedEncoder(json.JSONEncoder):
         def default(self, obj):
             if isinstance(obj, float):
@@ -872,12 +800,10 @@ def main():
             return super().default(obj)
 
     json_str = json.dumps(data, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder)
-    # 二次检查：确保没有任何 NaN/Infinity 出现在 JSON 中
     json_str = re.sub(r':NaN', ':null', json_str)
     json_str = re.sub(r':-Infinity', ':null', json_str)
     json_str = re.sub(r':Infinity', ':null', json_str)
 
-    # 包装为 JS 变量声明（通过 <script src="data.js"> 加载，无需 fetch/XHR）
     js_content = f'var DATA = {json_str};'
 
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
@@ -887,16 +813,14 @@ def main():
     print(f"  输出: {OUTPUT_PATH}")
     print(f"  大小: {file_size / 1024 / 1024:.2f} MB")
 
-    # ── 验证 data.js 有效性 ──
-    print("\n验证 data.js 有效性...")
+    print("\n验证 data_women.js 有效性...")
     try:
-        # 提取 JSON 部分（去除 var DATA =  和尾部 ;）
         if js_content.startswith('var DATA = ') and js_content.endswith(';'):
             inner = js_content[11:-1]
         else:
             inner = js_content
         verified = json.loads(inner)
-        print(f"  ✓ DATA 有效: {len(verified)} 个顶级字段")
+        print(f"  OK DATA 有效: {len(verified)} 个顶级字段")
         for key in verified:
             v = verified[key]
             if isinstance(v, dict):
@@ -906,42 +830,8 @@ def main():
             else:
                 print(f"    {key}: {type(v).__name__}")
     except json.JSONDecodeError as e:
-        print(f"  ❌ DATA 无效: {e}")
+        print(f"  FAIL DATA 无效: {e}")
         return 1
-
-    # ── 自动更新 HTML 中 data.js 的版本号（强制浏览器刷新缓存）──
-    html_path = os.path.join(OUTPUT_DIR, "product-weekly-report.html")
-    if os.path.exists(html_path):
-        new_ver = datetime.now().strftime("%Y%m%d%H%M")
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html = f.read()
-        updated_html = re.sub(r'data\.js\?v=\d+', f'data.js?v={new_ver}', html)
-        if updated_html != html:
-            with open(html_path, 'w', encoding='utf-8') as f:
-                f.write(updated_html)
-            print(f"\n  已更新 HTML 缓存版本号: ?v={new_ver}")
-        else:
-            print(f"\n  ⚠ HTML 中未找到 data.js?v= 模式，请手动检查")
-
-    # ── 数据质量诊断 ──
-    print("\n数据质量诊断:")
-    # 检查 return_rate 是否为百分比
-    rr_check = 0
-    rr_small = 0
-    qty_from_m = 0
-    for wk in verified["WEEK_DATA"]:
-        for p in verified["WEEK_DATA"][wk].get("allProducts", []):
-            rr = p.get("return_rate", 0)
-            if rr and rr > 0:
-                rr_check += 1
-                if rr < 1:
-                    rr_small += 1
-            if p.get("qty", 0) > 0:
-                qty_from_m += 1
-    print(f"  return_rate 百分比格式: {rr_check - rr_small}/{rr_check} (小数值 {rr_small})")
-    print(f"  qty (来源 M列): {qty_from_m} 个产品")
-    print(f"  TRAFFIC_WEEKLY: {len(verified['TRAFFIC_WEEKLY'])} 周")
-    print(f"  SKU_OWNER: {len(verified['SKU_OWNER'])} 个 SKU")
 
     print("\n" + "=" * 60)
     print("完成!")
