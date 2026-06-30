@@ -857,7 +857,7 @@ def main():
         "SKU_INVENTORY": sku_inventory,
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
-        "OWNERS": ["毛立新", "陈欣诺", "其他/待定"],
+        "OWNERS": sorted(set(o for owners in shop_owners.values() for o in owners)) + ["其他/待定"],
     }
 
     # ── 写入 data.js ──
