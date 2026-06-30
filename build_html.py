@@ -14,6 +14,7 @@ build_html.py - 一键从 Excel 生成带内嵌数据的 product-weekly-report.h
 """
 
 import json
+import math
 import os
 import subprocess
 import sys
@@ -67,8 +68,24 @@ def main():
         else:
             core_data[key] = value
 
-    core_json = json.dumps(core_data, ensure_ascii=False, separators=(',', ':'))
-    detail_json = json.dumps(detail_data, ensure_ascii=False, separators=(',', ':'))
+    # Sanitized encoder: 防止 NaN/Infinity 进入 JSON
+    class SanitizedEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, float):
+                if math.isnan(obj) or math.isinf(obj):
+                    return None
+            return super().default(obj)
+
+    def sanitize_nan(json_str):
+        """正则兜底：清除 json.dumps 可能漏掉的 NaN/Infinity"""
+        import re
+        json_str = re.sub(r':\s*NaN\b', ':null', json_str)
+        json_str = re.sub(r':\s*Infinity\b', ':null', json_str)
+        json_str = re.sub(r':\s*-Infinity\b', ':null', json_str)
+        return json_str
+
+    core_json = sanitize_nan(json.dumps(core_data, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    detail_json = sanitize_nan(json.dumps(detail_data, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
 
     print(f"  CORE_DATA: {len(core_data)} 字段, {len(core_json)} 字符")
     print(f"  DETAIL_DATA: {len(detail_data)} 字段, {len(detail_json)} 字符")
@@ -94,8 +111,8 @@ def main():
                 round(float(p.get('gsv', 0) or 0), 2),
                 round(float(p.get('margin', 0) or 0), 4)
             ]
-    raw_sales_json = json.dumps(raw_sales, ensure_ascii=False, separators=(',', ':'))
-    raw_profit_json = json.dumps(raw_profit, ensure_ascii=False, separators=(',', ':'))
+    raw_sales_json = sanitize_nan(json.dumps(raw_sales, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    raw_profit_json = sanitize_nan(json.dumps(raw_profit, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
     print(f"  RAW_SALES_DATA: {len(raw_sales)} 周, {len(raw_sales_json)} 字符")
     print(f"  RAW_PROFIT_DATA: {len(raw_profit)} 周, {len(raw_profit_json)} 字符")
 

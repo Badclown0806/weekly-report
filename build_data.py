@@ -334,8 +334,8 @@ def read_traffic_weekly(weeks_iso):
     iso_to_w = {iso: f"W{i+1}" for i, iso in enumerate(weeks_iso)}
     ws = wb[wb.sheetnames[0]]  # Export
 
-    # 列: 0=日期, 2=店铺名称, 3=卖家SKU, 7=访客, 10=加购数, 11=加购转化, 12=销量, 19=转化率,
-    #     22=财报退货率, 26=广告点击率
+    # 列: 0=日期(A), 1=主图CN(B), 2=店铺名称(C), 3=WB商品ID(D), 4=卖家SKU(E),
+    #     5=可售数量(F), 8=访客(I), 11=加购数(L), 13=销量(N), 23=财报退货率(X), 27=广告点击率(AB)
     # 按 ISO周 + SKU 汇总: visitors, add_to_cart_count, sales_qty, click_cnt, return_qty, total_qty
     weekly_agg = defaultdict(lambda: defaultdict(lambda: {
         "visitors": 0, "atc": 0, "qty": 0,
@@ -345,7 +345,7 @@ def read_traffic_weekly(weeks_iso):
 
     # 同时追踪每个SKU首次出现库存的日期（用于上架天数计算）
     sku_first_inventory_date = {}
-    # 追踪每个SKU最新日期的可售数量（E列）
+    # 追踪每个SKU最新日期的可售数量（F列）
     sku_latest_inventory = {}  # sku -> {'date': date, 'value': float}
 
     for i, row in enumerate(ws.iter_rows(min_row=2)):
@@ -354,14 +354,14 @@ def read_traffic_weekly(weeks_iso):
         if not row:
             continue
 
-        d_val = row[0].value if len(row) > 0 else None  # 日期
-        sku = row[3].value if len(row) > 3 else None     # 卖家SKU
-        inventory = row[4].value if len(row) > 4 else None  # E列 可售数量
-        visitors = row[7].value if len(row) > 7 else None  # 访客
-        atc = row[10].value if len(row) > 10 else None     # 加购数
-        qty = row[12].value if len(row) > 12 else None     # 销量
-        click_rate_val = row[26].value if len(row) > 26 else None  # 广告点击率 (decimal)
-        return_rate_raw = row[22].value if len(row) > 22 else None  # 财报退货率 (decimal)
+        d_val = row[0].value if len(row) > 0 else None  # 日期 A列
+        sku = row[4].value if len(row) > 4 else None     # 卖家SKU E列
+        inventory = row[5].value if len(row) > 5 else None  # 可售数量 F列
+        visitors = row[8].value if len(row) > 8 else None  # 访客 I列
+        atc = row[11].value if len(row) > 11 else None     # 加购数 L列
+        qty = row[13].value if len(row) > 13 else None     # 销量 N列
+        click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 AB列
+        return_rate_raw = row[23].value if len(row) > 23 else None  # 财报退货率 X列
 
         if not d_val or not sku:
             continue
@@ -857,6 +857,7 @@ def main():
         "SKU_INVENTORY": sku_inventory,
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
+        "OWNERS": ["毛立新", "陈欣诺", "其他/待定"],
     }
 
     # ── 写入 data.js ──
