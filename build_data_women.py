@@ -325,13 +325,13 @@ def read_traffic_weekly(weeks_iso):
             continue
 
         d_val = row[0].value if len(row) > 0 else None
-        sku = row[3].value if len(row) > 3 else None
-        inventory = row[4].value if len(row) > 4 else None
-        visitors = row[7].value if len(row) > 7 else None
-        atc = row[10].value if len(row) > 10 else None
-        qty = row[12].value if len(row) > 12 else None
-        click_rate_val = row[26].value if len(row) > 26 else None
-        return_rate_raw = row[22].value if len(row) > 22 else None
+        sku = row[4].value if len(row) > 4 else None          # 卖家SKU (col 4)
+        inventory = row[5].value if len(row) > 5 else None     # 可售数量 (col 5)
+        visitors = row[8].value if len(row) > 8 else None      # 访客 (col 8)
+        atc = row[11].value if len(row) > 11 else None         # 加购数 (col 11)
+        qty = row[13].value if len(row) > 13 else None         # 销量 (col 13)
+        click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 (col 27)
+        return_rate_raw = row[23].value if len(row) > 23 else None # 财报退货率 (col 23)
 
         if not d_val or not sku:
             continue
@@ -401,14 +401,17 @@ def read_traffic_weekly(weeks_iso):
 
 # ── 阶段 5: 读取年规进度 → PERSON_TARGETS ─────────────
 
-# 女装版店铺→负责人映射（只保留两人）
+# 女装版店铺→负责人映射
 WOMEN_SHOP_TO_OWNER = {
     "Z-NZTF1店": "毛立新",
     "G-NZTF1店": "陈欣诺",
+    "WB纯白关店": "其他/待定",
+    "OZ女装店": "其他/待定",
+    "WB汤总女装店": "其他/待定",
 }
 
 def read_person_targets():
-    """从2026WB年规进度 - 女装.xlsx 生成 PERSON_TARGETS（仅输出毛立新/陈欣诺）"""
+    """从2026WB年规进度 - 女装.xlsx 生成 PERSON_TARGETS（支持同一负责人多店铺合并）"""
     path = os.path.join(SRC_DIR, "2026WB年规进度 - 女装.xlsx")
     wb = load_workbook_safe(path)
     if wb is None:
@@ -419,13 +422,8 @@ def read_person_targets():
 
     all_targets = {}
 
-    for sheet_name in wb.sheetnames:
-        # 只处理映射表中的店铺
-        owner_name = WOMEN_SHOP_TO_OWNER.get(sheet_name)
-        if owner_name is None:
-            continue
-        ws = wb[sheet_name]
-
+    def parse_shop_sheet(ws):
+        """解析单个店铺 sheet，返回 {month: {gsv_target, gsv_done, ...}}"""
         rows_data = {}
         for i, row in enumerate(ws.iter_rows(min_row=1, max_row=100)):
             vals = [cell.value for cell in row[:16]]
@@ -493,6 +491,10 @@ def read_person_targets():
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_done"] = sanitize_value(v) or 0
 
+        return targets_by_month
+
+    def finalize_targets(targets_by_month):
+        """补全 1-12 月 + 计算利润率"""
         for month in targets_by_month:
             t = targets_by_month[month]
             gsv_done = t.get("gsv_done", 0)
@@ -501,7 +503,6 @@ def read_person_targets():
                 t["profit_rate"] = round(profit_done / gsv_done * 100, 2)
             else:
                 t["profit_rate"] = 0
-
         for m in range(1, 13):
             if m not in targets_by_month:
                 targets_by_month[m] = {
@@ -511,9 +512,30 @@ def read_person_targets():
                     "profit_target": 0, "profit_done": 0,
                     "profit_rate": 0
                 }
+        return {str(m): dict(targets_by_month[m]) for m in range(1, 13)}
 
-        person_data = {str(m): dict(targets_by_month[m]) for m in range(1, 13)}
-        all_targets[owner_name] = person_data
+    def merge_targets(existing, incoming):
+        """将 incoming 的月度数据累加到 existing 上"""
+        for m_str in existing:
+            em = existing[m_str]
+            im = incoming.get(m_str, {})
+            for k in em:
+                em[k] = em[k] + (im.get(k, 0) or 0)
+        return existing
+
+    for sheet_name in wb.sheetnames:
+        owner_name = WOMEN_SHOP_TO_OWNER.get(sheet_name)
+        if owner_name is None:
+            continue
+        ws = wb[sheet_name]
+        shop_targets = parse_shop_sheet(ws)
+        person_data = finalize_targets(shop_targets)
+
+        if owner_name in all_targets:
+            # 同一负责人多个店铺：累加
+            all_targets[owner_name] = merge_targets(all_targets[owner_name], person_data)
+        else:
+            all_targets[owner_name] = person_data
 
     wb.close()
     print(f"  PERSON_TARGETS: {len(all_targets)} people")
@@ -756,6 +778,10 @@ def main():
     # 同步修正 SHOP_OWNERS
     if 'G-NZTF1店' in shop_owners:
         shop_owners['G-NZTF1店'] = {'陈欣诺': True}
+    # 三个无数据店铺挂到"其他/待定"
+    shop_owners['WB纯白关店'] = {'其他/待定': True}
+    shop_owners['OZ女装店'] = {'其他/待定': True}
+    shop_owners['WB汤总女装店'] = {'其他/待定': True}
     print(f"  G-NZTF1店 负责人重映射: {remap_count} 条 (陈敏华 → 陈欣诺)")
 
     print("\n[5.5] 预计算新品等级和销售等级...")
