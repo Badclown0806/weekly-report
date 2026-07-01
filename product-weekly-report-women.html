@@ -4707,6 +4707,11 @@ function bootstrap(){
     }
   }
   console.log('[Init] DONE');
+  // Auto-expand key sections on page load
+  if(!targetExpanded) toggleTargetSection();
+  if(!chartExpanded) toggleChartSection();
+  if(!shopGridExpanded) toggleShopGridSection();
+  if(!prodExpanded) toggleProdSection();
 }
 
 
