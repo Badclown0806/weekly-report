@@ -695,7 +695,7 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 var METRIC_STYLES = {};
 var WEEK_LABELS = {};
 var dataInitialized = false;
-var selectedMonths = new Set([String(new Date().getMonth() + 1)]);
+var selectedMonths = new Set();
 var sortState = {key: '', dir: 'desc'};
 console.log('Data-driven report loading...');
 
@@ -822,7 +822,7 @@ var curWeek, selectedShops, OWNERS, selectedOwners, selectedWeeks;
 var curProdTab, prodExpanded, allProducts, selectedMonths, sortState;
 var SHOPS, COLORS, WB_ID_OWNER, DEPARTMENT_OWNERS, YEARLY_PROFIT_TARGETS;
 var currentWeekPreset = 'this';
-selectedMonths = new Set([String(new Date().getMonth() + 1)]);
+selectedMonths = new Set();
 sortState = {key: '', dir: 'desc'};
 var _weekKeyMap = {};
 
