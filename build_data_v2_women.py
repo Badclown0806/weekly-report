@@ -63,12 +63,13 @@ def read_product_list():
         vals = [cell.value for cell in row[:15]]
         wb_id,sku,img,cat,shop = vals[0],vals[1],vals[4],vals[6],vals[11]
         owner = vals[9] or ""
+        create_time = vals[14]  # 创建时间 (datetime)
         if not sku: continue
         sku=str(sku).strip()
         sw[sku]=str(wb_id) if wb_id else ""
         si[sku]=str(img) if img else ""
         so[sku]=str(owner) if owner else ""
-        if vals[2]: sf[sku]=str(vals[2])[:10]
+        if create_time: sf[sku]=str(create_time)[:10]
     print(f"  产品列表: {len(si)} SKU")
     return si,so,sf,sw
 
@@ -154,15 +155,22 @@ def read_profit_data(week_ranges):
 def read_gmv(week_ranges):
     path = os.path.join(SRC_DIR,"运营日数据.xlsx")
     wb = load_workbook_safe(path)
-    if wb is None: return {},{}
+    if wb is None: return {},{},{}
     ws = wb[wb.sheetnames[0]]
     gd = defaultdict(lambda: defaultdict(float))
+    sku_inv = {}  # SKU|shop → inventory
     total = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
         if not row or len(row)<16: continue
         dv = row[0]; shop = str(row[2] or "")
         if shop not in WOMEN_SHOPS: continue
         gmv = float(row[14] or 0)
+        # Extract inventory: col 5 = 可售数量
+        sku = str(row[4] or "").strip()
+        inv_val = row[5]
+        if sku and inv_val is not None:
+            try: sku_inv[sku+'|'+shop] = int(inv_val)
+            except: pass
         if not dv: continue
         matched = None
         if isinstance(dv,datetime):
@@ -182,8 +190,8 @@ def read_gmv(week_ranges):
         tw[dr] = {}
         for shop,gmv in shops.items():
             tw[dr][shop] = {"gmv":round(gmv,2),"visitors":0,"atc":0,"qty":0,"click_rate":0,"cart_rate":0,"conv_rate":0}
-    print(f"  GMV: {total} entries")
-    return tw, dict(gs)
+    print(f"  GMV: {total} entries, inventory: {len(sku_inv)} SKU")
+    return tw, dict(gs), sku_inv
 
 def compute_monthly(shop_agg, gmv_shop, targets, week_ranges, wm):
     monthly = defaultdict(lambda: defaultdict(dict))
@@ -247,7 +255,7 @@ def main():
     targets = read_targets()
     print("\n[4/5] 利润表 + GMV...")
     shop_weekly, week_data, shop_agg = read_profit_data(ranges)
-    traffic_weekly, gmv_shop = read_gmv(ranges)
+    traffic_weekly, gmv_shop, sku_inventory = read_gmv(ranges)
     print("\n[5/5] 完成进度...")
     monthly = compute_monthly(shop_agg, gmv_shop, targets, ranges, wm)
 
@@ -294,6 +302,7 @@ def main():
             "SHOP_WEEKLY":sw2,"WEEK_DATA":wd2,"TRAFFIC_WEEKLY":tw2,
             "PERSON_TARGETS":owner_targets,"MONTHLY_COMPLETION":monthly,
             "SKU_IMG":si,"SKU_OWNER":so,"SKU_FIRST_DATE":sf,"SKU_WB_ID":sw,
+            "SKU_INVENTORY":sku_inventory,
             "SHOP_OWNERS":shop_owners_out,"OWNERS":owners_list,"SKU_OWNER_LOOKUP":so,
             "_VERSION":"v2.0-women"}
 
