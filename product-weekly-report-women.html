@@ -825,6 +825,7 @@ var curWeek, selectedShops, OWNERS, selectedOwners, selectedWeeks;
 var curProdTab, prodExpanded, allProducts, selectedMonths, sortState;
 var SHOPS, COLORS, WB_ID_OWNER, DEPARTMENT_OWNERS, YEARLY_PROFIT_TARGETS;
 var currentWeekPreset = 'this';
+var _weekKeyMap = null;
 selectedMonths = new Set([String(new Date().getMonth() + 1)]);
 sortState = {key: '', dir: 'desc'};
 
@@ -1827,17 +1828,40 @@ function hasShopData(shop){
   return false;
 }
 
-// Get product list for a week (fallback: top10Profit if allProducts missing)
-// 将 Date 对象格式化为 YY.MM.DD（与 data-detail-women.js 的 WEEK_DATA key 格式一致）
-function fmtDate(d){ var y=(d.getFullYear()%100); var m=d.getMonth()+1; var day=d.getDate(); return (y<10?'0':'')+y+'.'+(m<10?'0':'')+m+'.'+(day<10?'0':'')+day; }
-function fmtDR(dr){ return fmtDate(dr.start)+'-'+fmtDate(dr.end); }
+// Get product list for a week: match WEEKS label (e.g. "W26") to WEEK_DATA date-range key
+// ISO week number helper (Monday-based, ISO 8601, UTC-safe)
+function _getISOWeek(d) {
+  var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
 
 function getWeekProducts(wk){
   if(!WEEK_DATA) return [];
   var d = WEEK_DATA[wk];
   if (!d) {
-    var dr = getWeekDateRange(wk);
-    if (dr) { d = WEEK_DATA[fmtDR(dr)]; }
+    // Build week→key mapping from WEEK_DATA date ranges (cached on first use)
+    if (!_weekKeyMap) {
+      _weekKeyMap = {};
+      var keys = Object.keys(WEEK_DATA);
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var parts = key.split('-');
+        if (parts.length >= 3) {
+          var dateParts = parts[0].split('.');
+          var y = 2000 + parseInt(dateParts[0], 10);
+          var m = parseInt(dateParts[1], 10);
+          var day = parseInt(dateParts[2], 10);
+          var date = new Date(y, m - 1, day);
+          var isoWk = _getISOWeek(date);
+          _weekKeyMap['W' + isoWk] = key;
+        }
+      }
+    }
+    var matchedKey = _weekKeyMap[wk];
+    if (matchedKey) d = WEEK_DATA[matchedKey];
   }
   if(d && d.allProducts && d.allProducts.length > 0) return d.allProducts;
   if(d && d.top10Profit && d.top10Profit.length > 0) return d.top10Profit;
