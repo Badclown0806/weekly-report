@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 
 SRC_DIR = r"D:\周汇报文件"
 WOMEN_SHOPS = ["Z-NZTF1店", "G-NZTF1店"]
-SHOP_TO_OWNER = {"Z-NZTF1店": "毛立新", "G-NZTF1店": "陈敏华"}
+SHOP_TO_OWNER = {"Z-NZTF1店": "毛立新", "G-NZTF1店": "陈欣诺"}
 
 def load_workbook_safe(path):
     try: return load_workbook(path, data_only=True)
@@ -122,6 +122,13 @@ def read_profit_data(week_ranges):
         if not sku: continue
         pf = float(row[8] or 0); gs = float(row[10] or 0)
         rs = float(row[16] or 0); qt = int(row[19] or 0)
+        cat = str(row[4] or "")
+        mr = float(row[9] or 0)  # 毛利率CNY (decimal)
+        rr = float(row[21] or 0) if len(row) > 21 else 0  # 送达退货率 (decimal)
+        ad = float(row[35] or 0) if len(row) > 35 else 0  # 广告花费CNY
+        # Convert decimal to percentage (same as men's build_data.py)
+        margin_pct = round(mr * 100, 2) if mr < 1 else round(mr, 2)
+        return_pct = round(rr * 100, 2) if rr < 1 else round(rr, 2)
         total += 1
         sw[shop][dr]["gsv"] += gs; sw[shop][dr]["profit"] += pf
         sw[shop][dr]["real_sales"] += rs; sw[shop][dr]["qty"] += qt
@@ -130,7 +137,8 @@ def read_profit_data(week_ranges):
             wd[dr]["shops"][shop] = {"gsv":0,"profit":0,"margin":0,"products":0,"ad_spend":0}
         sd = wd[dr]["shops"][shop]
         sd["gsv"] += gs; sd["profit"] += pf; sd["products"] += 1
-        wd[dr]["allProducts"].append({"sku":sku,"shop":shop,"profit":round(pf,2),"gsv":round(gs,2),"qty":qt,"real_sales":round(rs,2)})
+        sd["ad_spend"] += ad
+        wd[dr]["allProducts"].append({"sku":sku,"shop":shop,"cat":cat,"profit":round(pf,2),"margin":margin_pct,"gsv":round(gs,2),"qty":qt,"return_rate":return_pct,"ad_spend":round(ad,2),"real_sales":round(rs,2)})
         sa[shop][dr]["gsv"] += gs; sa[shop][dr]["profit"] += pf
         sa[shop][dr]["real_sales"] += rs; sa[shop][dr]["qty"] += qt
     for _,weeks in sw.items():
