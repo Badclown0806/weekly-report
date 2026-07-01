@@ -2348,7 +2348,7 @@ function renderProdTable(){
     var daysOnSale = getDaysOnSale(p.sku, p.shop, wbId);
 
     // Traffic data aggregation placeholder
-    var trafficData = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})();
+    var trafficData = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})();
     var clickHtml = trafficData && trafficData[0] !== null ? (Number(trafficData[0])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
     var cartHtml = trafficData && trafficData[1] !== null ? (Number(trafficData[1])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
     var convHtml = trafficData && trafficData[2] !== null ? (Number(trafficData[2])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
@@ -2539,9 +2539,9 @@ function getSortValue(p, key){
       var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
       var ds = getDaysOnSale(p.sku, p.shop, wbId); 
       return typeof ds === 'number' ? ds : 99999;
-    case 'clickRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[0] !== null ? td[0] : -9999; }
-    case 'cartRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[1] !== null ? td[1] : -9999; }
-    case 'convRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[2] !== null ? td[2] : -9999; }
+    case 'clickRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[0] !== null ? td[0] : -9999; }
+    case 'cartRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[1] !== null ? td[1] : -9999; }
+    case 'convRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[2] !== null ? td[2] : -9999; }
     case 'sku': return p.sku || '';
     case 'shop': return p.shop || '';
     case 'cat': return p.cat || '';
