@@ -824,6 +824,7 @@ var SHOPS, COLORS, WB_ID_OWNER, DEPARTMENT_OWNERS, YEARLY_PROFIT_TARGETS;
 var currentWeekPreset = 'this';
 selectedMonths = new Set([String(new Date().getMonth() + 1)]);
 sortState = {key: '', dir: 'desc'};
+var _weekKeyMap = {};
 
 // ── Initialize from data.js (called after async loading completes) ──
 function initFromDataJs() {
@@ -839,6 +840,7 @@ function initFromDataJs() {
     WEEK_LABELS = DATA.WEEK_LABELS;
     SHOP_WEEKLY = DATA.SHOP_WEEKLY;
     WEEK_DATA = DATA.WEEK_DATA;
+    _weekKeyMap = buildWeekKeyMap();
     TRAFFIC_WEEKLY = DATA.TRAFFIC_WEEKLY;
     PERSON_TARGETS = DATA.PERSON_TARGETS;
     if(!PERSON_TARGETS) PERSON_TARGETS = {};
@@ -1157,8 +1159,8 @@ function renderWeekRange(){
 
 function getLatestDataWeek(){
   for (var i = WEEKS.length - 1; i >= 0; i--) {
-    if (WEEK_DATA && WEEK_DATA[WEEKS[i]]) {
-      var wd = WEEK_DATA[WEEKS[i]];
+    var wd = getWeekData(WEEKS[i]);
+    if (wd) {
       var shops = wd.shops || {};
       var totalProfit = 0;
       for (var s in shops) {
@@ -1350,7 +1352,7 @@ function getAggregatedShopData(){
   var selected = getSelectedWeeks();
   var result = {};
   selected.forEach(function(wk){
-    var d = WEEK_DATA ? WEEK_DATA[wk] : null;
+    var d = getWeekData(wk);
     if (!d || !d.shops) return;
     for (var shop in d.shops) {
       if (!result[shop]) result[shop] = {gsv: 0, profit: 0, ad_spend: 0};
@@ -1774,6 +1776,34 @@ function tglM(m){
   renderProductTargetBoard();
 }
 
+// ── Week-key mapper: W-number → date-range key for WEEK_DATA ──
+function buildWeekKeyMap() {
+  var map = {};
+  if (!WEEK_DATA || !WEEK_LABELS || !WEEKS) return map;
+  var wkDataKeys = Object.keys(WEEK_DATA);
+  for (var i = 0; i < WEEK_LABELS.length; i++) {
+    var label = WEEK_LABELS[i];
+    // "2026-W26 (W49·06.22-06.28)" → W49, "06.22-06.28"
+    var m = label.match(/\(W(\d+)·([\d.]+-[\d.]+)\)/);
+    if (!m) continue;
+    var wNum = 'W' + m[1];
+    var shortDR = m[2];
+    for (var j = 0; j < wkDataKeys.length; j++) {
+      if (wkDataKeys[j].indexOf(shortDR) >= 0) {
+        map[wNum] = wkDataKeys[j];
+        break;
+      }
+    }
+  }
+  return map;
+}
+
+function getWeekData(wk) {
+  if (!WEEK_DATA) return null;
+  var key = _weekKeyMap[wk] || wk;
+  return WEEK_DATA[key] || null;
+}
+
 // ========== SHOP GRID ==========
 function getPrevWeek(w){
   var idx = WEEKS.indexOf(w);
@@ -1798,7 +1828,7 @@ function hasShopData(shop){
 // Get product list for a week (fallback: top10Profit if allProducts missing)
 function getWeekProducts(wk){
   if(!WEEK_DATA) return [];
-  var d = WEEK_DATA[wk];
+  var d = getWeekData(wk);
   if(d && d.allProducts && d.allProducts.length > 0) return d.allProducts;
   if(d && d.top10Profit && d.top10Profit.length > 0) return d.top10Profit;
   return [];
@@ -1895,7 +1925,7 @@ function renderShopGrid(){
   var totalAdRatio = totalGsv > 0 ? (totalAdSpend / totalGsv * 100) : 0;
 
   var prevWeek = getSelectedWeeks().length === 1 ? getPrevWeek(getSelectedWeeks()[0]) : null;
-  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
+  var pd = prevWeek ? getWeekData(prevWeek) : null;
 
   var prevOwnerTotals = {};
   ownerKeys.forEach(function(ok){ prevOwnerTotals[ok.key] = {gsv:0, profit:0, orders:0, ad_spend:0}; });
@@ -2743,8 +2773,8 @@ function getMetricVal(shopKey, week, metricKey, dataKey){
   if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][week] && typeof SHOP_WEEKLY[shop][week][metricKey] === 'number'){
     return SHOP_WEEKLY[shop][week][metricKey];
   }
-  if(WEEK_DATA && WEEK_DATA[week]){
-    var wd = WEEK_DATA[week];
+  if(WEEK_DATA && getWeekData(week)){
+    var wd = getWeekData(week);
     if(wd.shops && wd.shops[shop] && typeof wd.shops[shop][dataKey] === 'number'){
       return wd.shops[shop][dataKey];
     }
@@ -2802,7 +2832,7 @@ function renderProgress(){
     return;
   }
   var weekLabel = selected.length === 1 ? WEEK_LABELS[WEEKS.indexOf(selected[0])] : selected.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
-  var d = selected.length === 1 ? WEEK_DATA[selected[0]] : null;
+  var d = selected.length === 1 ? getWeekData(selected[0]) : null;
   if(selected.length > 1){
     // Multi-week: data comes from aggregation in generateInsights
   } else if(!d || !d.shops){
@@ -2832,9 +2862,9 @@ function renderProgress(){
 function generateInsights(){
   if (!WEEK_DATA) return '';
   var selected = getSelectedWeeks();
-  var d = selected.length === 1 ? WEEK_DATA[selected[0]] : null;
+  var d = selected.length === 1 ? getWeekData(selected[0]) : null;
   var prevWeek = selected.length === 1 ? getPrevWeek(selected[0]) : null;
-  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
+  var pd = prevWeek ? getWeekData(prevWeek) : null;
   var curLabel = selected.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
 
   // ── Build product list (exclude 无匹配ID费用) ──
@@ -4648,7 +4678,7 @@ function bootstrap(){
   console.log('[Init] selectedWeeks=' + Array.from(selectedWeeks).join(',') + ' WEEKS=' + (WEEKS?WEEKS.length:0) + ' hasWkData=' + hasWkData);
   if (hasWkData) {
     console.log('[Init] WEEK_DATA keys=' + Object.keys(WEEK_DATA).length);
-    var dd = null; var sw = getSelectedWeeks(); if(sw.length > 0) dd = WEEK_DATA[sw[0]];
+    var dd = null; var sw = getSelectedWeeks(); if(sw.length > 0) dd = getWeekData(sw[0]);
     console.log('[Init] current data: ' + (dd ? 'OK shps=' + Object.keys(dd.shops||{}).length + ' prods=' + (dd.allProducts||[]).length : 'NULL'));
   }
 
