@@ -314,9 +314,9 @@ def main():
 
     dc = sanitize(data)
     js = json.dumps(dc, ensure_ascii=False, default=str)
-    out = os.path.join(SRC_DIR,"data.js")
+    out = os.path.join(SRC_DIR,"data-detail-women.js")
     with open(out,"w",encoding="utf-8") as f: f.write(f"var DATA = {js};")
-    print(f"\n输出: data.js ({os.path.getsize(out)/1024/1024:.1f} MB)")
+    print(f"\n输出: data-detail-women.js ({os.path.getsize(out)/1024/1024:.1f} MB)")
     print(f"  周:{len(w2)} 店铺:{len(targets)} 负责人:{len(owners_list)} 数据店铺:{len(sw2)}")
     print("完成!")
 
