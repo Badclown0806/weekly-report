@@ -278,6 +278,36 @@ def main():
             for key in ["profit_target","sales_target","real_sales_target","gmv_target","gsv_target"]:
                 owner_targets[owner][month][key] += mdata.get(key, 0)
 
+    # Compute actual monthly done values per owner (aggregated from shop_agg + gmv_shop)
+    owner_monthly_actual = defaultdict(lambda: defaultdict(lambda: {"gsv":0,"profit":0,"qty":0,"gmv":0}))
+    for dr in ranges:
+        m = None
+        parts = dr.split('-')
+        if len(parts) == 2:
+            dt = parse_date_str(parts[1])
+            if dt: m = str(dt.month)
+        if not m: continue
+        # From shop_agg (per-shop weekly metrics)
+        for shop, data in shop_agg.items():
+            owner = SHOP_TO_OWNER.get(shop, "其他/待定")
+            if dr in data:
+                owner_monthly_actual[owner][m]["gsv"] += data[dr].get("gsv", 0)
+                owner_monthly_actual[owner][m]["profit"] += data[dr].get("profit", 0)
+                owner_monthly_actual[owner][m]["qty"] += data[dr].get("qty", 0)
+        # From gmv_shop (per-week per-shop GMV)
+        if dr in gmv_shop:
+            for shop, gmv in gmv_shop[dr].items():
+                owner = SHOP_TO_OWNER.get(shop, "其他/待定")
+                owner_monthly_actual[owner][m]["gmv"] += gmv
+    # Write done values into owner_targets
+    for owner in owner_targets:
+        for month in owner_targets[owner]:
+            actual = owner_monthly_actual.get(owner, {}).get(month, {})
+            owner_targets[owner][month]["gsv_done"] = round(actual.get("gsv", 0), 2)
+            owner_targets[owner][month]["profit_done"] = round(actual.get("profit", 0), 2)
+            owner_targets[owner][month]["sales_done"] = int(actual.get("qty", 0))
+            owner_targets[owner][month]["gmv_done"] = round(actual.get("gmv", 0), 2)
+
     # Build OWNERS list (owners with targets first, then others)
     owners_list = sorted([o for o in owner_targets if o != "其他/待定"])
     if "其他/待定" in owner_targets:
