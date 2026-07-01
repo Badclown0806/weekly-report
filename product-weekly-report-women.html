@@ -1783,13 +1783,14 @@ function buildWeekKeyMap() {
   var wkDataKeys = Object.keys(WEEK_DATA);
   for (var i = 0; i < WEEK_LABELS.length; i++) {
     var label = WEEK_LABELS[i];
-    // "2026-W26 (W49·06.22-06.28)" → W49, "06.22-06.28"
-    var m = label.match(/\(W(\d+)·([\d.]+-[\d.]+)\)/);
+    // "2025年01月 W18·24.12.30-25.01.05" → W18, "24.12.30-25.01.05"
+    var m = label.match(/W(\d+).([\d.]+-[\d.]+)/);
     if (!m) continue;
     var wNum = 'W' + m[1];
-    var shortDR = m[2];
+    var dateRange = m[2];
     for (var j = 0; j < wkDataKeys.length; j++) {
-      if (wkDataKeys[j].indexOf(shortDR) >= 0) {
+      // Direct match: both formats now have year prefixes
+      if (wkDataKeys[j] === dateRange) {
         map[wNum] = wkDataKeys[j];
         break;
       }
