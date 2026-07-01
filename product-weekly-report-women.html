@@ -1592,7 +1592,7 @@ function getTargetPersons(){
 // selectedMonths initialized above with state variables
 function getSelectedMonths(){
   var months = Array.from(selectedMonths);
-  if(months.length === 0) months.push('5');
+  if(months.length === 0) { var lastMonth='6'; if(typeof PERSON_TARGETS!=='undefined'&&PERSON_TARGETS){ var lastFound=0; for(var m=1;m<=12;m++){for(var person in PERSON_TARGETS){var t=PERSON_TARGETS[person][String(m)];if(t&&(t.profit_done||t.gsv_done||t.sales_done)){lastFound=m;break;}}} if(lastFound>0) lastMonth=String(lastFound); } months.push(lastMonth); }
   return months;
 }
 
