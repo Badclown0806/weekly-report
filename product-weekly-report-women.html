@@ -826,6 +826,17 @@ var curProdTab, prodExpanded, allProducts, selectedMonths, sortState;
 var SHOPS, COLORS, WB_ID_OWNER, DEPARTMENT_OWNERS, YEARLY_PROFIT_TARGETS;
 var currentWeekPreset = 'this';
 var _weekKeyMap = null;
+var _wkDateRangeMap = null;
+
+// ── Resolve week key (W-number or ISO-week) to WEEK_DATA date-range key ──
+function _resolveDateKey(wk){
+    if(!wk) return wk;
+    if(WEEK_DATA && WEEK_DATA[wk]) return wk;
+    if(_wkDateRangeMap && _wkDateRangeMap[wk]) return _wkDateRangeMap[wk];
+    if(_weekKeyMap && _weekKeyMap[wk]) return _weekKeyMap[wk];
+    return wk;
+}
+
 selectedMonths = new Set([String(new Date().getMonth() + 1)]);
 sortState = {key: '', dir: 'desc'};
 
@@ -843,9 +854,45 @@ function initFromDataJs() {
     WEEK_LABELS = DATA.WEEK_LABELS;
     SHOP_WEEKLY = DATA.SHOP_WEEKLY;
     WEEK_DATA = DATA.WEEK_DATA;
+    WEEK_RANGES = DATA.WEEK_RANGES;
     TRAFFIC_WEEKLY = DATA.TRAFFIC_WEEKLY;
     PERSON_TARGETS = DATA.PERSON_TARGETS;
     if(!PERSON_TARGETS) PERSON_TARGETS = {};
+
+    // Build week-key resolution maps (W-number → date-range, ISO-week → date-range)
+    if (WEEK_DATA && WEEKS && WEEK_RANGES) {
+        _wkDateRangeMap = {};
+        for (var _mi = 0; _mi < WEEKS.length; _mi++) {
+            if (WEEK_RANGES[_mi]) _wkDateRangeMap[WEEKS[_mi]] = WEEK_RANGES[_mi];
+        }
+        _weekKeyMap = {};
+        var _wdKeys = Object.keys(WEEK_DATA);
+        for (var _wdi = 0; _wdi < _wdKeys.length; _wdi++) {
+            var _key = _wdKeys[_wdi];
+            var _parts = _key.split('-');
+            if (_parts.length >= 3) {
+                var _dp = _parts[0].split('.');
+                var _y = 2000 + parseInt(_dp[0], 10);
+                var _m = parseInt(_dp[1], 10);
+                var _d = parseInt(_dp[2], 10);
+                var _date = new Date(_y, _m - 1, _d);
+                try {
+                    var _isoWk = _getISOWeek(_date);
+                    _weekKeyMap['W' + _isoWk] = _key;
+                } catch(_e) {}
+            }
+        }
+    }
+
+    // ── Compute curWeek: latest week whose end date ≤ today ──
+    (function(){
+      var today = new Date();
+      for (var ci = WEEKS.length - 1; ci >= 0; ci--) {
+        var dr = getWeekDateRange(WEEKS[ci]);
+        if (dr && dr.end && dr.end <= today) { curWeek = WEEKS[ci]; break; }
+      }
+      if (!curWeek) curWeek = WEEKS[WEEKS.length - 1];
+    })();
 
     YEARLY_PROFIT_TARGETS = (function(){
       var result = {};
@@ -922,12 +969,14 @@ function initFromDataJs() {
     };
 
     WB_ID_OWNER = {};
-    for (var sku in SKU_OWNER) {
+    if (SKU_WB_ID) {
+      for (var sku in SKU_OWNER) {
         var wbId = SKU_WB_ID[sku];
         if (wbId) {
             if (!WB_ID_OWNER[wbId]) WB_ID_OWNER[wbId] = new Set();
             WB_ID_OWNER[wbId].add(SKU_OWNER[sku]);
         }
+      }
     }
 
     // ── Per-shop-owner weekly aggregation (for trend split) ──
@@ -989,8 +1038,9 @@ function initFromDataJs() {
     // Find latest week with actual profit data as default selection
     if (WEEK_DATA) {
       for (var _i = WEEKS.length - 1; _i >= 0; _i--) {
-        if (WEEK_DATA[WEEKS[_i]]) {
-            var _wd = WEEK_DATA[WEEKS[_i]];
+        var _rk = _resolveDateKey(WEEKS[_i]);
+        if (_rk && WEEK_DATA[_rk]) {
+            var _wd = WEEK_DATA[_rk];
             var _shops = _wd.shops || {};
             var _tp = 0;
             for (var _s in _shops) {
@@ -1004,6 +1054,18 @@ function initFromDataJs() {
       }
     }
     if (selectedWeeks.size === 0) selectedWeeks.add(WEEKS[WEEKS.length - 1]);
+    // Guard: if selected week is too far behind curWeek (e.g. W49 in 2025 while curWeek is W95),
+    // fall back to curWeek so monthly boards and product table use current-period data.
+    if (curWeek && selectedWeeks.size > 0) {
+      var selWk = null;
+      selectedWeeks.forEach(function(wk) { selWk = wk; });
+      var selIdx = WEEKS.indexOf(selWk);
+      var curIdx = WEEKS.indexOf(curWeek);
+      if (selIdx >= 0 && curIdx >= 0 && (curIdx - selIdx) > 4) {
+        console.log('[Init] selectedWeeks ' + selWk + ' is too far behind curWeek ' + curWeek + ', falling back to curWeek');
+        selectedWeeks = new Set([curWeek]);
+      }
+    }
     selectedShops = new Set(SHOPS);
     // SHOP_CATEGORIES = { '女装': ['LXTF1店', 'LXTF2店', 'LXTF4店', 'Z-NZTF1店', 'G-NZTF1店'] }; // [女装已移除]
     SHOP_CATEGORIES = {};
@@ -1190,14 +1252,17 @@ function renderWeekRange(){
 
 function getLatestDataWeek(){
   for (var i = WEEKS.length - 1; i >= 0; i--) {
-    if (WEEK_DATA && WEEK_DATA[WEEKS[i]]) {
-      var wd = WEEK_DATA[WEEKS[i]];
-      var shops = wd.shops || {};
-      var totalProfit = 0;
-      for (var s in shops) {
-        if (shops.hasOwnProperty(s)) totalProfit += (shops[s].profit || 0);
+    if (WEEK_DATA) {
+      var _rk = _resolveDateKey(WEEKS[i]);
+      if (_rk && WEEK_DATA[_rk]) {
+        var wd = WEEK_DATA[_rk];
+        var shops = wd.shops || {};
+        var totalProfit = 0;
+        for (var s in shops) {
+          if (shops.hasOwnProperty(s)) totalProfit += (shops[s].profit || 0);
+        }
+        if (totalProfit !== 0) return WEEKS[i];
       }
-      if (totalProfit !== 0) return WEEKS[i];
     }
   }
   return WEEKS[WEEKS.length - 1];
@@ -1383,7 +1448,7 @@ function getAggregatedShopData(){
   var selected = getSelectedWeeks();
   var result = {};
   selected.forEach(function(wk){
-    var d = WEEK_DATA ? WEEK_DATA[wk] : null;
+    var d = WEEK_DATA ? WEEK_DATA[_resolveDateKey(wk)] : null;
     if (!d || !d.shops) return;
     for (var shop in d.shops) {
       if (!result[shop]) result[shop] = {gsv: 0, profit: 0, ad_spend: 0};
@@ -1840,29 +1905,7 @@ function _getISOWeek(d) {
 
 function getWeekProducts(wk){
   if(!WEEK_DATA) return [];
-  var d = WEEK_DATA[wk];
-  if (!d) {
-    // Build week→key mapping from WEEK_DATA date ranges (cached on first use)
-    if (!_weekKeyMap) {
-      _weekKeyMap = {};
-      var keys = Object.keys(WEEK_DATA);
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var parts = key.split('-');
-        if (parts.length >= 3) {
-          var dateParts = parts[0].split('.');
-          var y = 2000 + parseInt(dateParts[0], 10);
-          var m = parseInt(dateParts[1], 10);
-          var day = parseInt(dateParts[2], 10);
-          var date = new Date(y, m - 1, day);
-          var isoWk = _getISOWeek(date);
-          _weekKeyMap['W' + isoWk] = key;
-        }
-      }
-    }
-    var matchedKey = _weekKeyMap[wk];
-    if (matchedKey) d = WEEK_DATA[matchedKey];
-  }
+  var d = WEEK_DATA[_resolveDateKey(wk)];
   if(d && d.allProducts && d.allProducts.length > 0) return d.allProducts;
   if(d && d.top10Profit && d.top10Profit.length > 0) return d.top10Profit;
   return [];
@@ -1959,7 +2002,7 @@ function renderShopGrid(){
   var totalAdRatio = totalGsv > 0 ? (totalAdSpend / totalGsv * 100) : 0;
 
   var prevWeek = getSelectedWeeks().length === 1 ? getPrevWeek(getSelectedWeeks()[0]) : null;
-  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
+  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[_resolveDateKey(prevWeek)] : null;
 
   var prevOwnerTotals = {};
   ownerKeys.forEach(function(ok){ prevOwnerTotals[ok.key] = {gsv:0, profit:0, orders:0, ad_spend:0}; });
@@ -2238,7 +2281,7 @@ function renderProdTable(){
   // 新品等级筛选
   if (NEW_GRADE_FILTER !== 'all') {
     products = products.filter(function(p) {
-      var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+      var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
       var grade = computeNewProductGrade(p.shop, p.sku, wbId);
       if (NEW_GRADE_FILTER === 'unmarked') return !grade;
       return grade === NEW_GRADE_FILTER;
@@ -2300,7 +2343,7 @@ function renderProdTable(){
     products.sort(function(a,b){ return a.profit - b.profit; });
   } else if(curProdTab === 'newProd'){
     var newProducts = products.filter(function(p){ 
-      var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+      var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
       return isNewProduct(p.sku, p.shop, wbId); 
     });
     if(newProducts.length === 0){
@@ -2354,7 +2397,7 @@ function renderProdTable(){
     // Format 1: sku|shop (original format)
     var key1 = p.sku + '|' + p.shop;
     // Format 2: sku|shop|wbId (with WB ID)
-    var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+    var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
     var key2 = wbId ? p.sku + '|' + p.shop + '|' + wbId : '';
     // Format 3: sku|wbId (without shop)
     var key3 = wbId ? p.sku + '|' + wbId : '';
@@ -2377,7 +2420,7 @@ function renderProdTable(){
     var imgHtml = imgUrl ? '<img class="tb-img" src="'+imgUrl+'" loading="lazy" onerror="this.style.display=\'none\'" onclick="event.stopPropagation();showImageLightbox(this.src)" title="'+escHtml(p.sku)+'">' : '';
 
     var noteText = PRODUCT_NOTES[p.sku] || '';
-    var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '-';
+    var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '-') : '-';
     var daysOnSale = getDaysOnSale(p.sku, p.shop, wbId);
 
     // Traffic data aggregation placeholder
@@ -2569,7 +2612,7 @@ function getSortValue(p, key){
     case 'ad_spend': return p.ad_spend || 0;
     case 'adRatio': return (p.ad_spend && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv) : -1;
     case 'days': 
-      var wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+      var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
       var ds = getDaysOnSale(p.sku, p.shop, wbId); 
       return typeof ds === 'number' ? ds : 99999;
     case 'clickRate': { var td = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})() ? (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[sw[i]])td=TRAFFIC_WEEKLY[sw[i]][p.sku];}return td;})()[p.sku] : null; return td && td[0] !== null ? td[0] : -9999; }
@@ -2578,10 +2621,10 @@ function getSortValue(p, key){
     case 'sku': return p.sku || '';
     case 'shop': return p.shop || '';
     case 'cat': return p.cat || '';
-    case 'wbId': return SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+    case 'wbId': return SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
     case 'inventory': return (SKU_INVENTORY[p.sku+'|'+p.shop] != null ? SKU_INVENTORY[p.sku+'|'+p.shop] : (SKU_INVENTORY[p.sku] != null ? SKU_INVENTORY[p.sku] : -1));
     case 'newGrade':
-      var wbIdForSort = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+      var wbIdForSort = SKU_WB_ID ? (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '') : '';
       var ng = computeNewProductGrade(p.shop, p.sku, wbIdForSort);
       var ngOrder = { 'S': 3, 'A': 2, 'B': 1 };
       return ng ? (ngOrder[ng] || 0) : -1;
@@ -2807,8 +2850,8 @@ function getMetricVal(shopKey, week, metricKey, dataKey){
   if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][week] && typeof SHOP_WEEKLY[shop][week][metricKey] === 'number'){
     return SHOP_WEEKLY[shop][week][metricKey];
   }
-  if(WEEK_DATA && WEEK_DATA[week]){
-    var wd = WEEK_DATA[week];
+  if(WEEK_DATA && WEEK_DATA[_resolveDateKey(week)]){
+    var wd = WEEK_DATA[_resolveDateKey(week)];
     if(wd.shops && wd.shops[shop] && typeof wd.shops[shop][dataKey] === 'number'){
       return wd.shops[shop][dataKey];
     }
@@ -2866,7 +2909,7 @@ function renderProgress(){
     return;
   }
   var weekLabel = selected.length === 1 ? WEEK_LABELS[WEEKS.indexOf(selected[0])] : selected.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
-  var d = selected.length === 1 ? WEEK_DATA[selected[0]] : null;
+  var d = selected.length === 1 ? WEEK_DATA[_resolveDateKey(selected[0])] : null;
   if(selected.length > 1){
     // Multi-week: data comes from aggregation in generateInsights
   } else if(!d || !d.shops){
@@ -2896,9 +2939,9 @@ function renderProgress(){
 function generateInsights(){
   if (!WEEK_DATA) return '';
   var selected = getSelectedWeeks();
-  var d = selected.length === 1 ? WEEK_DATA[selected[0]] : null;
+  var d = selected.length === 1 ? WEEK_DATA[_resolveDateKey(selected[0])] : null;
   var prevWeek = selected.length === 1 ? getPrevWeek(selected[0]) : null;
-  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[prevWeek] : null;
+  var pd = (prevWeek && WEEK_DATA) ? WEEK_DATA[_resolveDateKey(prevWeek)] : null;
   var curLabel = selected.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
 
   // ── Build product list (exclude 无匹配ID费用) ──
@@ -3006,7 +3049,7 @@ function generateInsights(){
   }
 
   function skuRow(p, highlightCol){
-    var wbIdForImg = SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '';
+    var wbIdForImg = SKU_WB_ID ? (SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '') : '';
     var imgUrl = '';
     var key1 = p.sku + '|' + p.shop;
     var key2 = wbIdForImg ? p.sku + '|' + p.shop + '|' + wbIdForImg : '';
@@ -3023,7 +3066,7 @@ function generateInsights(){
         }
       }
     }
-    var wbId = SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '';
+    var wbId = SKU_WB_ID ? (SKU_WB_ID[p.sku+'|'+p.shop] || SKU_WB_ID[p.sku] || '') : '';
     var cKey = p.sku + '|' + p.shop;
     var cText = __abnCommentMap[cKey] || __abnCommentMap[p.sku] || (wbId ? __abnCommentMap[wbId] : '') || '';
     var commentCell = cText
@@ -4339,7 +4382,7 @@ function generateOwnerSummary() {
       // Look up SKU image
       var skuImgUrl = '';
       var key1 = product.sku + '|' + (product.shop || '');
-      var wbIdForImg = SKU_WB_ID[product.sku + '|' + (product.shop || '')] || SKU_WB_ID[product.sku] || '';
+      var wbIdForImg = SKU_WB_ID ? (SKU_WB_ID[product.sku + '|' + (product.shop || '')] || SKU_WB_ID[product.sku] || '') : '';
       var key2 = wbIdForImg ? product.sku + '|' + (product.shop || '') + '|' + wbIdForImg : '';
       var key3 = wbIdForImg ? product.sku + '|' + wbIdForImg : '';
       var key4 = product.sku;
@@ -4500,7 +4543,7 @@ function showCommentPanelForSku(sku) {
     var cpImgWrap = document.getElementById('cpImgWrap');
     var cpImg = document.getElementById('cpImg');
     // Multi-key SKU image lookup (same pattern as renderProdTable)
-    var wbIdForCp = SKU_WB_ID[sku + '|' + (currentCommentShop||'')] || SKU_WB_ID[sku] || '';
+    var wbIdForCp = SKU_WB_ID ? (SKU_WB_ID[sku + '|' + (currentCommentShop||'')] || SKU_WB_ID[sku] || '') : '';
     var keysToTry = [sku + '|' + (currentCommentShop||''), wbIdForCp ? sku + '|' + (currentCommentShop||'') + '|' + wbIdForCp : '', wbIdForCp ? sku + '|' + wbIdForCp : '', sku];
     var imgUrl = '';
     for (var ki = 0; ki < keysToTry.length; ki++) {
@@ -4712,7 +4755,7 @@ function bootstrap(){
   console.log('[Init] selectedWeeks=' + Array.from(selectedWeeks).join(',') + ' WEEKS=' + (WEEKS?WEEKS.length:0) + ' hasWkData=' + hasWkData);
   if (hasWkData) {
     console.log('[Init] WEEK_DATA keys=' + Object.keys(WEEK_DATA).length);
-    var dd = null; var sw = getSelectedWeeks(); if(sw.length > 0) dd = WEEK_DATA[sw[0]];
+    var dd = null; var sw = getSelectedWeeks(); if(sw.length > 0) dd = WEEK_DATA[_resolveDateKey(sw[0])];
     console.log('[Init] current data: ' + (dd ? 'OK shps=' + Object.keys(dd.shops||{}).length + ' prods=' + (dd.allProducts||[]).length : 'NULL'));
   }
 
