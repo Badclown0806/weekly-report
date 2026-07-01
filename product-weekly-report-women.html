@@ -1078,7 +1078,7 @@ function initFromDataJs() {
 // [Ś•≥Ť£ÖŚ∑≤ÁßĽťô§]       });
 // [Ś•≥Ť£ÖŚ∑≤ÁßĽťô§]     })();
 // [Ś•≥Ť£ÖŚ∑≤ÁßĽťô§]     WOMEN_SHOP_NAMES = ["LXTF1Śļó", "LXTF2Śļó", "LXTF4Śļó", "Z-NZTF1Śļó", "G-NZTF1Śļó"];
-    OWNERS = ["śĮõÁęčśĖį", "ťôąś¨£ŤĮļ", "ŚÖ∂šĽĖ/ŚĺÖŚģö"];
+    OWNERS = (typeof PERSON_TARGETS !== "undefined" && PERSON_TARGETS) ? Object.keys(PERSON_TARGETS) : [];
     selectedOwners = new Set(OWNERS);
     DEPARTMENT_OWNERS = {
       "ŤīüŤī£šļļ": ["śĮõÁęčśĖį", "ťôąś¨£ŤĮļ"],
