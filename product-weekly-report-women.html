@@ -982,20 +982,21 @@ function initFromDataJs() {
 
     // ── State (init) ──
     selectedWeeks = new Set();
-    // Find latest week with actual profit data as default selection
-    if (WEEK_DATA) {
+    // Find latest week with actual profit data as default selection.
+    // Use SHOP_WEEKLY (W-number keys) instead of WEEK_DATA (date-range keys from data-detail-women.js).
+    if (SHOP_WEEKLY) {
       for (var _i = WEEKS.length - 1; _i >= 0; _i--) {
-        if (WEEK_DATA[WEEKS[_i]]) {
-            var _wd = WEEK_DATA[WEEKS[_i]];
-            var _shops = _wd.shops || {};
-            var _tp = 0;
-            for (var _s in _shops) {
-              if (_shops.hasOwnProperty(_s)) _tp += (_shops[_s].profit || 0);
-            }
-            if (_tp !== 0) {
-              selectedWeeks.add(WEEKS[_i]);
-              break;
-            }
+        var _weekKey = WEEKS[_i];
+        var _hasProfit = false;
+        for (var _s in SHOP_WEEKLY) {
+          if (SHOP_WEEKLY.hasOwnProperty(_s)) {
+            var _sw = SHOP_WEEKLY[_s][_weekKey];
+            if (_sw && (_sw.gsv || 0) > 0) { _hasProfit = true; break; }
+          }
+        }
+        if (_hasProfit) {
+          selectedWeeks.add(_weekKey);
+          break;
         }
       }
     }
@@ -1090,37 +1091,6 @@ function initFromDataJs() {
     // ── Bootstrap ──
     dataInitialized = true;
     bootstrap();
-
-    // ===== 批量初始化手动等级（仅执行一次）=====
-    if (!localStorage.getItem('mg_profit_init_done')) {
-      setTimeout(function() {
-        try {
-          var products = getMultiWeekProducts();
-          if (products && products.length > 0) {
-            var count = 0;
-            for (var i = 0; i < products.length; i++) {
-              var p = products[i];
-              var key = p.shop + '|' + p.sku;
-              if (!profitManualOverrides.hasOwnProperty(key)) {
-                var grade = autoComputeManualGrade(p);
-                if (grade) {
-                  profitManualOverrides[key] = grade;
-                  count++;
-                }
-              }
-            }
-            if (count > 0) {
-              try { localStorage.setItem('mg_profit_overrides', JSON.stringify(profitManualOverrides)); } catch(e) {console.error("catch error:", e);}
-            }
-            localStorage.setItem('mg_profit_init_done', '1');
-            renderProdTable();
-            console.log('[MG Init] Auto-graded ' + count + ' products');
-          }
-        } catch(e) {
-          console.warn('[MG Init] Batch init error: ' + e.message);
-        }
-      }, 800);
-    }
 }
 
 function getWeekYear(w){
@@ -5702,12 +5672,8 @@ function autoComputeProductGrade(p){
   if(productManualOverrides.hasOwnProperty(key)){
     return productManualOverrides[key] || null;
   }
-  // Auto-compute based on profit margin thresholds
-  var margin = Number(p.margin) || 0;
-  if(margin >= 30) return 'S';
-  if(margin >= 20) return 'A';
-  if(margin >= 10) return 'B';
-  return '';
+  // Auto-grading disabled — only manual overrides are honored.
+  return null;
 }
 
 function autoComputeManualGrade(p){
@@ -5715,14 +5681,8 @@ function autoComputeManualGrade(p){
   if(profitManualOverrides.hasOwnProperty(key)){
     return profitManualOverrides[key] || null;
   }
-  var weeks = getSelectedWeeks();
-  var numWeeks = weeks.length || 1;
-  var pft = Number(p.profit) || 0;
-  var avgProfit = pft / numWeeks;
-  if(avgProfit >= 10000) return 'S';
-  if(avgProfit >= 7500) return 'A';
-  if(avgProfit >= 3000) return 'B';
-  return '';
+  // Auto-grading disabled — only manual overrides are honored.
+  return null;
 }
 
 function editProfitManualGrade(shop, sku, event){
