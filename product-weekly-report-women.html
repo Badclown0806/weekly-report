@@ -1592,7 +1592,7 @@ function getTargetPersons(){
 // selectedMonths initialized above with state variables
 function getSelectedMonths(){
   var months = Array.from(selectedMonths);
-  if(months.length === 0) { var lastMonth='6'; if(typeof PERSON_TARGETS!=='undefined'&&PERSON_TARGETS){ var lastFound=0; var curM=String(new Date().getMonth()+1); for(var m=1;m<=12;m++){if(m>parseInt(curM))break; for(var person in PERSON_TARGETS){var t=PERSON_TARGETS[person][String(m)];if(t&&(t.profit_done||t.gsv_done||t.sales_done)){lastFound=m;break;}}} if(lastFound>0) lastMonth=String(lastFound); } months.push(lastMonth); }
+  if(months.length===0){var lastMonth='6';if(typeof PERSON_TARGETS!=='undefined'&&PERSON_TARGETS){var lastFound=0;var curM=(new Date()).getMonth()+1;for(var m=1;m<=12&&m<=curM;m++){for(var person in PERSON_TARGETS){var t=PERSON_TARGETS[person][String(m)];if(t&&(t.profit_done||t.gsv_done||t.sales_done)){lastFound=m;break;}}}if(lastFound>0)lastMonth=String(lastFound);}months.push(lastMonth);}
   return months;
 }
 
