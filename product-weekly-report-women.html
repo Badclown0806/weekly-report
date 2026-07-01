@@ -4712,6 +4712,8 @@ function bootstrap(){
   if(!chartExpanded) toggleChartSection();
   if(!shopGridExpanded) toggleShopGridSection();
   if(!prodExpanded) toggleProdSection();
+  // Delayed re-render to ensure async data fully loaded
+  setTimeout(function(){ renderTargetBoard(); renderProductTargetBoard(); }, 2000);
 }
 
 
