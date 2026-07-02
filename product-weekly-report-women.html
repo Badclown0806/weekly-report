@@ -6987,9 +6987,6 @@ function renderProdTable(){
     else {
 
 
-      // Try to find any key that starts with sku|shop
-
-
       for(var k in SKU_IMG){
 
 
@@ -7006,6 +7003,18 @@ function renderProdTable(){
 
 
       }
+
+
+    }
+
+
+    if (imgUrl && /^\d+$/.test(imgUrl)) {
+
+
+      var nid = parseInt(imgUrl);
+
+
+      imgUrl = 'https://images.wbstatic.net/c516x688/new/' + (Math.floor(nid/10000)*10000) + '/' + nid + '.jpg';
 
 
     }
@@ -16002,7 +16011,72 @@ function computeNewProductGrade(shop, sku, wbId) {
   }
 
 
+  var days = getDaysNum(sku, shop, wbId);
+
+
+  if (days >= 0) {
+
+
+    if (days <= 45) return 'S';
+
+
+    if (days <= 90) return 'A';
+
+
+    if (days <= 180) return 'B';
+
+
+    if (days <= 365) return 'C';
+
+
+  }
+
+
   return null;
+
+
+}
+
+
+
+
+function getDaysNum(sku, shop, wbId) {
+
+
+  if (!sku || !SKU_FIRST_DATE) return -1;
+
+
+  var fd = null;
+
+
+  if (wbId && shop) fd = SKU_FIRST_DATE[sku + '|' + shop + '|' + wbId];
+
+
+  if (!fd && wbId) fd = SKU_FIRST_DATE[sku + '|' + wbId];
+
+
+  if (!fd && shop) fd = SKU_FIRST_DATE[sku + '|' + shop];
+
+
+  if (!fd) fd = SKU_FIRST_DATE[sku];
+
+
+  if (!fd) return -1;
+
+
+  var p = fd.split('-');
+
+
+  if (p.length < 3) return -1;
+
+
+  var d1 = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+
+
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+
+
+  return Math.floor((t - d1) / 86400000);
 
 
 }
@@ -16012,6 +16086,87 @@ function computeNewProductGrade(shop, sku, wbId) {
 
 
 // ========== 销售等级（全历史最高SABC等级·预计算查表）==========
+
+
+var _sgCache = null;
+
+
+function precomputeSG() {
+
+
+  if (_sgCache) return _sgCache;
+
+
+  var tq = {};
+
+
+  if (WEEK_DATA) {
+
+
+    for (var w in WEEK_DATA) {
+
+
+      var ps = (WEEK_DATA[w] && WEEK_DATA[w].allProducts) || (WEEK_DATA[w] && WEEK_DATA[w].top10Profit) || [];
+
+
+      for (var i = 0; i < ps.length; i++) {
+
+
+        var ck = ps[i].shop + '|' + ps[i].sku;
+
+
+        tq[ck] = (tq[ck] || 0) + (ps[i].qty || 0);
+
+
+      }
+
+
+    }
+
+
+  }
+
+
+  var e = [];
+
+
+  for (var k in tq) e.push({k: k, q: tq[k]});
+
+
+  e.sort(function(a, b) { return b.q - a.q; });
+
+
+  _sgCache = {};
+
+
+  for (var i = 0; i < e.length; i++) {
+
+
+    var pct = (i + 1) / e.length;
+
+
+    if (pct <= 0.10) _sgCache[e[i].k] = 'S';
+
+
+    else if (pct <= 0.25) _sgCache[e[i].k] = 'A';
+
+
+    else if (pct <= 0.50) _sgCache[e[i].k] = 'B';
+
+
+    else if (pct <= 0.75) _sgCache[e[i].k] = 'C';
+
+
+    else _sgCache[e[i].k] = 'D';
+
+
+  }
+
+
+  return _sgCache;
+
+
+}
 
 
 function computeSalesGrade(shop, sku) {
@@ -16029,7 +16184,7 @@ function computeSalesGrade(shop, sku) {
   }
 
 
-  return null;
+  return (precomputeSG())[ck] || null;
 
 
 }
