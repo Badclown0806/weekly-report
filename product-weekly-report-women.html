@@ -884,12 +884,7 @@ function initFromDataJs() {
     // ‚ĒÄ‚ĒÄ Derived data ‚ĒÄ‚ĒÄ
     SHOPS = Object.keys(SHOP_WEEKLY);
     // Ś•≥Ť£ÖÁČąÔľöŚŹ™šŅĚÁēôŚ•≥Ť£ÖŚļóťďļÔľąśó†śēįśćģÁöĄŚļóťďļšĻüšŅĚÁēôŚú®ŚąóŤ°®šł≠ÔľČ
-    var WOMEN_SHOP_LIST = ["Z-NZTF1Śļó","G-NZTF1Śļó","WBÁļĮÁôĹŚÖ≥Śļó","OZŚ•≥Ť£ÖŚļó","WBśĪ§śÄĽŚ•≥Ť£ÖŚļó"];
-    SHOPS = SHOPS.filter(function(s){ return WOMEN_SHOP_LIST.indexOf(s) >= 0; });
-    // Ť°•ŚÖÖśó†śēįśćģšĹÜťúÄŤ¶ĀŚĪēÁ§ļÁõģś†áÁöĄŚļóťďļ
-    WOMEN_SHOP_LIST.forEach(function(s){
-      if(SHOPS.indexOf(s) < 0) SHOPS.push(s);
-    });
+        // Women edition: SHOPS already filtered in build script, no runtime filter needed
     // Per-metric color palettes with distinct shades for each shop
     PROFIT_COLORS  = ['#1e3a5f','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#3730a3','#4f46e5','#6366f1','#818cf8','#a5b4fc','#312e81','#4338ca','#5b21b6','#6d28d9','#7c3aed','#8b5cf6','#1e40af','#3b5998','#4a6fa5','#5b8cc9','#6ea8fe','#2c3e6b','#344e86','#1a365d'];
     MARGIN_COLORS  = ['#064e3b','#065f46','#047857','#059669','#10b981','#34d399','#6ee7b7','#a7f3d0','#15803d','#16a34a','#22c55e','#4ade80','#86efac','#14532d','#166534','#65a30d','#84cc16','#a3e635','#0d9488','#14b8a6','#2dd4bf','#5eead4','#134e4a','#115e59','#0f766e'];
