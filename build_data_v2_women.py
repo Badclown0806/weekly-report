@@ -62,7 +62,7 @@ def read_product_list():
     for row in ws.iter_rows(min_row=2):
         vals = [cell.value for cell in row[:15]]
         wb_id,sku,img,cat,shop = vals[0],vals[1],vals[4],vals[6],vals[11]
-        owner = vals[9] or ""
+        owner = SHOP_TO_OWNER.get(str(shop) if shop else "", "其他/待定")
         create_time = vals[14]  # 创建时间 (datetime)
         if not sku: continue
         sku=str(sku).strip()
