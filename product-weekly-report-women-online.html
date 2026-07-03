@@ -1659,15 +1659,15 @@ function computeDynamicMonthlyDone(months, weeks, persons){
           totalGsv += SHOP_WEEKLY[shop][wk].gsv;
         }
         // Profit from WEEK_DATA (detail)
-        if(typeof DETAIL_DATA !== 'undefined' && DETAIL_DATA.WEEK_DATA && DETAIL_DATA.WEEK_DATA[wk] && DETAIL_DATA.WEEK_DATA[wk].shops && DETAIL_DATA.WEEK_DATA[wk].shops[shop] && typeof DETAIL_DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
+        if(DETAIL_DATA && DETAIL_DATA.WEEK_DATA && DETAIL_DATA.WEEK_DATA[wk] && DETAIL_DATA.WEEK_DATA[wk].shops && DETAIL_DATA.WEEK_DATA[wk].shops[shop] && typeof DETAIL_DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
           totalProfit += DETAIL_DATA.WEEK_DATA[wk].shops[shop].profit;
         }
         // GMV from DETAIL_DATA
-        if(typeof DETAIL_DATA !== 'undefined' && DETAIL_DATA.TRAFFIC_WEEKLY && DETAIL_DATA.TRAFFIC_WEEKLY[wk] && DETAIL_DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DETAIL_DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
+        if(DETAIL_DATA && DETAIL_DATA.TRAFFIC_WEEKLY && DETAIL_DATA.TRAFFIC_WEEKLY[wk] && DETAIL_DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DETAIL_DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
           totalGmv += DETAIL_DATA.TRAFFIC_WEEKLY[wk][shop].gmv;
         }
         // Sales from DETAIL_DATA
-        if(typeof DETAIL_DATA !== 'undefined' && DETAIL_DATA.WEEK_DATA && DETAIL_DATA.WEEK_DATA[wk] && DETAIL_DATA.WEEK_DATA[wk].shops && DETAIL_DATA.WEEK_DATA[wk].shops[shop] && typeof DETAIL_DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
+        if(DETAIL_DATA && DETAIL_DATA.WEEK_DATA && DETAIL_DATA.WEEK_DATA[wk] && DETAIL_DATA.WEEK_DATA[wk].shops && DETAIL_DATA.WEEK_DATA[wk].shops[shop] && typeof DETAIL_DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
           totalSales += DETAIL_DATA.WEEK_DATA[wk].shops[shop].products;
         }
       }
