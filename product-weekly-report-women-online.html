@@ -1621,11 +1621,6 @@ function computeDynamicMonthlyDone(months, weeks, persons){
       var shop = shops[si];
       for(var wi = 0; wi < weeks.length; wi++){
         var wk = weeks[wi];
-        // Check if this week belongs to a selected month
-        var range = getWeekDateRange(wk);
-        if(!range) continue;
-        var month = String(range.end.getMonth() + 1);
-        if(months.indexOf(month) < 0) continue;
         // GSV from SHOP_WEEKLY
         if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wk] && typeof SHOP_WEEKLY[shop][wk].gsv === 'number'){
           totalGsv += SHOP_WEEKLY[shop][wk].gsv;
