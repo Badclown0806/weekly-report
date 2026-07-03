@@ -2305,6 +2305,36 @@ var DETAIL_DATA = null;
   (function loadDetail() {
 
 
+    var done = false;
+
+
+    function processText(jsText){
+
+
+      if(done) return; done = true;
+
+
+      var start = jsText.indexOf('{');
+
+
+      var end = jsText.lastIndexOf('}');
+
+
+      if(start < 0 || end < 0) throw new Error('Invalid data-detail.js format');
+
+
+      var detailData = JSON.parse(jsText.substring(start, end + 1));
+
+
+      for(var k in detailData){ if(detailData.hasOwnProperty(k)) window.DATA[k] = detailData[k]; }
+
+
+      onDetailLoaded();
+
+
+    }
+
+
     var controller = new AbortController();
 
 
@@ -2329,46 +2359,49 @@ var DETAIL_DATA = null;
       })
 
 
-      .then(function(jsText){
-
-
-        // Extract JSON from var DETAIL_DATA = {...};
-
-
-        var start = jsText.indexOf('{');
-
-
-        var end = jsText.lastIndexOf('}');
-
-
-        if(start < 0 || end < 0) throw new Error('Invalid data-detail.js format');
-
-
-        var detailData = JSON.parse(jsText.substring(start, end + 1));
-
-
-        for(var k in detailData){ if(detailData.hasOwnProperty(k)) window.DATA[k] = detailData[k]; }
-
-
-        onDetailLoaded();
-
-
-      })
+      .then(processText)
 
 
       .catch(function(e){
 
 
-        console.warn('[Load] Detail async error, running core-only: ' + e.message);
+        console.warn('[Load] Fetch failed (' + e.message + '), trying XHR for local file...');
 
 
-        // Still hide overlay if somehow still showing
+        var xhr = new XMLHttpRequest();
 
 
-        var overlay2 = document.getElementById('loadingOverlay');
+        xhr.open('GET', 'data-detail-women.js?' + ver, true);
 
 
-        if(overlay2 && overlay2.style.display !== 'none') overlay2.style.display = 'none';
+        xhr.timeout = 15000;
+
+
+        xhr.onload = function(){
+
+
+          if(xhr.status === 200 || xhr.status === 0){
+
+
+            try { processText(xhr.responseText); }
+
+
+            catch(ex){ console.warn('[Load] XHR parse error: ' + ex.message); }
+
+
+          }
+
+
+        };
+
+
+        xhr.onerror = function(){ console.warn('[Load] XHR failed, running core-only'); };
+
+
+        xhr.ontimeout = function(){ console.warn('[Load] XHR timeout, running core-only'); };
+
+
+        xhr.send();
 
 
       });
@@ -4774,6 +4807,192 @@ function getSelectedMonths(){
 
 
 
+function computeDynamicMonthlyDone(months, weeks, persons){
+
+
+  var ownerShops = {};
+
+
+  for(var s in SHOP_OWNERS){
+
+
+    if(!SHOP_OWNERS.hasOwnProperty(s)) continue;
+
+
+    var owners = SHOP_OWNERS[s];
+
+
+    for(var o in owners){
+
+
+      if(!owners.hasOwnProperty(o)) continue;
+
+
+      if(!ownerShops[o]) ownerShops[o] = [];
+
+
+      ownerShops[o].push(s);
+
+
+    }
+
+
+  }
+
+
+  var monthMaxIdx = {};
+
+
+  for(var wi = 0; wi < weeks.length; wi++){
+
+
+    var range = getWeekDateRange(weeks[wi]);
+
+
+    if(!range) continue;
+
+
+    var m = String(range.end.getMonth() + 1);
+
+
+    var idx = WEEKS.indexOf(weeks[wi]);
+
+
+    if(idx < 0) continue;
+
+
+    if(!(m in monthMaxIdx) || idx > monthMaxIdx[m]) monthMaxIdx[m] = idx;
+
+
+  }
+
+
+  var weekRanges = {};
+
+
+  for(var i = 0; i < WEEKS.length; i++){
+
+
+    var range = getWeekDateRange(WEEKS[i]);
+
+
+    if(!range) continue;
+
+
+    var m = String(range.end.getMonth() + 1);
+
+
+    if(!(m in monthMaxIdx)) continue;
+
+
+    if(!weekRanges[m] || i < weekRanges[m].first) {
+
+
+      if(!weekRanges[m]) weekRanges[m] = {};
+
+
+      weekRanges[m].first = i;
+
+
+    }
+
+
+  }
+
+
+  var weeksSet = {};
+
+
+  for(var m in monthMaxIdx){
+
+
+    var first = weekRanges[m] ? weekRanges[m].first : 0;
+
+
+    for(var i = first; i <= monthMaxIdx[m]; i++){
+
+
+      weeksSet[WEEKS[i]] = true;
+
+
+    }
+
+
+  }
+
+
+  var totalGsv = 0, totalGmv = 0, totalSales = 0, totalProfit = 0;
+
+
+  for(var pi = 0; pi < persons.length; pi++){
+
+
+    var shops = ownerShops[persons[pi]] || [];
+
+
+    for(var si = 0; si < shops.length; si++){
+
+
+      var shop = shops[si];
+
+
+      for(var wk in weeksSet){
+
+
+        if(!weeksSet.hasOwnProperty(wk)) continue;
+
+
+        if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wk] && typeof SHOP_WEEKLY[shop][wk].gsv === 'number'){
+
+
+          totalGsv += SHOP_WEEKLY[shop][wk].gsv;
+
+
+        }
+
+
+        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
+
+
+          totalProfit += DATA.WEEK_DATA[wk].shops[shop].profit;
+
+
+        }
+
+
+        if(DATA && DATA.TRAFFIC_WEEKLY && DATA.TRAFFIC_WEEKLY[wk] && DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
+
+
+          totalGmv += DATA.TRAFFIC_WEEKLY[wk][shop].gmv;
+
+
+        }
+
+
+        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
+
+
+          totalSales += DATA.WEEK_DATA[wk].shops[shop].products;
+
+
+        }
+
+
+      }
+
+
+    }
+
+
+  }
+
+
+  return {gsv: totalGsv, gmv: totalGmv, sales: totalSales, profit: totalProfit};
+
+
+}
+
+
 
 
 function renderTargetBoard(){
@@ -5068,6 +5287,21 @@ function renderTargetBoard(){
 
 
   }
+
+  // 根据选中的周动态覆盖 done 值
+  var selWeeks = getSelectedWeeks();
+  if(selWeeks.length > 0){
+    var dynamic = computeDynamicMonthlyDone(months, selWeeks, persons);
+    if(dynamic.gsv > 0){
+      agg.gsv_done = dynamic.gsv;
+      if(dynamic.profit > 0) agg.profit_done = dynamic.profit;
+      if(dynamic.sales > 0) agg.sales_done = dynamic.sales;
+      if(dynamic.gmv > 0) agg.gmv_done = dynamic.gmv;
+      profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
+      hasData = true;
+    }
+  }
+
 
 
   
@@ -17243,10 +17477,10 @@ function setProfitManualFilter(grade) {
 // ========== 手动等级（利润/库存规则）==========
 
 
-var profitManualOverrides = (function(){try{var d=localStorage.getItem('mg_profit_overrides');return d?JSON.parse(d):{};}catch(e){return{};}})();
+var profitManualOverrides = {};
 
 
-var productManualOverrides = (function(){try{var d=localStorage.getItem('mg_product_overrides');return d?JSON.parse(d):{};}catch(e){return{};}})();
+var productManualOverrides = {};
 
 
 
