@@ -1612,28 +1612,59 @@ function computeDynamicMonthlyDone(months, weeks, persons){
       ownerShops[o].push(s);
     }
   }
+
+  // Step 1: For selected weeks, find the max week index per month
+  // Also figure out which weeks to sum: from first week of each month
+  // to the max selected week in that month
+  var monthMaxIdx = {};  // month -> max selected week index
+  for(var wi = 0; wi < weeks.length; wi++){
+    var range = getWeekDateRange(weeks[wi]);
+    if(!range) continue;
+    var m = String(range.end.getMonth() + 1);
+    var idx = WEEKS.indexOf(weeks[wi]);
+    if(idx < 0) continue;
+    if(!(m in monthMaxIdx) || idx > monthMaxIdx[m]) monthMaxIdx[m] = idx;
+  }
+
+  // Step 2: For each selected month, find the first week index in that month
+  var weekRanges = {};  // month -> {first: idx, last: idx}
+  for(var i = 0; i < WEEKS.length; i++){
+    var range = getWeekDateRange(WEEKS[i]);
+    if(!range) continue;
+    var m = String(range.end.getMonth() + 1);
+    if(!(m in monthMaxIdx)) continue;  // only care about selected months
+    if(!weekRanges[m] || i < weekRanges[m].first) {
+      if(!weekRanges[m]) weekRanges[m] = {};
+      weekRanges[m].first = i;
+    }
+  }
+
+  // Step 3: Build the set of weeks to sum: firstIdx..maxIdx per month
+  var weeksSet = {};
+  for(var m in monthMaxIdx){
+    var first = weekRanges[m] ? weekRanges[m].first : 0;
+    for(var i = first; i <= monthMaxIdx[m]; i++){
+      weeksSet[WEEKS[i]] = true;
+    }
+  }
+
+  // Step 4: Sum data for those weeks
   var totalGsv = 0, totalGmv = 0, totalSales = 0, totalProfit = 0;
-  // For each person, iterate their shops and selected weeks
   for(var pi = 0; pi < persons.length; pi++){
-    var person = persons[pi];
-    var shops = ownerShops[person] || [];
+    var shops = ownerShops[persons[pi]] || [];
     for(var si = 0; si < shops.length; si++){
       var shop = shops[si];
-      for(var wi = 0; wi < weeks.length; wi++){
-        var wk = weeks[wi];
-        // GSV from SHOP_WEEKLY
+      for(var wk in weeksSet){
+        if(!weeksSet.hasOwnProperty(wk)) continue;
         if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wk] && typeof SHOP_WEEKLY[shop][wk].gsv === 'number'){
           totalGsv += SHOP_WEEKLY[shop][wk].gsv;
         }
-        // Profit from DATA (detail merged in Phase 2)
         if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
           totalProfit += DATA.WEEK_DATA[wk].shops[shop].profit;
         }
-        // GMV from DATA
         if(DATA && DATA.TRAFFIC_WEEKLY && DATA.TRAFFIC_WEEKLY[wk] && DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
           totalGmv += DATA.TRAFFIC_WEEKLY[wk][shop].gmv;
         }
-        // Sales from DATA
         if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
           totalSales += DATA.WEEK_DATA[wk].shops[shop].products;
         }
