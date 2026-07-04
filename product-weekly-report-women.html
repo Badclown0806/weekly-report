@@ -5595,7 +5595,7 @@ function buildWeekKeyMap() {
       // Direct match: both formats now have year prefixes
 
 
-      if (wkDataKeys[j] === dateRange) {
+      if (wkDataKeys[j] === dateRange || wkDataKeys[j].indexOf(dateRange) >= 0) {
 
 
         map[wNum] = wkDataKeys[j];
