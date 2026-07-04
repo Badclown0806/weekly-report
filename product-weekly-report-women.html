@@ -2289,6 +2289,15 @@ var DETAIL_DATA = null;
 
 
 
+  // Render immediately with core data — page shows cards right away
+
+
+  if(typeof renderAll === 'function') renderAll();
+
+
+
+
+
   // Hide loading overlay IMMEDIATELY after core data renders
 
 
@@ -7325,7 +7334,7 @@ function renderProdTable(){
     // Traffic data aggregation placeholder
 
 
-    var trafficData = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];}return td;})();
+    var trafficData = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY&&TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];}return td;})();
 
     // Fallback: use SKU-level traffic data for click/cart/conv rates
     var skuTraffic = null;
@@ -7931,13 +7940,13 @@ function getSortValue(p, key){
       return typeof ds === 'number' ? ds : 99999;
 
 
-    case 'clickRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.click_rate != null) return td.click_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][0]!=null){total+=stw[p.sku][0];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
+    case 'clickRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY&&TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.click_rate != null) return td.click_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][0]!=null){total+=stw[p.sku][0];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
-    case 'cartRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.cart_rate != null) return td.cart_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][1]!=null){total+=stw[p.sku][1];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
+    case 'cartRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY&&TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.cart_rate != null) return td.cart_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][1]!=null){total+=stw[p.sku][1];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
-    case 'convRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.conv_rate != null) return td.conv_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][2]!=null){total+=stw[p.sku][2];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
+    case 'convRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY&&TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.conv_rate != null) return td.conv_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][2]!=null){total+=stw[p.sku][2];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
     case 'sku': return p.sku || '';
