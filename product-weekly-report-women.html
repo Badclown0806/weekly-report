@@ -4843,7 +4843,10 @@ function computeDynamicMonthlyDone(months, weeks, persons){
   }
 
 
-  var monthMaxIdx = {};
+  // Find max week index among selected weeks that match selected months
+
+
+  var maxIdx = -1;
 
 
   for(var wi = 0; wi < weeks.length; wi++){
@@ -4867,13 +4870,19 @@ function computeDynamicMonthlyDone(months, weeks, persons){
     if(idx < 0) continue;
 
 
-    if(!(m in monthMaxIdx) || idx > monthMaxIdx[m]) monthMaxIdx[m] = idx;
+    if(idx > maxIdx) maxIdx = idx;
 
 
   }
 
 
-  var weekRanges = {};
+  if(maxIdx < 0) return {gsv: 0, gmv: 0, sales: 0, profit: 0};
+
+
+  // Find first week of the earliest selected month
+
+
+  var firstIdx = WEEKS.length;
 
 
   for(var i = 0; i < WEEKS.length; i++){
@@ -4888,40 +4897,25 @@ function computeDynamicMonthlyDone(months, weeks, persons){
     var m = String(range.end.getMonth() + 1);
 
 
-    if(!(m in monthMaxIdx)) continue;
+    if(months.indexOf(m) < 0) continue;
 
 
-    if(!weekRanges[m] || i < weekRanges[m].first) {
-
-
-      if(!weekRanges[m]) weekRanges[m] = {};
-
-
-      weekRanges[m].first = i;
-
-
-    }
+    if(i < firstIdx) firstIdx = i;
 
 
   }
 
 
+  // Build weeks set from firstIdx to maxIdx
+
+
   var weeksSet = {};
 
 
-  for(var m in monthMaxIdx){
+  for(var i = firstIdx; i <= maxIdx; i++){
 
 
-    var first = weekRanges[m] ? weekRanges[m].first : 0;
-
-
-    for(var i = first; i <= monthMaxIdx[m]; i++){
-
-
-      weeksSet[WEEKS[i]] = true;
-
-
-    }
+    weeksSet[WEEKS[i]] = true;
 
 
   }
