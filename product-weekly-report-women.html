@@ -2329,7 +2329,7 @@ var DETAIL_DATA = null;
       var detailData = JSON.parse(jsText.substring(start, end + 1));
 
 
-      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY')) window.DATA[k] = detailData[k]; }
+      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY')) window.DATA[k] = detailData[k]; }
 
 
       onDetailLoaded();
