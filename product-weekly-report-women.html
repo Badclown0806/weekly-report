@@ -2221,6 +2221,32 @@ var DETAIL_DATA = null;
     if(typeof renderAll === 'function') renderAll();
 
 
+    // Phase 3: Load SKU-level traffic data from data_women.js
+    (function loadSkuTraffic() {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'data_women.js?' + ver, true);
+      xhr.timeout = 20000;
+      xhr.onload = function() {
+        if (xhr.status === 200 || xhr.status === 0) {
+          try {
+            var txt = xhr.responseText;
+            var s = txt.indexOf('{');
+            var e = txt.lastIndexOf('}');
+            var wdata = JSON.parse(txt.substring(s, e + 1));
+            if (wdata.TRAFFIC_WEEKLY) {
+              window._skuTraffic = wdata.TRAFFIC_WEEKLY;
+              // Re-render product table with traffic data
+              if (typeof renderProdTable === 'function') renderProdTable();
+              if (typeof renderTargetBoard === 'function') renderTargetBoard();
+            }
+          } catch(ex) { console.warn('[Load] SKU traffic parse error:', ex.message); }
+        }
+      };
+      xhr.onerror = function() { console.warn('[Load] SKU traffic XHR failed'); };
+      xhr.send();
+    })();
+
+
   }
 
 
@@ -7282,14 +7308,47 @@ function renderProdTable(){
 
     var trafficData = (function(){var sw=getSelectedWeeks();var td=null;for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];}return td;})();
 
+    // Fallback: use SKU-level traffic data for click/cart/conv rates
+    var skuTraffic = null;
+    if ((!trafficData || !trafficData.click_rate) && window._skuTraffic) {
+      var sw = getSelectedWeeks();
+      var totalClick = 0, totalCart = 0, totalConv = 0, cnt = 0;
+      for (var si = 0; si < sw.length; si++) {
+        var wk = sw[si];
+        var stw = window._skuTraffic[wk];
+        if (stw && stw[p.sku]) {
+          var arr = stw[p.sku];  // [click_rate, atc_rate, conv_rate, return_rate, qty]
+          if (arr[0] != null) { totalClick += arr[0]; cnt++; }
+          if (arr[1] != null) totalCart += arr[1];
+          if (arr[2] != null) totalConv += arr[2];
+        }
+      }
+      if (cnt > 0) {
+        skuTraffic = {
+          click_rate: totalClick / cnt,
+          cart_rate: totalCart / cnt,
+          conv_rate: totalConv / cnt
+        };
+      }
+    }
 
-    var clickHtml = trafficData && trafficData.click_rate != null ? (Number(trafficData.click_rate)*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var clickHtml = (skuTraffic && skuTraffic.click_rate != null)
+      ? (skuTraffic.click_rate * 100).toFixed(2) + '%'
+      : (trafficData && trafficData.click_rate != null)
+        ? (Number(trafficData.click_rate) * 100).toFixed(2) + '%'
+        : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
+    var cartHtml = (skuTraffic && skuTraffic.cart_rate != null)
+      ? (skuTraffic.cart_rate * 100).toFixed(2) + '%'
+      : (trafficData && trafficData.cart_rate != null)
+        ? (Number(trafficData.cart_rate) * 100).toFixed(2) + '%'
+        : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
-    var cartHtml = trafficData && trafficData.cart_rate != null ? (Number(trafficData.cart_rate)*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
-
-
-    var convHtml = trafficData && trafficData.conv_rate != null ? (Number(trafficData.conv_rate)*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var convHtml = (skuTraffic && skuTraffic.conv_rate != null)
+      ? (skuTraffic.conv_rate * 100).toFixed(2) + '%'
+      : (trafficData && trafficData.conv_rate != null)
+        ? (Number(trafficData.conv_rate) * 100).toFixed(2) + '%'
+        : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
 
 
@@ -7853,13 +7912,13 @@ function getSortValue(p, key){
       return typeof ds === 'number' ? ds : 99999;
 
 
-    case 'clickRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} return td && td.click_rate != null ? td.click_rate : -9999; }
+    case 'clickRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.click_rate != null) return td.click_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][0]!=null){total+=stw[p.sku][0];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
-    case 'cartRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} return td && td.cart_rate != null ? td.cart_rate : -9999; }
+    case 'cartRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.cart_rate != null) return td.cart_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][1]!=null){total+=stw[p.sku][1];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
-    case 'convRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} return td && td.conv_rate != null ? td.conv_rate : -9999; }
+    case 'convRate': { var sw=getSelectedWeeks(); var td=null; for(var i=0;i<sw.length&&!td;i++){if(TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]])td=TRAFFIC_WEEKLY[_weekKeyMap[sw[i]]||sw[i]][p.shop];} if(td && td.conv_rate != null) return td.conv_rate; if(window._skuTraffic){var total=0,cnt=0;for(var si=0;si<sw.length;si++){var stw=window._skuTraffic[sw[si]];if(stw&&stw[p.sku]&&stw[p.sku][2]!=null){total+=stw[p.sku][2];cnt++;}}if(cnt>0)return total/cnt;} return -9999; }
 
 
     case 'sku': return p.sku || '';
