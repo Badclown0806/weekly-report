@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 
 
 <html lang="zh-CN">
@@ -2292,10 +2292,7 @@ var DETAIL_DATA = null;
   // Render immediately with core data — page shows cards right away
 
 
-  if(typeof renderAll === 'function') renderAll();
-
-
-
+    try { if(typeof renderAll === 'function') renderAll(); } catch(e) { console.warn('[Load] renderAll error:', e.message); }
 
 
   // Hide loading overlay IMMEDIATELY after core data renders
@@ -9840,6 +9837,9 @@ function rerenderActivityLogWithFilter() {
 
 
 function renderActivityLog(){
+
+
+  if (!WEEK_DATA) return;  // Phase 1 skip
 
 
   var tbody = document.querySelector('#activityLogTable tbody');
