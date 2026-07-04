@@ -2329,7 +2329,7 @@ var DETAIL_DATA = null;
       var detailData = JSON.parse(jsText.substring(start, end + 1));
 
 
-      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY')) window.DATA[k] = detailData[k]; }
+      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY' || k === 'SKU_INVENTORY')) window.DATA[k] = detailData[k]; }
 
 
       onDetailLoaded();
@@ -4972,10 +4972,10 @@ function computeDynamicMonthlyDone(months, weeks, persons){
         }
 
 
-        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wkKey] && DATA.WEEK_DATA[wkKey].shops && DATA.WEEK_DATA[wkKey].shops[shop] && typeof DATA.WEEK_DATA[wkKey].shops[shop].products === 'number'){
+        if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wkKey] && typeof SHOP_WEEKLY[shop][wkKey].qty === 'number'){
 
 
-          totalSales += DATA.WEEK_DATA[wkKey].shops[shop].products;
+          totalSales += SHOP_WEEKLY[shop][wkKey].qty;
 
 
         }
