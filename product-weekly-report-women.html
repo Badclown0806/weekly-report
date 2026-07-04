@@ -2218,6 +2218,9 @@ var DETAIL_DATA = null;
     initFromDataJs();
 
 
+    if(typeof renderAll === 'function') renderAll();
+
+
   }
 
 
@@ -4942,37 +4945,40 @@ function computeDynamicMonthlyDone(months, weeks, persons){
         if(!weeksSet.hasOwnProperty(wk)) continue;
 
 
-        if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wk] && typeof SHOP_WEEKLY[shop][wk].gsv === 'number'){
+        var wkKey = _weekKeyMap[wk] || wk;
 
 
-          totalGsv += SHOP_WEEKLY[shop][wk].gsv;
+        if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wkKey] && typeof SHOP_WEEKLY[shop][wkKey].gsv === 'number'){
 
 
-        }
-
-
-        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
-
-
-          totalProfit += DATA.WEEK_DATA[wk].shops[shop].profit;
+          totalGsv += SHOP_WEEKLY[shop][wkKey].gsv;
 
 
         }
 
 
-        if(DATA && DATA.TRAFFIC_WEEKLY && DATA.TRAFFIC_WEEKLY[wk] && DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
+        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wkKey] && DATA.WEEK_DATA[wkKey].shops && DATA.WEEK_DATA[wkKey].shops[shop] && typeof DATA.WEEK_DATA[wkKey].shops[shop].profit === 'number'){
 
 
-          totalGmv += DATA.TRAFFIC_WEEKLY[wk][shop].gmv;
+          totalProfit += DATA.WEEK_DATA[wkKey].shops[shop].profit;
 
 
         }
 
 
-        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
+        if(DATA && DATA.TRAFFIC_WEEKLY && DATA.TRAFFIC_WEEKLY[wkKey] && DATA.TRAFFIC_WEEKLY[wkKey][shop] && typeof DATA.TRAFFIC_WEEKLY[wkKey][shop].gmv === 'number'){
 
 
-          totalSales += DATA.WEEK_DATA[wk].shops[shop].products;
+          totalGmv += DATA.TRAFFIC_WEEKLY[wkKey][shop].gmv;
+
+
+        }
+
+
+        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wkKey] && DATA.WEEK_DATA[wkKey].shops && DATA.WEEK_DATA[wkKey].shops[shop] && typeof DATA.WEEK_DATA[wkKey].shops[shop].products === 'number'){
+
+
+          totalSales += DATA.WEEK_DATA[wkKey].shops[shop].products;
 
 
         }
