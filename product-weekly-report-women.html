@@ -4858,6 +4858,9 @@ function computeDynamicMonthlyDone(months, weeks, persons){
     var m = String(range.end.getMonth() + 1);
 
 
+    if(months.indexOf(m) < 0) continue;
+
+
     var idx = WEEKS.indexOf(weeks[wi]);
 
 
