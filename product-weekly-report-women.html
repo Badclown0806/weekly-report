@@ -5592,10 +5592,12 @@ function buildWeekKeyMap() {
     for (var j = 0; j < wkDataKeys.length; j++) {
 
 
-      // Direct match: both formats now have year prefixes
+      // Strip year prefix from data key (YY.MM.DD-YY.MM.DD → MM.DD-MM.DD)
+      var parts = wkDataKeys[j].split('-');
+      var keyDR = parts[0].substring(3) + '-' + parts[1].substring(3);
 
 
-      if (wkDataKeys[j] === dateRange || wkDataKeys[j].indexOf(dateRange) >= 0) {
+      if (keyDR === dateRange) {
 
 
         map[wNum] = wkDataKeys[j];
