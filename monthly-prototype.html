@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>月报原型 - 目标与完成进度</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;color:#1e293b;font-size:13px;padding:20px}
+.wrap{max-width:1400px;margin:0 auto}
+h1{font-size:20px;font-weight:700;margin-bottom:16px;color:#0f172a}
+.sc{background:#fff;border-radius:10px;padding:18px 20px;margin-bottom:14px;border:1px solid #e2e8f0}
+.sc h2{font-size:14px;font-weight:600;margin-bottom:10px;color:#334155}
+
+/* 月度完成卡片 */
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mcard{background:#f8fafc;border-radius:8px;padding:14px;border:1px solid #e2e8f0}
+.mcard.future{opacity:0.45}
+.mcard h3{font-size:14px;font-weight:600;margin-bottom:8px;color:#1e40af}
+.mcard .row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f1f5f9}
+.mcard .row .lbl{color:#64748b}
+.mcard .row .val{font-weight:600;color:#334155}
+.mcard .row .pct{color:#10b981}
+.mcard .row .warn{color:#ef4444}
+
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid #e2e8f0}
+th{background:#f1f5f9;font-weight:600;color:#475569;position:sticky;top:0}
+td:first-child,th:first-child{text-align:left;font-weight:600}
+.progress-bar{height:6px;background:#e2e8f0;border-radius:3px;margin-top:2px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.progress-fill.good{background:#10b981}
+.progress-fill.warn{background:#f59e0b}
+.progress-fill.bad{background:#ef4444}
+
+.note{font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>月报原型 — 目标 vs 完成进度</h1>
+<p class="note">数据源：LX利润表(分周SKU) + 运营日数据(Export) + 年规进度 |
+利润目标=GSV目标×15%(固定) | 退货率目标=65%(固定) | 利润率=毛利量/GSV | 退货率=1-(GSV×12.5)/GMV</p>
+
+<!-- 月度汇总卡片 -->
+<div class="sc">
+<h2>月度完成总览</h2>
+<div class="month-grid">
+
+<div class="mcard">
+<h3>1月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">250,634 / 2,331,000</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">2.7% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">332,945,299 / 496,906,850</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">9,436,936 / 15,539,998</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">31,839 / 52,655</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">64.6% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>10.8% → /100.0% = 10.8%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>67.0% → /100.0% = 67.0%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>2月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">1,532,704 / 3,211,615</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">11.8% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">477,476,502 / 724,001,993</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">13,028,808 / 21,410,768</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">38,726 / 69,546</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">65.9% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>47.7% → /100.0% = 47.7%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>65.9% → /100.0% = 65.9%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>3月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">3,364,605 / 3,085,253</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">15.1% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">806,095,516 / 701,142,448</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">22,244,163 / 20,568,354</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">60,655 / 67,315</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">65.5% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>109.1% → /100.0% = 109.1%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>115.0% → /100.0% = 115.0%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>4月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">1,839,152 / 3,242,629</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">11.2% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">593,457,276 / 732,358,293</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">16,377,324 / 21,617,527</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">45,222 / 71,261</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">65.5% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>56.7% → /100.0% = 56.7%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>81.0% → /100.0% = 81.0%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>5月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">2,545,095 / 3,222,699</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">12.7% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">693,468,392 / 709,941,788</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">19,995,187 / 21,484,658</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">52,946 / 70,658</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">64.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>79.0% → /100.0% = 79.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>97.7% → /100.0% = 97.7%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>6月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">2,342,269 / 3,217,909</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">14.3% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">494,242,780 / 690,745,728</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">16,402,613 / 21,452,728</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">42,367 / 69,130</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">58.5% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">100.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>72.8% → /100.0% = 72.8%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>71.6% → /100.0% = 71.6%</span>
+</div>
+</div>
+<div class="mcard">
+<h3>7月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">132,174 / 3,809,892</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">6.9% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">0 / 792,819,228</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">1,925,329 / 25,399,281</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">6,649 / 80,989</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">0.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">3.2%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>3.5% → /3.2% = 107.5%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /3.2% = 0.0%</span>
+</div>
+</div>
+<div class="mcard future">
+<h3>8月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">1,070,063 / 3,898,338</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">18.3% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">0 / 772,792,854</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">5,848,601 / 25,988,923</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">19,562 / 80,722</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">0.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">0.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+</div>
+<div class="mcard future">
+<h3>9月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">711,761 / 4,056,406</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">14.6% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">0 / 774,479,314</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">4,864,266 / 27,042,706</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">16,160 / 83,682</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">0.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">0.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+</div>
+<div class="mcard future">
+<h3>10月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">818,825 / 3,963,312</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">12.4% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">0 / 747,222,937</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">6,604,820 / 26,422,080</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">22,329 / 81,527</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">0.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">0.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+</div>
+<div class="mcard future">
+<h3>11月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">624,365 / 3,940,484</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">7.1% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">0 / 769,138,868</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">8,802,924 / 26,269,890</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">28,526 / 81,382</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">0.0% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">0.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+</div>
+<div class="mcard future">
+<h3>12月</h3>
+<div class="row"><span class="lbl">利润</span><span class="val">878,065 / 2,746,011</span></div>
+<div class="row"><span class="lbl">利润率</span><span class="val">7.7% （目标 15%）</span></div>
+<div class="row"><span class="lbl">GMV</span><span class="val">135,266,904 / 540,867,072</span></div>
+<div class="row"><span class="lbl">GSV</span><span class="val">11,348,258 / 18,306,743</span></div>
+<div class="row"><span class="lbl">实销</span><span class="val">35,500 / 56,798</span></div>
+<div class="row"><span class="lbl">退货率</span><span class="val">-4.9% （目标 65%）</span></div>
+<div class="row"><span class="lbl">时间进度</span><span class="val">0.0%</span></div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>利润完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+<div class="row" style="font-size:12px;color:#3b5cf6;font-weight:700">
+  <span>GMV完成进度</span>
+  <span>0.0% → /0.0% = 0.0%</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 详细表格 -->
+<div class="sc">
+<h2>详细数据表（按指标 × 月份）</h2>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr><th>指标</th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th></tr></thead><tbody><tr><td>利润目标</td><td>2,331,000</td><td>3,211,615</td><td>3,085,253</td><td>3,242,629</td><td>3,222,699</td><td>3,217,909</td><td>3,809,892</td><td>3,898,338</td><td>4,056,406</td><td>3,963,312</td><td>3,940,484</td><td>2,746,011</td></tr><tr><td>利润完成（毛利量CNY）</td><td>250,634</td><td>1,532,704</td><td>3,364,605</td><td>1,839,152</td><td>2,545,095</td><td>2,342,269</td><td>132,174</td><td>1,070,063</td><td>711,761</td><td>818,825</td><td>624,365</td><td>878,065</td></tr><tr><td>利润率</td><td>2.7%</td><td>11.8%</td><td>15.1%</td><td>11.2%</td><td>12.7%</td><td>14.3%</td><td>6.9%</td><td>18.3%</td><td>14.6%</td><td>12.4%</td><td>7.1%</td><td>7.7%</td></tr><tr><td>GMV目标</td><td>496,906,850</td><td>724,001,993</td><td>701,142,448</td><td>732,358,293</td><td>709,941,788</td><td>690,745,728</td><td>792,819,228</td><td>772,792,854</td><td>774,479,314</td><td>747,222,937</td><td>769,138,868</td><td>540,867,072</td></tr><tr><td>GMV完成（卢布）</td><td>332,945,299</td><td>477,476,502</td><td>806,095,516</td><td>593,457,276</td><td>693,468,392</td><td>494,242,780</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>135,266,904</td></tr><tr><td>GSV目标</td><td>15,539,998</td><td>21,410,768</td><td>20,568,354</td><td>21,617,527</td><td>21,484,658</td><td>21,452,728</td><td>25,399,281</td><td>25,988,923</td><td>27,042,706</td><td>26,422,080</td><td>26,269,890</td><td>18,306,743</td></tr><tr><td>GSV完成（后台价）</td><td>9,436,936</td><td>13,028,808</td><td>22,244,163</td><td>16,377,324</td><td>19,995,187</td><td>16,402,613</td><td>1,925,329</td><td>5,848,601</td><td>4,864,266</td><td>6,604,820</td><td>8,802,924</td><td>11,348,258</td></tr><tr><td>实销目标</td><td>52,655</td><td>69,546</td><td>67,315</td><td>71,261</td><td>70,658</td><td>69,130</td><td>80,989</td><td>80,722</td><td>83,682</td><td>81,527</td><td>81,382</td><td>56,798</td></tr><tr><td>实销完成（财报净销量）</td><td>31,839</td><td>38,726</td><td>60,655</td><td>45,222</td><td>52,946</td><td>42,367</td><td>6,649</td><td>19,562</td><td>16,160</td><td>22,329</td><td>28,526</td><td>35,500</td></tr><tr><td>销量完成（送达数量）</td><td>100,271</td><td>119,081</td><td>196,668</td><td>146,424</td><td>175,714</td><td>133,797</td><td>17,251</td><td>51,619</td><td>46,919</td><td>65,849</td><td>86,646</td><td>109,812</td></tr><tr><td>退货率</td><td>64.6%</td><td>65.9%</td><td>65.5%</td><td>65.5%</td><td>64.0%</td><td>58.5%</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-4.9%</td></tr><tr><td>时间进度</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>3.2%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td></tr><tr><td>利润完成进度（完成/时间进度）</td><td>10.8%</td><td>47.7%</td><td>109.1%</td><td>56.7%</td><td>79.0%</td><td>72.8%</td><td>107.5%</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>GMV完成进度（完成/时间进度）</td><td>67.0%</td><td>65.9%</td><td>115.0%</td><td>81.0%</td><td>97.7%</td><td>71.6%</td><td>0.0%</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>GSV完成进度（完成/时间进度）</td><td>60.7%</td><td>60.9%</td><td>108.1%</td><td>75.8%</td><td>93.1%</td><td>76.5%</td><td>235.0%</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>实销完成进度（完成/时间进度）</td><td>60.5%</td><td>55.7%</td><td>90.1%</td><td>63.5%</td><td>74.9%</td><td>61.3%</td><td>254.5%</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+</tbody></table>
+</div>
+</div>
+
+<div class="sc">
+<h2>数据覆盖</h2>
+<div class="note">
+周数据范围：95 个周<br>
+利润表最早周：24.09.02-24.09.08<br>
+利润表最晚周：26.06.22-26.06.28<br>
+运营日数据日期范围：2025-12-20 ~ 2026-06-28<br>
+年规人数：8 人<br>
+月归属规则：跨月周按结束日期所在月份归属（如 26.04.27-26.05.03 → 5月）
+</div>
+</div>
+
+</div>
+</body>
+</html>

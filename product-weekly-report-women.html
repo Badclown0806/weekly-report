@@ -2350,7 +2350,7 @@ var DETAIL_DATA = null;
       if(start < 0 || end < 0) throw new Error('Invalid data-detail.js format');
 
 
-      var detailData = JSON.parse(jsText.substring(start, end + 1));
+      var jsonStr = jsText.substring(start, end + 1).replace(/\bNaN\b/g, 'null').replace(/\bInfinity\b/g, 'null').replace(/-Infinity\b/g, 'null'); var detailData = JSON.parse(jsonStr);
 
 
       for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY' || k === 'SKU_INVENTORY')) window.DATA[k] = detailData[k]; }
