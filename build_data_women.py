@@ -24,14 +24,6 @@ SRC_DIR = r"D:\周汇报文件"
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "data_women.js")
 
-# 女装版店铺→负责人映射（常量，各阶段共用）
-WOMEN_SHOP_TO_OWNER = {
-    "Z-NZTF1店": "毛立新",
-    "G-NZTF1店": "陈欣诺",
-    "WB纯白关店": "其他/待定",
-    "OZ女装店": "其他/待定",
-    "WB汤总女装店": "其他/待定",
-}
 # ── 工具函数 ──────────────────────────────────────────
 
 def sanitize_value(v):
@@ -94,27 +86,29 @@ def load_workbook_safe(path):
 # ── 阶段 1: 生成WEEKS等基础数据 ───────────────────────
 
 def generate_weeks():
-    """从2026-01-26（周一）开始生成周数组，该日为W1起点"""
-    start_date = date(2026, 1, 26)  # 周一
-
-    # 计算从起始日到今天的完整周数（含本周）
-    today = date.today()
-    total_weeks = ((today - start_date).days // 7) + 1
+    """从 2026.01.26(周一) 动态生成至今天所在周的数组"""
+    from datetime import date as dt_date, timedelta
+    start_date = dt_date(2026, 1, 26)  # W1 = 2026.01.26-2026.02.01
+    today = dt_date.today()
+    # 计算从 start_date 到今天经过了多少周
+    delta_days = (today - start_date).days
+    if delta_days < 0:
+        delta_days = 0
+    total_weeks = (delta_days // 7) + 1
 
     weeks = []
     weeks_iso = []
     week_labels = []
-
     for i in range(total_weeks):
-        monday = start_date + timedelta(weeks=i)
-        sunday = monday + timedelta(days=6)
-        iso = date_to_iso_week(monday)
-
-        label = f"W{i+1} ({monday.month:02d}.{monday.day:02d}-{sunday.month:02d}.{sunday.day:02d})"
+        week_start = start_date + timedelta(weeks=i)
+        week_end = week_start + timedelta(days=6)
+        # ISO week of the Monday
+        iso_year, iso_wn, _ = week_start.isocalendar()
+        iso = f"{iso_year}-W{iso_wn:02d}"
+        label = f"W{i+1} ({week_start.month:02d}.{week_start.day:02d}-{week_end.month:02d}.{week_end.day:02d})"
         weeks.append(f"W{i+1}")
         weeks_iso.append(iso)
         week_labels.append(label)
-
     return weeks, weeks_iso, week_labels
 
 
@@ -228,9 +222,6 @@ def read_lx_profit(weeks_iso):
 
     shop_weekly = {k: dict(v) for k, v in shop_weekly.items()}
 
-    # 女装版：过滤只保留女装店铺
-    shop_weekly = {k: v for k, v in shop_weekly.items() if k in WOMEN_SHOP_TO_OWNER}
-
     ws_sku = wb["分周SKU"]
     week_data_raw = defaultdict(list)
 
@@ -277,10 +268,8 @@ def read_lx_profit(weeks_iso):
         if isinstance(product["return_rate"], float) and product["return_rate"] < 1:
             product["return_rate"] = round(product["return_rate"] * 100, 2)
 
-        # 女装版：只保留女装店铺的产品
-        if str(shop) in WOMEN_SHOP_TO_OWNER:
-            week_data_raw[w_key].append(product)
-            sku_count += 1
+        week_data_raw[w_key].append(product)
+        sku_count += 1
 
     week_data = {}
     for w_key in sorted(week_data_raw.keys(), key=lambda x: int(x[1:])):
@@ -418,6 +407,16 @@ def read_traffic_weekly(weeks_iso):
 
 
 # ── 阶段 5: 读取年规进度 → PERSON_TARGETS ─────────────
+
+# 女装版店铺→负责人映射
+WOMEN_SHOP_TO_OWNER = {
+    "Z-NZTF1店": "毛立新",
+    "G-NZTF1店": "陈欣诺",
+    "WB纯白关店": "其他/待定",
+    "OZ女装店": "其他/待定",
+    "WB汤总女装店": "其他/待定",
+}
+
 def read_person_targets():
     """从2026WB年规进度 - 女装.xlsx 生成 PERSON_TARGETS（支持同一负责人多店铺合并）"""
     path = os.path.join(SRC_DIR, "2026WB年规进度 - 女装.xlsx")
@@ -777,22 +776,43 @@ def main():
             sku_owner_lookup[parts[0]] = owner
     print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries")
 
-    # G-NZTF1店 SKU负责人重映射 陈敏华 → 陈欣诺
+    # 女装版：G-NZTF1店 负责人重映射 陈敏华 → 陈欣诺
     remap_count = 0
     for key in list(sku_owner_lookup.keys()):
         if 'G-NZTF1店' in key and sku_owner_lookup[key] == '陈敏华':
             sku_owner_lookup[key] = '陈欣诺'
             remap_count += 1
-
-    # 女装版：过滤SHOP_OWNERS只保留女装店铺
-    shop_owners = {k: v for k, v in shop_owners.items() if k in WOMEN_SHOP_TO_OWNER}
-    # G-NZTF1店 负责人重映射 陈敏华 → 陈欣诺
-    shop_owners['G-NZTF1店'] = {'陈欣诺': True}
+    # 同步修正 SHOP_OWNERS
+    if 'G-NZTF1店' in shop_owners:
+        shop_owners['G-NZTF1店'] = {'陈欣诺': True}
     # 三个无数据店铺挂到"其他/待定"
     shop_owners['WB纯白关店'] = {'其他/待定': True}
     shop_owners['OZ女装店'] = {'其他/待定': True}
     shop_owners['WB汤总女装店'] = {'其他/待定': True}
-    print(f"  SHOP_OWNERS 过滤后: {len(shop_owners)} 家女装店铺")
+    print(f"  G-NZTF1店 负责人重映射: {remap_count} 条 (陈敏华 → 陈欣诺)")
+
+    # ── 女装版：过滤到仅女装5店 ──
+    women_shops = set(WOMEN_SHOP_TO_OWNER.keys())
+    print(f"\n  [女装过滤] 仅保留 {len(women_shops)} 家店铺: {women_shops}")
+    
+    # 1. SHOP_WEEKLY
+    orig_sw = len(shop_weekly)
+    shop_weekly = {k: v for k, v in shop_weekly.items() if k in women_shops}
+    print(f"    SHOP_WEEKLY: {orig_sw} → {len(shop_weekly)}")
+    
+    # 2. WEEK_DATA: filter shops and allProducts
+    orig_wd_products = sum(len(wd.get('allProducts', [])) for wd in week_data.values())
+    for wk in list(week_data.keys()):
+        wd = week_data[wk]
+        wd['shops'] = {k: v for k, v in wd.get('shops', {}).items() if k in women_shops}
+        wd['allProducts'] = [p for p in wd.get('allProducts', []) if p.get('shop') in women_shops]
+    new_wd_products = sum(len(wd.get('allProducts', [])) for wd in week_data.values())
+    print(f"    WEEK_DATA products: {orig_wd_products} → {new_wd_products}")
+    
+    # 3. SHOP_OWNERS
+    orig_so = len(shop_owners)
+    shop_owners = {k: v for k, v in shop_owners.items() if k in women_shops}
+    print(f"    SHOP_OWNERS: {orig_so} → {len(shop_owners)}")
 
     print("\n[5.5] 预计算新品等级和销售等级...")
     new_product_grades = compute_new_product_grades(
