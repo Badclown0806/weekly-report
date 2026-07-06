@@ -5,7 +5,12 @@ on:
     branches: [main]
     paths:
       - 'product-weekly-report.html'
+      - 'product-weekly-report-women.html'
       - 'data.js'
+      - 'data_women.js'
+      - 'data-detail-women.js'
+      - 'build_data_women.py'
+      - 'build_html_women.py'
 
 jobs:
   deploy:
