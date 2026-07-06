@@ -760,7 +760,27 @@ def main():
     sku_inventory = {}
     for sku, info in sku_latest_inventory.items():
         sku_inventory[sku] = int(info['value'])
-    print(f"  SKU_INVENTORY: {len(sku_inventory)} 个SKU (最新日期可售数量)")
+
+    # 添加 shop|sku 映射，让渲染代码能通过 SKU代码|店铺 键查找库存
+    inv_shop_sku_added = 0
+    for wk, wd in week_data.items():
+        for p in wd.get("allProducts", []):
+            shop = p.get("shop", "")
+            sku = p.get("sku", "")
+            if not shop or not sku or sku == "无匹配ID费用":
+                continue
+            shop_sku_key = f"{shop}|{sku}"
+            if shop_sku_key in sku_inventory:
+                continue
+            if sku in sku_to_wb_ids:
+                for wb_id in sku_to_wb_ids[sku]:
+                    wb_id_str = str(wb_id)
+                    if wb_id_str in sku_inventory:
+                        sku_inventory[shop_sku_key] = sku_inventory[wb_id_str]
+                        inv_shop_sku_added += 1
+                        break
+
+    print(f"  SKU_INVENTORY: {len(sku_inventory)} 个SKU (最新日期可售数量), 新增 shop|sku 映射 {inv_shop_sku_added} 个")
 
     # 阶段 5: 年规进度 (女装版)
     print("\n[5/5] 读取年规进度 (女装)...")
