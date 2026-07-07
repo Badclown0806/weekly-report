@@ -22,6 +22,7 @@ import sys
 SRC_DIR = r"D:\周汇报文件"
 DATA_JS = os.path.join(SRC_DIR, "data.js")
 HTML_PATH = os.path.join(SRC_DIR, "product-weekly-report.html")
+MANUAL_SAB_JSON = os.path.join(SRC_DIR, "manual_sab_overrides.json")
 
 # 哪些字段属于 DETAIL_DATA（体积大、非首屏必要）
 DETAIL_FIELDS = {"WEEK_DATA", "TRAFFIC_WEEKLY"}
@@ -134,6 +135,16 @@ def main():
         return 1
     print(f"  生成期验证通过: {source_count} 周一致")
 
+    # ── 读取手动 SAB 覆盖配置 ──
+    sab_overrides = {"profit": {}, "product": {}}
+    if os.path.exists(MANUAL_SAB_JSON):
+        with open(MANUAL_SAB_JSON, 'r', encoding='utf-8') as f:
+            sab_overrides = json.load(f)
+    sab_profit_json = sanitize_nan(json.dumps(sab_overrides.get("profit", {}), ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    sab_product_json = sanitize_nan(json.dumps(sab_overrides.get("product", {}), ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    print(f"  MANUAL_SAB_PROFIT_OVERRIDES: {len(sab_overrides.get('profit', {}))} 条")
+    print(f"  MANUAL_SAB_PRODUCT_OVERRIDES: {len(sab_overrides.get('product', {}))} 条")
+
     # ── Step 4: 替换 HTML ──
     print("\n[4/4] 替换 HTML 内嵌数据 ...")
     with open(HTML_PATH, 'r', encoding='utf-8') as f:
@@ -191,6 +202,8 @@ def main():
             f"{sabc_start}\n"
             f"var RAW_SALES_DATA = {raw_sales_json};\n"
             f"var RAW_PROFIT_DATA = {raw_profit_json};\n"
+            f"var MANUAL_SAB_PROFIT_OVERRIDES = {sab_profit_json};\n"
+            f"var MANUAL_SAB_PRODUCT_OVERRIDES = {sab_product_json};\n"
             f"{sabc_end}"
         )
         new_html = new_html[:idx_ss] + sabc_block + new_html[idx_se:]
