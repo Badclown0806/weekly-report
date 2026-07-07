@@ -898,13 +898,13 @@ tr:hover td:first-child{background:#f1f5f9}
 /* 销量颜色标记 (qty tier) — 浅色底三色 */
 
 
-tr.qty-tier-3 td{background:#dbeafe !important}
+tr.qty-tier-3 td{background:#dbeafe}
 
 
-tr.qty-tier-2 td{background:#dcfce7 !important}
+tr.qty-tier-2 td{background:#dcfce7}
 
 
-tr.qty-tier-1 td{background:#fef9c3 !important}
+tr.qty-tier-1 td{background:#fef9c3}
 
 
 tr.qty-tier-3 td:first-child{border-left:4px solid #2563eb}
@@ -7445,7 +7445,9 @@ function renderProdTable(){
 
 
     // SABC 行背景色（基于 sales marker）
-    var pWithWbId = {sku: p.sku, shop: p.shop, qty: p.qty, wbId: (SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '')};
+    var _wbId = SKU_WB_ID[p.sku + '|' + p.shop] || SKU_WB_ID[p.sku] || '';
+    var _isNewProd = isNewProduct(p.sku, p.shop, _wbId);
+    var pWithWbId = {sku: p.sku, shop: p.shop, qty: p.qty, wbId: _wbId, isNew: _isNewProd};
     var salesMarker = getSalesMarker(pWithWbId);
     var rowBgStyle = '';
     if (salesMarker === 'blue') rowBgStyle = 'background:#eff6ff;';
@@ -16629,6 +16631,18 @@ function getSalesMarker(rowData) {
   }
 
 
+  // 备用判新：当 wbId 不可用时，通过显式 isNew 标记（由调用侧基于 isNewProduct 提供）
+
+
+  if (!isNew && rowData.isNew === true) {
+
+
+    isNew = true;
+
+
+  }
+
+
   if (isNew) {
 
 
@@ -16806,7 +16820,11 @@ function renderProductTargetBoard() {
 
 
 
-    var marker = getSalesMarker(p);
+    var _pWbId = (SKU_WB_ID && SKU_WB_ID[p.sku + '|' + p.shop]) || (SKU_WB_ID && SKU_WB_ID[p.sku]) || '';
+    var _pIsNew = isNewProduct(p.sku, p.shop, _pWbId);
+    var _pData = {sku: p.sku, shop: p.shop, qty: p.qty, wbId: _pWbId, isNew: _pIsNew};
+
+    var marker = getSalesMarker(_pData);
 
 
     if (!marker || !ratios[marker]) return;
@@ -16881,6 +16899,25 @@ function renderProductTargetBoard() {
   });
 
 
+
+
+
+  // 诊断：输出最新一周各标实际分布
+  (function(){
+    var _lw = selWeeks[selWeeks.length - 1];
+    var _prods = getMultiWeekProducts ? getMultiWeekProducts() : [];
+    var _dist = {blue:0, green:0, yellow:0, none:0};
+    _prods.forEach(function(p){
+      var _wb = (SKU_WB_ID && SKU_WB_ID[p.sku+'|'+p.shop]) || (SKU_WB_ID && SKU_WB_ID[p.sku]) || '';
+      var _in = isNewProduct(p.sku, p.shop, _wb);
+      var _m = getSalesMarker({sku:p.sku, shop:p.shop, qty:p.qty, wbId:_wb, isNew:_in});
+      if(_m==='blue') _dist.blue++;
+      else if(_m==='green') _dist.green++;
+      else if(_m==='yellow') _dist.yellow++;
+      else _dist.none++;
+    });
+    console.log('[SABC诊断] 最新一周('+_lw+') 标分布: 蓝='+_dist.blue+' 绿='+_dist.green+' 黄='+_dist.yellow+' 无标='+_dist.none);
+  })();
 
 
 
