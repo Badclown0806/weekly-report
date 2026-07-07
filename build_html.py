@@ -212,29 +212,7 @@ def main():
         print(f"  [WARNING] 未找到 SABC 标记 (start={idx_ss}, end={idx_se})，跳过 RAW 数据更新")
 
     
-    # ── 注入 MEETING_SUMMARY ──
-    meeting_json_path = os.path.join(SRC_DIR, "meeting_summary.json")
-    meeting_json_str = "{}"
-    if os.path.exists(meeting_json_path):
-        try:
-            with open(meeting_json_path, 'r', encoding='utf-8') as f:
-                meeting_data = json.load(f)
-            meeting_json_str = json.dumps(meeting_data, ensure_ascii=False, separators=(',', ':'))
-            print(f"  MEETING_SUMMARY 已加载 ({len(meeting_data.get('highlights', []))} 条重点事项, {len(meeting_data.get('todos', []))} 条待办)")
-        except Exception as e:
-            print(f"  [WARNING] 读取 meeting_summary.json 失败: {e}，将使用空对象")
-    else:
-        print(f"  未找到 meeting_summary.json，MEETING_SUMMARY 设为空对象")
-
-    sabc_end_marker = '// ========== END SABC DATA =========='
-    idx_sabc_end = new_html.find(sabc_end_marker)
-    if idx_sabc_end >= 0:
-        insert_pos = idx_sabc_end + len(sabc_end_marker)
-        injection = f"\nvar MEETING_SUMMARY = {meeting_json_str};\n"
-        new_html = new_html[:insert_pos] + injection + new_html[insert_pos:]
-        print(f"  MEETING_SUMMARY 已注入 HTML")
-    else:
-        print(f"  [WARNING] 未找到 END SABC DATA 标记，跳过 MEETING_SUMMARY 注入")
+    # ── 男装 MEETING_SUMMARY 已在 HTML 中硬编码，跳过注入 ──
 # ── Step 5: 输出前验证 ──
     print("\n[5/4] 输出前验证 ...")
     errors = []
