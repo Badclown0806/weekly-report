@@ -77,15 +77,19 @@ def main():
     raw_sales = {}
     raw_profit = {}
     for week, wd in week_data.items():
-        products = wd.get('allProducts', [])
+        # allProducts 和 top10Profit 合并，确保 TOP10 产品也参与 SABC 标色计算
+        seen_keys = set()
         raw_sales[week] = {}
         raw_profit[week] = {}
-        for p in products:
+        for p in wd.get('allProducts', []) + wd.get('top10Profit', []):
             shop = p.get('shop', '')
             sku = p.get('sku', '')
             if not shop or not sku:
                 continue
             key = f"{shop}|{sku}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
             raw_sales[week][key] = int(p.get('qty', 0) or 0)
             raw_profit[week][key] = [
                 round(float(p.get('profit', 0) or 0), 2),
