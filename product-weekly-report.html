@@ -741,6 +741,7 @@ var DETAIL_DATA = null;
     var vn = document.getElementById('verNum'); if(vn) vn.textContent = ver;
     selectedWeeks = null; // Phase 2: force re-select weeks with full WEEK_DATA + TRAFFIC_WEEKLY
     initFromDataJs();
+    renderMeetingNotes();
   }
 
   window.__loadStart = performance.now();
@@ -753,6 +754,7 @@ var DETAIL_DATA = null;
   // Run init immediately with core data — page renders right away
   try {
     initFromDataJs();
+    renderMeetingNotes();
   } catch(e) {
     console.error('[Load] Phase 1 initFromDataJs crashed: ' + e.message, e.stack);
   }
@@ -814,7 +816,7 @@ var RAW_PROFIT_DATA = {"W1":{"MHWB2店|WBMN2383-1LAN":[5888.01,31970.35,18.42],"
 var MANUAL_SAB_PROFIT_OVERRIDES = {};
 var MANUAL_SAB_PRODUCT_OVERRIDES = {};
 // ========== END SABC DATA ==========
-var MEETING_SUMMARY = null;
+var MEETING_SUMMARY = {"title":"俄罗斯二部第21周周会","highlights":["第21周目标13万，实收8万，进度62%；月目标52万，完成32万，缺口34%","男装整体下滑，女装在回弹——女装清货近尾声，附加费用减少","S级产品缺口2个：2462和2486等待红棕色到货后可拉上来","2464库存缺码严重（仅2个码），600+件滞销；27批货压关口已近3个月","新品跑出较少：2577有潜力但偏薄，2579待观察退货率；2624牛仔已复色发货","图片风格问题：精致风销量一般，运动休闲风表现更好，需复刻爆款图场景","秋冬厚款筹备中：2682加绒牛仔裤、夹克、卫衣陆续到货","下半年新款大量分配给运营，需等7月中旬到货集中拉量"],"todos":[{"task":"2462和2486拉上S级，本月完成","owner":"毛立新","deadline":"本月"},{"task":"图片优化，复刻爆款运动休闲场景风格","owner":"毛立新","deadline":"尽快"},{"task":"同步图片复盘结论给团队","owner":"李亚平","deadline":"本周"},{"task":"产品等级标签清空，运营手动标记S/A","owner":"毛立新","deadline":"本周"},{"task":"跟进27批关口滞留货物，加快入仓","owner":"毛立新","deadline":"尽快"},{"task":"2579新品观察退货率与品质，下周汇报","owner":"毛立新","deadline":"下周"}],"date":"2026-07-07"};
 
 
 
