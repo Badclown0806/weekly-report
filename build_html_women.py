@@ -193,16 +193,15 @@ def main():
     else:
         print(f"  未找到 meeting_summary.json，MEETING_SUMMARY 设为空对象")
 
-    # 在 END SABC DATA 后插入
-    sabc_end_marker = '// ========== END SABC DATA =========='
-    idx_sabc_end = new_html.find(sabc_end_marker)
-    if idx_sabc_end >= 0:
-        insert_pos = idx_sabc_end + len(sabc_end_marker)
-        injection = f"\nvar MEETING_SUMMARY = {meeting_json_str};\n"
-        new_html = new_html[:insert_pos] + injection + new_html[insert_pos:]
-        print(f"  MEETING_SUMMARY 已注入 HTML")
+    # 在 (function loadDataJs() 之前插入，确保 DOM 和数据在 IIFE 执行前就绪
+    load_marker = '(function loadDataJs()'
+    idx_load = new_html.find(load_marker)
+    if idx_load >= 0:
+        injection = f"var MEETING_SUMMARY = {meeting_json_str};\n\n"
+        new_html = new_html[:idx_load] + injection + new_html[idx_load:]
+        print(f"  MEETING_SUMMARY 已注入 HTML（loadDataJs 之前）")
     else:
-        print(f"  [WARNING] 未找到 END SABC DATA 标记，跳过 MEETING_SUMMARY 注入")
+        print(f"  [WARNING] 未找到 loadDataJs 标记，跳过 MEETING_SUMMARY 注入")
 # ── Step 5: 输出前验证 ──
     print("\n[5/4] 输出前验证 ...")
     errors = []
