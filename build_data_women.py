@@ -796,12 +796,16 @@ def main():
             sku_owner_lookup[parts[0]] = owner
     print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries")
 
-    # 女装版：G-NZTF1店 负责人重映射 陈敏华 → 陈欣诺
+    # 女装版：G-NZTF1店 全部产品强制归属 → 陈欣诺（产品列表Excel中可能是江凯伦/陈敏华等）
     remap_count = 0
     for key in list(sku_owner_lookup.keys()):
-        if 'G-NZTF1店' in key and sku_owner_lookup[key] == '陈敏华':
+        if 'G-NZTF1店' in key:
             sku_owner_lookup[key] = '陈欣诺'
             remap_count += 1
+    # 同步修正 SKU_OWNER 原始数据（HTML 也有从 SKU_OWNER 重建 fallback 的路径）
+    for key in list(sku_owner.keys()):
+        if 'G-NZTF1店' in key:
+            sku_owner[key] = '陈欣诺'
     # 同步修正 SHOP_OWNERS
     if 'G-NZTF1店' in shop_owners:
         shop_owners['G-NZTF1店'] = {'陈欣诺': True}
@@ -809,7 +813,7 @@ def main():
     shop_owners['WB纯白关店'] = {'其他/待定': True}
     shop_owners['OZ女装店'] = {'其他/待定': True}
     shop_owners['WB汤总女装店'] = {'其他/待定': True}
-    print(f"  G-NZTF1店 负责人重映射: {remap_count} 条 (陈敏华 → 陈欣诺)")
+    print(f"  G-NZTF1店 负责人强制归属陈欣诺: {remap_count} 条")
 
     # ── 女装版：过滤到仅女装5店 ──
     women_shops = set(WOMEN_SHOP_TO_OWNER.keys())
