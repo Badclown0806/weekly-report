@@ -193,11 +193,21 @@ def main():
     else:
         print(f"  未找到 meeting_summary.json，MEETING_SUMMARY 设为空对象")
 
+    # 先移除所有已存在的 var MEETING_SUMMARY 声明（防止重复积累）
+    import re
+    meeting_pattern = re.compile(r'var MEETING_SUMMARY\s*=\s*\{.*?\};\n*', re.DOTALL)
+    new_html = meeting_pattern.sub('', new_html)
+    meeting_default_pattern = re.compile(r'var DEFAULT_MEETING_SUMMARY\s*=.*?;\n*', re.DOTALL)
+    new_html = meeting_default_pattern.sub('', new_html)
+
     # 在 (function loadDataJs() 之前插入，确保 DOM 和数据在 IIFE 执行前就绪
     load_marker = '(function loadDataJs()'
     idx_load = new_html.find(load_marker)
     if idx_load >= 0:
-        injection = f"var MEETING_SUMMARY = {meeting_json_str};\n\n"
+        injection = (
+            f"var MEETING_SUMMARY = {meeting_json_str};\n"
+            f"var DEFAULT_MEETING_SUMMARY = JSON.parse(JSON.stringify(MEETING_SUMMARY));\n\n"
+        )
         new_html = new_html[:idx_load] + injection + new_html[idx_load:]
         print(f"  MEETING_SUMMARY 已注入 HTML（loadDataJs 之前）")
     else:
