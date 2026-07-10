@@ -250,6 +250,8 @@ def read_lx_profit(weeks_iso):
         qty = vals[14]       # 销售数量
         return_rate = vals[21] if len(vals) > 21 else None  # 送达退货率
         ad_spend = vals[35] if len(vals) > 35 else None  # AJ列 广告花费
+        unit_delivery = vals[17] if len(vals) > 17 else None  # 单件尾程配送CNY
+        unit_return_fee = vals[18] if len(vals) > 18 else None  # 单件退货费CNY
 
         if not week_end or not sku:
             continue
@@ -270,7 +272,9 @@ def read_lx_profit(weeks_iso):
             "gsv": sanitize_value(gsv) or 0,
             "qty": sanitize_value(qty) or 0,
             "return_rate": sanitize_value(return_rate),
-            "ad_spend": sanitize_value(ad_spend) or 0
+            "ad_spend": sanitize_value(ad_spend) or 0,
+            "unit_delivery": sanitize_value(unit_delivery) or 0,
+            "unit_return_fee": sanitize_value(unit_return_fee) or 0
         }
 
         # margin是小数, 转为百分比
