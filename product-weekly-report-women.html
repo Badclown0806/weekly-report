@@ -4220,7 +4220,7 @@ function getMultiWeekProducts(){
       if (!merged[key]) {
 
 
-        merged[key] = {sku: p.sku, shop: p.shop, gsv: 0, profit: 0, margin: 0, qty: 0, ad_spend: 0, return_qty: 0, return_rate: 0, click_rate: 0, cart_rate: 0, conv_rate: 0};
+        merged[key] = {sku: p.sku, shop: p.shop, gsv: 0, profit: 0, margin: 0, qty: 0, ad_spend: 0, return_qty: 0, return_rate: 0, click_rate: 0, cart_rate: 0, conv_rate: 0, unit_delivery: 0, unit_return_fee: 0};
 
 
         for (var k in p) {
@@ -4229,6 +4229,14 @@ function getMultiWeekProducts(){
           if (k !== 'sku' && k !== 'shop' && typeof p[k] === 'string') merged[key][k] = p[k];
 
 
+        }
+
+
+        // Copy per-unit cost fields (non-accumulative, use first available value)
+        if (!merged[key]._costSet) {
+          merged[key].unit_delivery = p.unit_delivery || 0;
+          merged[key].unit_return_fee = p.unit_return_fee || 0;
+          merged[key]._costSet = true;
         }
 
 
