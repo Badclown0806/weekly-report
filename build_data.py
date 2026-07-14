@@ -227,11 +227,11 @@ def read_lx_profit(weeks_iso):
 
     # ─── 分周SKU → WEEK_DATA ───
     ws_sku = wb["分周SKU"]
-    # 列: 0=数据范围, 1=星期结束值, 2=店铺名称, 3=负责人, 4=类目,
-    #     5=WB商品ID, 6=卖家SKU, 7=主图, 8=毛利量CNY, 9=毛利率CNY,
-    #     10=GSV(后台价), 11=周订单量售完天数, 12=每周日库存量, 13=货值CNY,
-    #     14=销售数量, 15=退款数量, 16=财报净销量, ..., 21=送达退货率,
-    #     35=AJ列(广告花费)
+    # 列: 0=数据范围, 1=星期结束值, 2=店铺名称, 3=负责人, 4=子负责人, 5=类目,
+    #     6=WB商品ID, 7=卖家SKU, 8=主图, 9=毛利量CNY, 10=毛利率CNY,
+    #     11=GSV(后台价), 12=周订单量售完天数, 13=每周日库存量, 14=货值CNY,
+    #     15=销售数量, 16=退款数量, 17=财报净销量, ..., 22=送达退货率,
+    #     36=广告花费CNY
 
     week_data_raw = defaultdict(list)
 
@@ -239,19 +239,19 @@ def read_lx_profit(weeks_iso):
     for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
         if i > 40000:
             break
-        vals = [cell.value for cell in row[:37]]
+        vals = [cell.value for cell in row[:38]]
         week_end = vals[1]
         shop = vals[2]
-        cat = vals[4]
-        sku = vals[6]
-        profit = vals[8]     # 毛利量CNY
-        margin_rate = vals[9]  # 毛利率CNY (as decimal e.g., 0.2507)
-        gsv = vals[10]       # GSV(后台价)
-        qty = vals[14]       # 销售数量
-        return_rate = vals[21] if len(vals) > 21 else None  # 送达退货率
-        ad_spend = vals[35] if len(vals) > 35 else None  # AJ列 广告花费
-        unit_delivery = vals[17] if len(vals) > 17 else None  # 单件尾程配送CNY
-        unit_return_fee = vals[18] if len(vals) > 18 else None  # 单件退货费CNY
+        cat = vals[5]
+        sku = vals[7]
+        profit = vals[9]     # 毛利量CNY
+        margin_rate = vals[10]  # 毛利率CNY (as decimal e.g., 0.2507)
+        gsv = vals[11]       # GSV(后台价)
+        qty = vals[15]       # 销售数量
+        return_rate = vals[22] if len(vals) > 22 else None  # 送达退货率
+        ad_spend = vals[36] if len(vals) > 36 else None  # 广告花费CNY
+        unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
+        unit_return_fee = vals[19] if len(vals) > 19 else None  # 单件退货费CNY
 
         if not week_end or not sku:
             continue

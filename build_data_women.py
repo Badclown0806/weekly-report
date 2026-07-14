@@ -229,19 +229,19 @@ def read_lx_profit(weeks_iso):
     for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
         if i > 40000:
             break
-        vals = [cell.value for cell in row[:37]]
+        vals = [cell.value for cell in row[:38]]
         week_end = vals[1]
         shop = vals[2]
-        cat = vals[4]
-        sku = vals[6]
-        profit = vals[8]
-        margin_rate = vals[9]
-        gsv = vals[10]
-        qty = vals[14]
-        return_rate = vals[21] if len(vals) > 21 else None
-        ad_spend = vals[35] if len(vals) > 35 else None
-        unit_delivery = vals[17] if len(vals) > 17 else None  # 单件尾程配送CNY
-        unit_return_fee = vals[18] if len(vals) > 18 else None  # 单件退货费CNY
+        cat = vals[5]
+        sku = vals[7]
+        profit = vals[9]
+        margin_rate = vals[10]
+        gsv = vals[11]
+        qty = vals[15]
+        return_rate = vals[22] if len(vals) > 22 else None
+        ad_spend = vals[36] if len(vals) > 36 else None
+        unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
+        unit_return_fee = vals[19] if len(vals) > 19 else None  # 单件退货费CNY
 
         if not week_end or not sku:
             continue
