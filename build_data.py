@@ -263,18 +263,25 @@ def read_lx_profit(weeks_iso):
 
         sku_str = str(sku).strip() if sku else ""
 
+        p_profit = sanitize_value(profit)
+        p_gsv = sanitize_value(gsv)
+        p_qty = sanitize_value(qty)
+        p_ad = sanitize_value(ad_spend)
+        p_del = sanitize_value(unit_delivery)
+        p_ret = sanitize_value(unit_return_fee)
+
         product = {
             "sku": sku_str or "",
             "shop": str(shop) if shop else "",
             "cat": str(cat) if cat else "",
-            "profit": sanitize_value(profit) or 0,
+            "profit": p_profit if isinstance(p_profit, (int, float)) else 0,
             "margin": sanitize_value(margin_rate),
-            "gsv": sanitize_value(gsv) or 0,
-            "qty": sanitize_value(qty) or 0,
+            "gsv": p_gsv if isinstance(p_gsv, (int, float)) else 0,
+            "qty": p_qty if isinstance(p_qty, (int, float)) else 0,
             "return_rate": sanitize_value(return_rate),
-            "ad_spend": sanitize_value(ad_spend) or 0,
-            "unit_delivery": sanitize_value(unit_delivery) or 0,
-            "unit_return_fee": sanitize_value(unit_return_fee) or 0
+            "ad_spend": p_ad if isinstance(p_ad, (int, float)) else 0,
+            "unit_delivery": p_del if isinstance(p_del, (int, float)) else 0,
+            "unit_return_fee": p_ret if isinstance(p_ret, (int, float)) else 0
         }
 
         # margin是小数, 转为百分比
