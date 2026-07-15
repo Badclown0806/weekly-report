@@ -518,18 +518,28 @@ def read_person_targets():
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_done"] = sanitize_value(v) or 0
 
+            elif "利润率" in label and "率" in label:
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["profit_rate_excel"] = sanitize_value(v)
+
         return targets_by_month
 
     def finalize_targets(targets_by_month):
-        """补全 1-12 月 + 计算利润率"""
+        """补全 1-12 月 + 计算利润率（Excel 行优先）"""
         for month in targets_by_month:
             t = targets_by_month[month]
-            gsv_done = t.get("gsv_done", 0)
-            profit_done = t.get("profit_done", 0)
-            if gsv_done and gsv_done > 0 and profit_done:
-                t["profit_rate"] = round(profit_done / gsv_done * 100, 2)
+            excel_rate = t.get("profit_rate_excel")
+            if excel_rate is not None and isinstance(excel_rate, (int, float)) and excel_rate > 0:
+                t["profit_rate"] = round(excel_rate * 100, 2)
             else:
-                t["profit_rate"] = 0
+                gsv_done = t.get("gsv_done", 0)
+                profit_done = t.get("profit_done", 0)
+                if gsv_done and gsv_done > 0 and profit_done:
+                    t["profit_rate"] = round(profit_done / gsv_done * 100, 2)
+                else:
+                    t["profit_rate"] = 0
         for m in range(1, 13):
             if m not in targets_by_month:
                 targets_by_month[m] = {

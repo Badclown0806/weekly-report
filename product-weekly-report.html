@@ -1832,18 +1832,40 @@ function renderTargetBoard(){
   var months = getSelectedMonths();
   var persons = getTargetPersons();
   
+  // 层级联动：选中的父负责人自动纳入其子负责人数据
+  var personsExpanded = [];
+  var subOwnersMap = {}; // parent -> [sub owners actually expanded]
+  for(var pi = 0; pi < persons.length; pi++){
+    var p = persons[pi];
+    personsExpanded.push(p);
+    var subs = (typeof OWNER_HIERARCHY !== 'undefined') ? OWNER_HIERARCHY[p] : null;
+    if(subs){
+      subOwnersMap[p] = [];
+      for(var si = 0; si < subs.length; si++){
+        if(personsExpanded.indexOf(subs[si]) < 0){
+          personsExpanded.push(subs[si]);
+          subOwnersMap[p].push(subs[si]);
+        }
+      }
+    }
+  }
+  // Use expanded list for data aggregation; original 'persons' kept for display label
+  var aggregationPersons = personsExpanded;
+  var origSinglePerson = persons.length === 1 ? persons[0] : null;
+  var hasExpandedSubs = origSinglePerson && subOwnersMap[origSinglePerson] && subOwnersMap[origSinglePerson].length > 0;
+  
   // Yearly profit banner
   var yearlyBannerHtml = '';
-  if(persons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
+  if(aggregationPersons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
     var yTotalTarget = 0, yTotalDone = 0;
-    for(var yi = 0; yi < persons.length; yi++){
-      var yt = YEARLY_PROFIT_TARGETS[persons[yi]];
+    for(var yi = 0; yi < aggregationPersons.length; yi++){
+      var yt = YEARLY_PROFIT_TARGETS[aggregationPersons[yi]];
       if(yt){ yTotalTarget += yt.target; yTotalDone += yt.done; }
     }
     if(yTotalTarget > 0){
       var yPct = (yTotalDone / yTotalTarget * 100);
       var yCls = yPct >= 100 ? 'ok' : (yPct >= 70 ? 'warn' : 'low');
-      var yLabel = persons.length === 1 ? persons[0] : '合计';
+      var yLabel = origSinglePerson ? (hasExpandedSubs ? origSinglePerson + '（含子负责人）' : origSinglePerson) : '合计';
       yearlyBannerHtml = '<div class="tgt-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px">'+
         '<div><span style="font-weight:700;font-size:13px;color:#0f172a">全年利润目标</span><span style="font-size:10px;color:#94a3b8;margin-left:8px">'+yLabel+'</span></div>'+
         '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
@@ -1857,16 +1879,16 @@ function renderTargetBoard(){
   
   // Yearly GSV banner
   var yearlyGsvHtml = '';
-  if(persons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
+  if(aggregationPersons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
     var yGsvTotalTarget = 0, yGsvTotalDone = 0;
-    for(var yi = 0; yi < persons.length; yi++){
-      var yt = YEARLY_PROFIT_TARGETS[persons[yi]];
+    for(var yi = 0; yi < aggregationPersons.length; yi++){
+      var yt = YEARLY_PROFIT_TARGETS[aggregationPersons[yi]];
       if(yt){ yGsvTotalTarget += yt.gsv_target || 0; yGsvTotalDone += yt.gsv_done || 0; }
     }
     if(yGsvTotalTarget > 0){
       var yGsvPct = (yGsvTotalDone / yGsvTotalTarget * 100);
       var yGsvCls = yGsvPct >= 100 ? 'ok' : (yGsvPct >= 70 ? 'warn' : 'low');
-      var yGsvLabel = persons.length === 1 ? persons[0] : '合计';
+      var yGsvLabel = origSinglePerson ? (hasExpandedSubs ? origSinglePerson + '（含子负责人）' : origSinglePerson) : '合计';
       yearlyGsvHtml = '<div class="tgt-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px">'+
         '<div><span style="font-weight:700;font-size:13px;color:#0f172a">全年GSV目标</span><span style="font-size:10px;color:#94a3b8;margin-left:8px">'+yGsvLabel+'</span></div>'+
         '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
@@ -1878,20 +1900,20 @@ function renderTargetBoard(){
     }
   }
   
-  if(persons.length === 0 || !PERSON_TARGETS) {
+  if(aggregationPersons.length === 0 || !PERSON_TARGETS) {
     tgtGrid.innerHTML = (yearlyBannerHtml + yearlyGsvHtml) || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
     return;
   }
   
-  // Aggregate data across all selected persons and months
+  // Aggregate data across all selected persons (including sub-owners) and months
   var agg = {gsv_done:0, gsv_target:0, gmv_done:0, gmv_target:0, sales_done:0, sales_target:0, profit_done:0, profit_target:0};
   var profitRate = 0;
   var hasData = false;
   
-  if(persons.length === 1){
+  if(aggregationPersons.length === 1){
     for(var mi=0; mi<months.length; mi++){
       var m = months[mi];
-      var t = PERSON_TARGETS[persons[0]] ? PERSON_TARGETS[persons[0]][m] : null;
+      var t = PERSON_TARGETS[aggregationPersons[0]] ? PERSON_TARGETS[aggregationPersons[0]][m] : null;
       if(!t) continue;
       hasData = true;
       agg.gsv_done += t.gsv_done || 0;
@@ -1906,10 +1928,10 @@ function renderTargetBoard(){
     // profit_rate is pre-computed per month, but for multi-month we recalculate
     profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
   } else {
-    for(var pi=0; pi<persons.length; pi++){
+    for(var pi=0; pi<aggregationPersons.length; pi++){
       for(var mi=0; mi<months.length; mi++){
         var m = months[mi];
-        var pt = PERSON_TARGETS[persons[pi]] ? PERSON_TARGETS[persons[pi]][m] : null;
+        var pt = PERSON_TARGETS[aggregationPersons[pi]] ? PERSON_TARGETS[aggregationPersons[pi]][m] : null;
         if(!pt) continue;
         hasData = true;
         agg.gsv_done += pt.gsv_done || 0;

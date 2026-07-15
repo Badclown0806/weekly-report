@@ -5264,6 +5264,30 @@ function renderTargetBoard(){
 
   var persons = getTargetPersons();
 
+  // ── OWNER_HIERARCHY: expand selected owners to include their sub-owners ──
+  var personsExpanded = [];
+  var subOwnersMap = {};
+  if(typeof OWNER_HIERARCHY !== 'undefined'){
+    for(var pi=0; pi<persons.length; pi++){
+      personsExpanded.push(persons[pi]);
+      var subs = OWNER_HIERARCHY[persons[pi]];
+      if(subs && subs.length > 0){
+        subOwnersMap[persons[pi]] = subs;
+        for(var si=0; si<subs.length; si++){
+          if(personsExpanded.indexOf(subs[si]) < 0){
+            personsExpanded.push(subs[si]);
+          }
+        }
+      }
+    }
+  } else {
+    personsExpanded = persons.slice();
+  }
+  var aggregationPersons = personsExpanded;
+  var origSinglePerson = persons.length === 1 ? persons[0] : null;
+  var hasExpandedSubs = origSinglePerson && subOwnersMap[origSinglePerson] && subOwnersMap[origSinglePerson].length > 0;
+  // ── END hierarchy expansion ──
+
 
   
 
@@ -5274,16 +5298,16 @@ function renderTargetBoard(){
   var yearlyBannerHtml = '';
 
 
-  if(persons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
+  if(aggregationPersons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
 
 
     var yTotalTarget = 0, yTotalDone = 0;
 
 
-    for(var yi = 0; yi < persons.length; yi++){
+    for(var yi = 0; yi < aggregationPersons.length; yi++){
 
 
-      var yt = YEARLY_PROFIT_TARGETS[persons[yi]];
+      var yt = YEARLY_PROFIT_TARGETS[aggregationPersons[yi]];
 
 
       if(yt){ yTotalTarget += yt.target; yTotalDone += yt.done; }
@@ -5301,7 +5325,7 @@ function renderTargetBoard(){
       var yCls = yPct >= 100 ? 'ok' : (yPct >= 70 ? 'warn' : 'low');
 
 
-      var yLabel = persons.length === 1 ? persons[0] : '合计';
+      var yLabel = origSinglePerson ? (hasExpandedSubs ? origSinglePerson + '（含子负责人）' : origSinglePerson) : '合计';
 
 
       yearlyBannerHtml = '<div class="tgt-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px">'+
@@ -5343,16 +5367,16 @@ function renderTargetBoard(){
   var yearlyGsvHtml = '';
 
 
-  if(persons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
+  if(aggregationPersons.length > 0 && typeof YEARLY_PROFIT_TARGETS !== 'undefined'){
 
 
     var yGsvTotalTarget = 0, yGsvTotalDone = 0;
 
 
-    for(var yi = 0; yi < persons.length; yi++){
+    for(var yi = 0; yi < aggregationPersons.length; yi++){
 
 
-      var yt = YEARLY_PROFIT_TARGETS[persons[yi]];
+      var yt = YEARLY_PROFIT_TARGETS[aggregationPersons[yi]];
 
 
       if(yt){ yGsvTotalTarget += yt.gsv_target || 0; yGsvTotalDone += yt.gsv_done || 0; }
@@ -5370,7 +5394,7 @@ function renderTargetBoard(){
       var yGsvCls = yGsvPct >= 100 ? 'ok' : (yGsvPct >= 70 ? 'warn' : 'low');
 
 
-      var yGsvLabel = persons.length === 1 ? persons[0] : '合计';
+      var yGsvLabel = origSinglePerson ? (hasExpandedSubs ? origSinglePerson + '（含子负责人）' : origSinglePerson) : '合计';
 
 
       yearlyGsvHtml = '<div class="tgt-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px">'+
@@ -5406,7 +5430,7 @@ function renderTargetBoard(){
   
 
 
-  if(persons.length === 0 || !PERSON_TARGETS) {
+  if(aggregationPersons.length === 0 || !PERSON_TARGETS) {
 
 
     tgtGrid.innerHTML = (yearlyBannerHtml + yearlyGsvHtml) || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:10px">暂无数据</div>';
@@ -5436,7 +5460,7 @@ function renderTargetBoard(){
   
 
 
-  if(persons.length === 1){
+  if(aggregationPersons.length === 1){
 
 
     for(var mi=0; mi<months.length; mi++){
@@ -5445,7 +5469,7 @@ function renderTargetBoard(){
       var m = months[mi];
 
 
-      var t = PERSON_TARGETS[persons[0]] ? PERSON_TARGETS[persons[0]][m] : null;
+      var t = PERSON_TARGETS[aggregationPersons[0]] ? PERSON_TARGETS[aggregationPersons[0]][m] : null;
 
 
       if(!t) continue;
@@ -5490,7 +5514,7 @@ function renderTargetBoard(){
   } else {
 
 
-    for(var pi=0; pi<persons.length; pi++){
+    for(var pi=0; pi<aggregationPersons.length; pi++){
 
 
       for(var mi=0; mi<months.length; mi++){
@@ -5499,7 +5523,7 @@ function renderTargetBoard(){
         var m = months[mi];
 
 
-        var pt = PERSON_TARGETS[persons[pi]] ? PERSON_TARGETS[persons[pi]][m] : null;
+        var pt = PERSON_TARGETS[aggregationPersons[pi]] ? PERSON_TARGETS[aggregationPersons[pi]][m] : null;
 
 
         if(!pt) continue;

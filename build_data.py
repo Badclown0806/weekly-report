@@ -557,15 +557,27 @@ def read_person_targets():
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_done"] = sanitize_value(v) or 0
 
-        # 计算 profit_rate
+            # 利润率（直接读取 Excel 行，优先于代码计算）
+            elif "利润率" in label and "率" in label:
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["profit_rate_excel"] = sanitize_value(v)
+
+        # 计算 profit_rate（Excel 行优先，无则 fallback 到 profit_done/gsv_done）
         for month in targets_by_month:
             t = targets_by_month[month]
-            gsv_done = t.get("gsv_done", 0)
-            profit_done = t.get("profit_done", 0)
-            if gsv_done and gsv_done > 0 and profit_done:
-                t["profit_rate"] = round(profit_done / gsv_done * 100, 2)
+            excel_rate = t.get("profit_rate_excel")
+            if excel_rate is not None and isinstance(excel_rate, (int, float)) and excel_rate > 0:
+                # Excel 已存为小数（如 0.1319），转换为百分比
+                t["profit_rate"] = round(excel_rate * 100, 2)
             else:
-                t["profit_rate"] = 0
+                gsv_done = t.get("gsv_done", 0)
+                profit_done = t.get("profit_done", 0)
+                if gsv_done and gsv_done > 0 and profit_done:
+                    t["profit_rate"] = round(profit_done / gsv_done * 100, 2)
+                else:
+                    t["profit_rate"] = 0
 
         # 确保所有12个月都有数据
         for m in range(1, 13):
