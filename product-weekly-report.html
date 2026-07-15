@@ -5760,6 +5760,21 @@ function renderProductTargetBoard() {
       }
     }
   }
+  // 层级联动：选中子负责人时自动纳入其上级负责人
+  var hierarchyChildren = {};  // parent -> [child1, child2, ...]
+  if (typeof OWNER_HIERARCHY !== 'undefined') {
+    for (var parent in OWNER_HIERARCHY) {
+      var children = OWNER_HIERARCHY[parent];
+      for (var ci = 0; ci < children.length; ci++) {
+        var child = children[ci];
+        if (activeOwners.indexOf(child) >= 0 && activeOwners.indexOf(parent) < 0) {
+          activeOwners.push(parent);
+          hierarchyChildren[parent] = children;
+          break;
+        }
+      }
+    }
+  }
   // [女装已移除]
 
   if (activeOwners.length === 0) {
@@ -5805,13 +5820,48 @@ function renderProductTargetBoard() {
 
   var totalR = { blue: 0, green: 0, yellow: 0 };
 
+  // 预计算：上级负责人汇总数据（含自身+所有子负责人）
+  var aggregatedCur = {};
+  var aggregatedRealized = {};
+  var aggregatedAvgProfit = {};
+  for (var _hp in hierarchyChildren) {
+    var children = hierarchyChildren[_hp];
+    var aggCur = { blue: 0, green: 0, yellow: 0 };
+    var aggRealized = (ownerRealized[_hp] || 0);
+    var aggProfitSums = { blue: 0, green: 0, yellow: 0 };
+    var aggProfitCnts = { blue: 0, green: 0, yellow: 0 };
+    // 加父自身
+    var _oc = ownerCur[_hp];
+    if (_oc) { aggCur.blue += _oc.blue || 0; aggCur.green += _oc.green || 0; aggCur.yellow += _oc.yellow || 0; }
+    var _oap = ownerAvgProfit[_hp];
+    if (_oap) { for (var mk in _oap) { aggProfitSums[mk] += _oap[mk]; aggProfitCnts[mk]++; } }
+    // 加子负责人
+    for (var _ci = 0; _ci < children.length; _ci++) {
+      var ch = children[_ci];
+      if (activeOwners.indexOf(ch) < 0) continue; // 未被选中的子负责人不参与汇总
+      aggRealized += (ownerRealized[ch] || 0);
+      var cc = ownerCur[ch];
+      if (cc) { aggCur.blue += cc.blue || 0; aggCur.green += cc.green || 0; aggCur.yellow += cc.yellow || 0; }
+      var cap = ownerAvgProfit[ch];
+      if (cap) { for (var mk2 in cap) { aggProfitSums[mk2] += cap[mk2]; aggProfitCnts[mk2]++; } }
+    }
+    aggregatedCur[_hp] = aggCur;
+    aggregatedRealized[_hp] = aggRealized;
+    var aggAvg = { blue: 0, green: 0, yellow: 0 };
+    for (var mk3 in aggProfitCnts) {
+      if (aggProfitCnts[mk3] > 0) aggAvg[mk3] = aggProfitSums[mk3] / aggProfitCnts[mk3];
+    }
+    aggregatedAvgProfit[_hp] = aggAvg;
+  }
+
   for (var ai = 0; ai < activeOwners.length; ai++) {
     var owner = activeOwners[ai];
     var ownerTarget = ownerMonthTarget[owner] || 0;
     var ownerWeekly = ownerTarget / 4;
 
-    var oap = ownerAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 };
-    var cur = ownerCur[owner] || { blue: 0, green: 0, yellow: 0 };
+    var isAggregated = (aggregatedRealized[owner] !== undefined);
+    var oap = isAggregated ? (aggregatedAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 }) : (ownerAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 });
+    var cur = isAggregated ? (aggregatedCur[owner] || { blue: 0, green: 0, yellow: 0 }) : (ownerCur[owner] || { blue: 0, green: 0, yellow: 0 });
 
     var req = { blue: '-', green: '-', yellow: '-' };
     var reqVal = { blue: 0, green: 0, yellow: 0 };
@@ -5825,7 +5875,7 @@ function renderProductTargetBoard() {
       }
     }
 
-    var realized = ownerRealized[owner] || 0;
+    var realized = isAggregated ? (aggregatedRealized[owner] || 0) : (ownerRealized[owner] || 0);
     var gap = Math.max(0, ownerWeekly - realized);
 
     for (var mi6 = 0; mi6 < markers.length; mi6++) {
@@ -5838,7 +5888,9 @@ function renderProductTargetBoard() {
     var realizedStr = ownerWeekly > 0 ? fmtK(realized) : '-';
 
     var highlight = '';
-    if (hasSingleFilter && selectedOwners.has(owner)) {
+    if (isAggregated) {
+      highlight = ' style="background:#e0f2fe;font-weight:600"';
+    } else if (hasSingleFilter && selectedOwners.has(owner)) {
       highlight = ' style="background:#fef3c7;font-weight:600"';
     }
 
@@ -5857,7 +5909,7 @@ function renderProductTargetBoard() {
     }
 
     html += '<tr' + highlight + '>';
-    html += '<td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:500">' + owner + '</td>';
+    html += '<td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:500">' + owner + (isAggregated ? ' <span style="font-size:10px;color:#3b82f6">汇总</span>' : '') + '</td>';
     html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0">' + monthTgtStr + '</td>';
     html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px;color:#64748b">' + weekTgtStr + '</td>';
     html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">' + realizedStr + '</td>';

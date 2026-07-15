@@ -910,6 +910,10 @@ def main():
         "SKU_INVENTORY": sku_inventory,
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
+        "OWNER_HIERARCHY": {
+            "江凯伦": ["林梓蕾", "陈欣诺"],
+            "张梦瑶": ["何欢洁", "郑志远"]
+        },
     }
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)

@@ -16855,13 +16855,15 @@ function getSalesMarker(rowData) {
   var qty = rowData.qty || 0;
 
 
-  // 阈值由当前选中的产品页签决定：新品页签降阈值，全部产品用全部阈值
+  // 动态新品判断：30天内上架用新品阈值（颜色逻辑与男装同步，阈值独立）
+  var isNew = false;
+  if (rowData.wbId) {
+    var days = getDaysOnSale(rowData.sku, rowData.shop, rowData.wbId);
+    isNew = (typeof days === 'number' && days <= 30);
+  }
 
 
-  var useNewThreshold = (typeof curProdTab !== 'undefined' && (curProdTab === 'newProd' || curProdTab === 'new2026'));
-
-
-  if (useNewThreshold) {
+  if (isNew) {
 
 
     if (qty >= 105) return 'blue';
@@ -17388,6 +17390,51 @@ function renderProductTargetBoard() {
   }
 
 
+  // 层级联动：选中子负责人时自动纳入其上级负责人
+
+
+  var hierarchyChildren = {};  // parent -> [child1, child2, ...]
+
+
+  if (typeof OWNER_HIERARCHY !== 'undefined') {
+
+
+    for (var parent in OWNER_HIERARCHY) {
+
+
+      var children = OWNER_HIERARCHY[parent];
+
+
+      for (var ci = 0; ci < children.length; ci++) {
+
+
+        var child = children[ci];
+
+
+        if (activeOwners.indexOf(child) >= 0 && activeOwners.indexOf(parent) < 0) {
+
+
+          activeOwners.push(parent);
+
+
+          hierarchyChildren[parent] = children;
+
+
+          break;
+
+
+        }
+
+
+      }
+
+
+    }
+
+
+  }
+
+
   // [女装已移除]
 
 
@@ -17523,7 +17570,41 @@ function renderProductTargetBoard() {
 
 
 
+  // 预计算：上级负责人汇总（含自身+所有子负责人）
+  var aggregatedCur = {};
+  var aggregatedRealized = {};
+  var aggregatedAvgProfit = {};
+  for (var _hp in hierarchyChildren) {
+    var _hc = hierarchyChildren[_hp];
+    var aggC = { blue: 0, green: 0, yellow: 0 };
+    var aggR = (ownerRealized[_hp] || 0);
+    var aggPS = { blue: 0, green: 0, yellow: 0 };
+    var aggPC = { blue: 0, green: 0, yellow: 0 };
+    var _oc = ownerCur[_hp];
+    if (_oc) { aggC.blue += _oc.blue || 0; aggC.green += _oc.green || 0; aggC.yellow += _oc.yellow || 0; }
+    var _oap = ownerAvgProfit[_hp];
+    if (_oap) { for (var _mk in _oap) { aggPS[_mk] += _oap[_mk]; aggPC[_mk]++; } }
+    for (var _ci = 0; _ci < _hc.length; _ci++) {
+      var ch = _hc[_ci];
+      if (activeOwners.indexOf(ch) < 0) continue;
+      aggR += (ownerRealized[ch] || 0);
+      var cc = ownerCur[ch];
+      if (cc) { aggC.blue += cc.blue || 0; aggC.green += cc.green || 0; aggC.yellow += cc.yellow || 0; }
+      var cap = ownerAvgProfit[ch];
+      if (cap) { for (var mk2 in cap) { aggPS[mk2] += cap[mk2]; aggPC[mk2]++; } }
+    }
+    aggregatedCur[_hp] = aggC;
+    aggregatedRealized[_hp] = aggR;
+    var aggA = { blue: 0, green: 0, yellow: 0 };
+    for (var mk3 in aggPC) { if (aggPC[mk3] > 0) aggA[mk3] = aggPS[mk3] / aggPC[mk3]; }
+    aggregatedAvgProfit[_hp] = aggA;
+  }
+
+
+
   for (var ai = 0; ai < activeOwners.length; ai++) {
+
+    var isAggregated = (hierarchyChildren.hasOwnProperty(activeOwners[ai]));
 
 
     var owner = activeOwners[ai];
@@ -17538,10 +17619,10 @@ function renderProductTargetBoard() {
 
 
 
-    var oap = ownerAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 };
+    var oap = isAggregated ? (aggregatedAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 }) : (ownerAvgProfit[owner] || { blue: 0, green: 0, yellow: 0 });
 
 
-    var cur = ownerCur[owner] || { blue: 0, green: 0, yellow: 0 };
+    var cur = isAggregated ? (aggregatedCur[owner] || { blue: 0, green: 0, yellow: 0 }) : (ownerCur[owner] || { blue: 0, green: 0, yellow: 0 });
 
 
 
@@ -17643,7 +17724,7 @@ function renderProductTargetBoard() {
     }
 
 
-        var realized = ownerRealized[owner] || 0;
+        var realized = isAggregated ? (aggregatedRealized[owner] || 0) : (ownerRealized[owner] || 0);
 
 
     var gap = Math.max(0, ownerWeekly - realized);
@@ -17682,7 +17763,13 @@ function renderProductTargetBoard() {
     var highlight = '';
 
 
-    if (hasSingleFilter && selectedOwners.has(owner)) {
+    if (isAggregated) {
+
+
+      highlight = ' style="background:#e0f2fe;font-weight:600"';
+
+
+    } else if (hasSingleFilter && selectedOwners.has(owner)) {
 
 
       highlight = ' style="background:#fef3c7;font-weight:600"';
@@ -17739,7 +17826,7 @@ function renderProductTargetBoard() {
     html += '<tr' + highlight + '>';
 
 
-    html += '<td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:500">' + owner + '</td>';
+    html += '<td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:500">' + owner + (isAggregated ? ' <span style="font-size:10px;color:#3b82f6">汇总</span>' : '') + '</td>';
 
 
     html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0">' + monthTgtStr + '</td>';

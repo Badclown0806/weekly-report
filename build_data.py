@@ -921,6 +921,10 @@ def main():
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
         "OWNERS": sorted(set(o for owners in shop_owners.values() for o in owners) | set(v for v in lx_owner_map.values() if v)) + ["其他/待定"],
+        "OWNER_HIERARCHY": {
+            "江凯伦": ["林梓蕾", "陈欣诺"],
+            "张梦瑶": ["何欢洁", "郑志远"]
+        },
     }
 
     # ── 写入 data.js ──
