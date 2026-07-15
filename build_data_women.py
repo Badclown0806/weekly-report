@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 build_data_women.py - 女装版：从源Excel文件生成 data_women.js
 源文件:
@@ -224,6 +224,7 @@ def read_lx_profit(weeks_iso):
 
     ws_sku = wb["分周SKU"]
     week_data_raw = defaultdict(list)
+    lx_owner_map = {}  # sku|shop → 子负责人（LX利润表 Col 4）
 
     sku_count = 0
     for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
@@ -242,6 +243,7 @@ def read_lx_profit(weeks_iso):
         ad_spend = vals[36] if len(vals) > 36 else None
         unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
         unit_return_fee = vals[19] if len(vals) > 19 else None  # 单件退货费CNY
+        sub_owner = str(vals[4]).strip() if vals[4] else ""    # 子负责人
 
         if not week_end or not sku:
             continue
@@ -264,6 +266,7 @@ def read_lx_profit(weeks_iso):
             "sku": sku_str or "",
             "shop": str(shop) if shop else "",
             "cat": str(cat) if cat else "",
+            "owner": sub_owner,
             "profit": p_profit if isinstance(p_profit, (int, float)) else 0,
             "margin": sanitize_value(margin_rate),
             "gsv": p_gsv if isinstance(p_gsv, (int, float)) else 0,
@@ -273,6 +276,12 @@ def read_lx_profit(weeks_iso):
             "unit_delivery": p_del if isinstance(p_del, (int, float)) else 0,
             "unit_return_fee": p_ret if isinstance(p_ret, (int, float)) else 0
         }
+
+        # 子负责人映射（用于合并进 SKU_OWNER_LOOKUP）
+        if sub_owner and sub_owner != "无负责人":
+            lx_key = f"{sku_str}|{str(shop)}"
+            if lx_key not in lx_owner_map:
+                lx_owner_map[lx_key] = sub_owner
 
         if isinstance(product["margin"], float) and product["margin"] < 1:
             product["margin"] = round(product["margin"] * 100, 2)
@@ -312,7 +321,7 @@ def read_lx_profit(weeks_iso):
     wb.close()
     print(f"  SHOP_WEEKLY: {len(shop_weekly)} shops")
     print(f"  WEEK_DATA: {len(week_data)} weeks, {sku_count} total product-weeks")
-    return shop_weekly, week_data
+    return shop_weekly, week_data, lx_owner_map
 
 
 # ── 阶段 4: 读取运营日数据 → TRAFFIC_WEEKLY ──────────
@@ -694,7 +703,7 @@ def main():
 
     # 阶段 3: 利润表
     print("\n[3/5] 读取LX利润表...")
-    shop_weekly, week_data = read_lx_profit(weeks_iso)
+    shop_weekly, week_data, lx_owner_map = read_lx_profit(weeks_iso)
 
     # 阶段 4: 运营日数据
     print("\n[4/5] 读取运营日数据...")
@@ -825,6 +834,30 @@ def main():
     shop_owners['OZ女装店'] = {'其他/待定': True}
     shop_owners['WB汤总女装店'] = {'其他/待定': True}
     print(f"  G-NZTF1店 负责人强制归属陈欣诺: {remap_count} 条")
+
+    # ── 合并 LX利润表子负责人到 SKU_OWNER_LOOKUP ──
+    lx_merged = 0
+    for key, sub_owner in lx_owner_map.items():
+        if sub_owner:
+            sku_owner_lookup[key] = sub_owner  # 子负责人覆盖原负责人
+            lx_merged += 1
+            sku_only = key.split('|')[0]
+            if sku_only not in sku_owner_lookup:
+                sku_owner_lookup[sku_only] = sub_owner
+    print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries (after LX merge, +{lx_merged})")
+
+    # ── 更新 shop_owners：LX子负责人对应的店铺关系 ──
+    lx_sub_owners_set = set(v for v in lx_owner_map.values() if v)
+    for key in lx_owner_map:
+        parts = key.split('|')
+        if len(parts) >= 2:
+            shop = parts[1]
+            if shop not in shop_owners:
+                shop_owners[shop] = {}
+            for sub_owner in lx_sub_owners_set:
+                if sub_owner not in shop_owners[shop]:
+                    shop_owners[shop][sub_owner] = True
+    print(f"  SHOP_OWNERS updated with LX sub-owners")
 
     # ── 女装版：过滤到仅女装5店 ──
     women_shops = set(WOMEN_SHOP_TO_OWNER.keys())
