@@ -2447,15 +2447,15 @@ function renderProdTable(){
     var qtyClass = '';
     var qtyMark = '';
     if(curProdTab === 'newProd'){
-      // 新品阈值 (需求4): 175/84/56
-      if(qtyVal >= 175){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 84){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 56){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      // 新品阈值 (对齐 SABC_NEW_THRESHOLDS: S/105, A/70, B/35)
+      if(qtyVal >= 105){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
+      else if(qtyVal >= 35){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
+      else if(qtyVal > 0){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
     } else {
-      // 全部产品阈值 (需求3): 350/175/105
-      if(qtyVal >= 350){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 175){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 105){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      // 全部产品阈值 (对齐 SABC_SALES_THRESHOLDS: S/210, A/140, B/70)
+      if(qtyVal >= 210){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
+      else if(qtyVal >= 70){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
+      else if(qtyVal > 0){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
     }
     var qtyHtml = (p.qty||0).toLocaleString() + qtyMark;
 
