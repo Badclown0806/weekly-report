@@ -779,7 +779,7 @@ var DETAIL_DATA = null;
     }
     // Try fetch first (works for HTTP/HTTPS)
     var controller = new AbortController();
-    var timeoutId = setTimeout(function(){ controller.abort(); }, 15000);
+    var timeoutId = setTimeout(function(){ controller.abort(); }, 90000);
     fetch('data-detail.js?' + ver, { signal: controller.signal })
       .then(function(r){
         clearTimeout(timeoutId);
@@ -792,15 +792,23 @@ var DETAIL_DATA = null;
         // Fallback: XHR for file:// protocol
         var xhr = new XMLHttpRequest();
         xhr.open('GET', 'data-detail.js?' + ver, true);
-        xhr.timeout = 15000;
+        xhr.timeout = 90000;
         xhr.onload = function(){
           if(xhr.status === 200 || xhr.status === 0){
             try { processText(xhr.responseText); }
             catch(ex){ console.warn('[Load] XHR parse error: ' + ex.message); }
           }
         };
-        xhr.onerror = function(){ console.warn('[Load] XHR failed, running core-only'); };
-        xhr.ontimeout = function(){ console.warn('[Load] XHR timeout, running core-only'); };
+        xhr.onerror = function(){
+          console.warn('[Load] XHR failed, running core-only');
+          var prodTable = document.getElementById('prodTable');
+          if (prodTable) prodTable.getElementsByTagName('tbody')[0].innerHTML = '<tr><td colspan="25" style="text-align:center;padding:20px;color:#ef4444">数据加载失败（网络错误），请刷新页面重试</td></tr>';
+        };
+        xhr.ontimeout = function(){
+          console.warn('[Load] XHR timeout, running core-only');
+          var prodTable = document.getElementById('prodTable');
+          if (prodTable) prodTable.getElementsByTagName('tbody')[0].innerHTML = '<tr><td colspan="25" style="text-align:center;padding:20px;color:#ef4444">数据加载超时，请刷新页面重试</td></tr>';
+        };
         xhr.send();
       });
   })();
