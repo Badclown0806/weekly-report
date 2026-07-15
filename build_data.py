@@ -877,18 +877,16 @@ def main():
                 sku_owner_lookup[sku_only] = sub_owner
     print(f"  SKU_OWNER_LOOKUP: {len(sku_owner_lookup)} entries (after LX merge, +{lx_merged})")
 
-    # ── 更新 shop_owners：LX子负责人对应的店铺关系 ──
-    lx_sub_owners_set = set(v for v in lx_owner_map.values() if v)
-    for key in lx_owner_map:
+    # ── 更新 shop_owners：只把LX子负责人加到他们实际有产品的店铺 ──
+    for key, sub_owner in lx_owner_map.items():
         parts = key.split('|')
-        if len(parts) >= 2:
+        if len(parts) >= 2 and sub_owner:
             shop = parts[1]
             if shop not in shop_owners:
                 shop_owners[shop] = {}
-            for sub_owner in lx_sub_owners_set:
-                if sub_owner not in shop_owners[shop]:
-                    shop_owners[shop][sub_owner] = True
-    print(f"  SHOP_OWNERS updated with LX sub-owners")
+            if sub_owner not in shop_owners[shop]:
+                shop_owners[shop][sub_owner] = True
+    print(f"  SHOP_OWNERS updated with LX sub-owners (per-shop accurate)")
 
     # ── 阶段 5.5: 预计算新品等级和销售等级 ──
     print("\n[5.5] 预计算新品等级和销售等级...")
@@ -922,7 +920,7 @@ def main():
         "SKU_INVENTORY": sku_inventory,
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
-        "OWNERS": sorted(set(o for owners in shop_owners.values() for o in owners) | lx_sub_owners_set) + ["其他/待定"],
+        "OWNERS": sorted(set(o for owners in shop_owners.values() for o in owners) | set(v for v in lx_owner_map.values() if v)) + ["其他/待定"],
     }
 
     # ── 写入 data.js ──
