@@ -441,9 +441,9 @@ def read_traffic_weekly(weeks_iso):
 WOMEN_SHOP_TO_OWNER = {
     "Z-NZTF1店": "毛立新",
     "G-NZTF1店": "陈欣诺",
-    "WB纯白关店": "其他/待定",
-    "OZ女装店": "其他/待定",
-    "WB汤总女装店": "其他/待定",
+    "OZ-OZTF1店": "其他/待定",
+    "OZ-NZBG2店": "其他/待定",
+    "WB-TZBG1店": "其他/待定",
 }
 
 def read_person_targets():
