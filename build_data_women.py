@@ -737,16 +737,20 @@ def main():
             month_week_map[month_key] = {"weeks": [], "total": 0}
         month_week_map[month_key]["weeks"].append(w)
     # 按日历维度计算每个月实际包含的 ISO 周数（total）
+    # 规则：周日落在该月的 ISO 周才归属该月
     for month_key in month_week_map:
         y, m = int(month_key[:4]), int(month_key[5:])
-        month_start = dt_date(y, m, 1)
-        month_end = dt_date(y, m + 1, 1) - dt_timedelta(days=1) if m < 12 else dt_date(y, 12, 31)
-        iso_weeks_in_month = set()
-        d = month_start
-        while d <= month_end:
-            iso_weeks_in_month.add(d.isocalendar()[1])
-            d += dt_timedelta(days=1)
-        month_week_map[month_key]["total"] = len(iso_weeks_in_month)
+        total = 0
+        # 遍历全年 53 个 ISO 周，统计周日落在该月的周数
+        for iso_week in range(1, 54):
+            jan4 = dt_date(y, 1, 4)
+            # ISO 周周一 = jan4 所在周的周一 + (iso_week - 1) * 7
+            jan4_weekday = jan4.weekday()  # 0=Monday
+            monday = jan4 - dt_timedelta(days=jan4_weekday) + dt_timedelta(weeks=iso_week - 1)
+            sunday = monday + dt_timedelta(days=6)
+            if sunday.year == y and sunday.month == m:
+                total += 1
+        month_week_map[month_key]["total"] = total
     print(f"  MONTH_WEEK_MAP: {len(month_week_map)} months")
 
     # 阶段 2: 产品列表
