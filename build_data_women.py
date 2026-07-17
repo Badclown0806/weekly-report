@@ -126,6 +126,7 @@ def read_product_list():
     sku_owner = {}
     sku_first_date = {}
     sku_wb_id = {}
+    sku_category = {}
     shop_owner_set = defaultdict(set)
 
     for i, row in enumerate(ws.iter_rows(min_row=2)):
@@ -138,6 +139,7 @@ def read_product_list():
         shop = vals[10] if len(vals) > 10 else None
         owner = vals[13] if len(vals) > 13 else None
         create_time = vals[14] if len(vals) > 14 else None
+        cat_name = vals[6] if len(vals) > 6 else None
 
         if not sku or not wb_id:
             continue
@@ -172,12 +174,16 @@ def read_product_list():
         if shop:
             sku_wb_id[sku_wb_key_shop] = wb_id_str
 
+        if cat_name:
+            sku_category[str(sku)] = str(cat_name)
+
     shop_owners = {s: {o: True for o in owners} for s, owners in shop_owner_set.items()}
 
     wb.close()
     print(f"  产品列表: {len(sku_img)} SKU图片, {len(sku_owner)} SKU负责人, "
-          f"{len(shop_owners)} 店铺负责人, {len(sku_wb_id)} SKU-WB映射, {len(sku_first_date)} 首次日期")
-    return sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners
+          f"{len(shop_owners)} 店铺负责人, {len(sku_wb_id)} SKU-WB映射, {len(sku_first_date)} 首次日期, "
+          f"{len(sku_category)} SKU类目")
+    return sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners, sku_category
 
 
 # ── 阶段 3: 读取LX利润表 ──────────────────────────────
@@ -337,7 +343,7 @@ def read_traffic_weekly(weeks_iso):
     ws = wb[wb.sheetnames[0]]
 
     weekly_agg = defaultdict(lambda: defaultdict(lambda: {
-        "visitors": 0, "atc": 0, "qty": 0,
+        "visitors": 0, "atc": 0, "qty": 0, "gmv": 0,
         "click_cnt": 0, "click_impressions": 0,
         "return_qty": 0, "total_qty_ref": 0
     }))
@@ -357,6 +363,7 @@ def read_traffic_weekly(weeks_iso):
         visitors = row[8].value if len(row) > 8 else None      # 访客 (col 8)
         atc = row[11].value if len(row) > 11 else None         # 加购数 (col 11)
         qty = row[13].value if len(row) > 13 else None         # 销量 (col 13)
+        gmv = row[14].value if len(row) > 14 else None          # GMV (col 14)
         click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 (col 27)
         return_rate_raw = row[23].value if len(row) > 23 else None # 财报退货率 (col 23)
 
@@ -385,6 +392,7 @@ def read_traffic_weekly(weeks_iso):
         agg["visitors"] += float(visitors) if visitors else 0
         agg["atc"] += float(atc) if atc else 0
         agg["qty"] += float(qty) if qty else 0
+        agg["gmv"] += float(gmv) if gmv else 0
 
         if inventory is not None:
             try:
@@ -416,7 +424,8 @@ def read_traffic_weekly(weeks_iso):
             conv_rate = round(agg["qty"] / v, 6) if v > 0 else 0.0
             return_rate = None
             sales_qty = round(agg["qty"], 0)
-            traffic_weekly[w_key][sku] = [click_rate, atc_rate, conv_rate, return_rate, sales_qty]
+            gmv_val = round(agg["gmv"], 2)
+            traffic_weekly[w_key][sku] = [click_rate, atc_rate, conv_rate, return_rate, sales_qty, gmv_val]
 
     wb.close()
     total_entries = sum(len(v) for v in traffic_weekly.values())
@@ -707,9 +716,24 @@ def main():
     weeks, weeks_iso, week_labels = generate_weeks()
     print(f"  共 {len(weeks)} 周: {weeks_iso[0]} → {weeks_iso[-1]}")
 
+    # 阶段 1.5: 计算 MONTH_WEEK_MAP
+    month_week_map = {}
+    from datetime import date as dt_date, timedelta as dt_timedelta
+    for iso, w in zip(weeks_iso, weeks):
+        # Parse ISO week to get Monday date
+        iso_year, iso_wn = int(iso[:4]), int(iso[6:])
+        monday = dt_date.fromisocalendar(iso_year, iso_wn, 1)
+        sunday = monday + dt_timedelta(days=6)
+        month_key = f"{sunday.year:04d}-{sunday.month:02d}"
+        if month_key not in month_week_map:
+            month_week_map[month_key] = {"weeks": [], "total": 0}
+        month_week_map[month_key]["weeks"].append(w)
+        month_week_map[month_key]["total"] = len(month_week_map[month_key]["weeks"])
+    print(f"  MONTH_WEEK_MAP: {len(month_week_map)} months")
+
     # 阶段 2: 产品列表
     print("\n[2/5] 读取产品列表...")
-    sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners = read_product_list()
+    sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners, sku_category = read_product_list()
 
     # 阶段 3: 利润表
     print("\n[3/5] 读取LX利润表...")
@@ -732,6 +756,8 @@ def main():
                 if new_qty and new_qty > 0:
                     p["qty"] = new_qty
                     qty_merged += 1
+                gmv_val = sku_qty[sku][5] if len(sku_qty[sku]) > 5 else 0
+                p["gmv"] = gmv_val if gmv_val else 0
     print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 M列)")
 
     sku_to_wb_ids = {}
@@ -924,6 +950,8 @@ def main():
             "江凯伦": ["林梓蕾", "陈欣诺"],
             "张梦瑶": ["何欢洁", "郑志远"]
         },
+        "SKU_CATEGORY": sku_category,
+        "MONTH_WEEK_MAP": month_week_map,
     }
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)

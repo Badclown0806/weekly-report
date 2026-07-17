@@ -462,6 +462,14 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <option value="unmarked">未标记</option>
 </select>
 </span>
+<span style="margin-left:12px;font-size:11px;color:#64748b">类目:</span>
+<select id="catFilter" onchange="setCatFilter(this.value)" style="padding:3px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none;background:#fff;color:#334155">
+<option value="all">全部</option>
+</select>
+<span style="margin-left:12px;font-size:11px;color:#64748b">店铺:</span>
+<select id="prodShopFilter" onchange="setProdShopFilter(this.value)" style="padding:3px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none;background:#fff;color:#334155">
+<option value="all">全部</option>
+</select>
 </div>
 <div id="prodContent" style="display:none">
 <div style="margin-bottom:10px;padding:8px 12px;background:#f8fafc;border-radius:6px;border-left:4px solid #3b5cf6;font-size:11px;color:#475569">
@@ -506,6 +514,7 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <th class="th-sort" onclick="sortTable('margin')">利润率</th>
 <th class="th-sort" onclick="sortTable('return')">送达退货率</th>
 <th class="th-sort" onclick="sortTable('qty')">销量</th>
+<th class="th-sort" onclick="sortTable('avgPrice')">客单价</th>
 <th class="th-sort" onclick="sortTable('ad_spend')">广告费</th>
 <th class="th-sort" onclick="sortTable('adRatio')">广告费占比</th>
 <th class="th-sort" onclick="sortTable('days')">上架天数</th>
@@ -1118,6 +1127,34 @@ function initFromDataJs() {
 
     // ===== 批量初始化手动等级（每次加载都重新计算）=====
     
+    // ===== 初始化类目和店铺筛选下拉框 =====
+    (function(){
+      // 类目下拉
+      var catSel = document.getElementById('catFilter');
+      if(catSel && typeof SKU_CATEGORY !== 'undefined'){
+        var cats = {};
+        for(var sk in SKU_CATEGORY){ cats[SKU_CATEGORY[sk]] = true; }
+        var catList = Object.keys(cats).sort();
+        for(var ci = 0; ci < catList.length; ci++){
+          var opt = document.createElement('option');
+          opt.value = catList[ci];
+          opt.textContent = catList[ci];
+          catSel.appendChild(opt);
+        }
+      }
+      // 店铺下拉（女装5店）
+      var shopSel = document.getElementById('prodShopFilter');
+      if(shopSel){
+        var womenShops = ["Z-NZTF1店","G-NZTF1店","WB纯白关店","OZ女装店","WB汤总女装店"];
+        for(var si = 0; si < womenShops.length; si++){
+          var opt = document.createElement('option');
+          opt.value = womenShops[si];
+          opt.textContent = womenShops[si];
+          shopSel.appendChild(opt);
+        }
+      }
+    })();
+    
 }
 
 function getWeekYear(w){
@@ -1350,7 +1387,7 @@ function getMultiWeekProducts(){
     products.forEach(function(p){
       var key = p.sku + '|' + (p.shop || '');
       if (!merged[key]) {
-        merged[key] = {sku: p.sku, shop: p.shop, gsv: 0, profit: 0, margin: 0, qty: 0, ad_spend: 0, return_qty: 0, return_rate: 0, click_rate: 0, cart_rate: 0, conv_rate: 0};
+        merged[key] = {sku: p.sku, shop: p.shop, gsv: 0, profit: 0, margin: 0, qty: 0, gmv: 0, ad_spend: 0, return_qty: 0, return_rate: 0, click_rate: 0, cart_rate: 0, conv_rate: 0};
         for (var k in p) {
           if (k !== 'sku' && k !== 'shop' && typeof p[k] === 'string') merged[key][k] = p[k];
         }
@@ -1358,6 +1395,7 @@ function getMultiWeekProducts(){
       merged[key].gsv += (p.gsv || 0);
       merged[key].profit += (p.profit || 0);
       merged[key].qty += (p.qty || 0);
+      merged[key].gmv += (p.gmv || 0);
       merged[key].ad_spend += (p.ad_spend || 0);
       merged[key].return_qty += (typeof p.return_rate === 'number' ? p.return_rate / 100 * (p.qty || 0) : (p.return_qty || 0));
     });
@@ -1813,22 +1851,28 @@ function renderTargetBoard(){
     return;
   }
   
-  // Compute monthly time progress from selected weeks
-  var timePct = 0, dayOfMonth = 0, monthLastDay = 0;
+  // Compute monthly time progress using MONTH_WEEK_MAP (by week count, not calendar days)
+  var timePct = 0, completedWeeks = 0, totalWeeks = 0;
   var sws = getSelectedWeeks();
-  if(sws.length > 0){
-    var latestWk = sws[sws.length - 1];
-    var range = getWeekDateRange(latestWk);
-    if(range){
-      var sunday = range.end;
-      monthLastDay = new Date(sunday.getFullYear(), sunday.getMonth() + 1, 0).getDate();
-      dayOfMonth = sunday.getDate();
-      timePct = (dayOfMonth / monthLastDay * 100);
+  var targetMonth = months.length === 1 ? months[0] : null;
+  if (targetMonth && typeof MONTH_WEEK_MAP !== 'undefined' && MONTH_WEEK_MAP) {
+    // Build month key: e.g. months=["7"] → "2026-07"
+    var monthKey = '2026-' + (targetMonth.length === 1 ? '0' + targetMonth : targetMonth);
+    var mwm = MONTH_WEEK_MAP[monthKey];
+    if (mwm && mwm.total > 0) {
+      totalWeeks = mwm.total;
+      var latestDataWeek = sws.length > 0 ? sws[sws.length - 1] : null;
+      if (latestDataWeek) {
+        // Count how many weeks in this month are <= latestDataWeek
+        completedWeeks = mwm.weeks.filter(function(w) { return w <= latestDataWeek; }).length;
+        timePct = totalWeeks > 0 ? (completedWeeks / totalWeeks * 100) : 0;
+      }
     }
   }
   var completionPct = 0;
-  if(timePct > 0 && agg.profit_target > 0){
-    completionPct = (agg.profit_done / agg.profit_target) / (dayOfMonth / monthLastDay) * 100;
+  if (agg.profit_target > 0) {
+    var timeRatio = completedWeeks > 0 ? (completedWeeks / totalWeeks) : 1;
+    completionPct = (agg.profit_done / agg.profit_target) / timeRatio * 100;
   }
   
   var items = [
@@ -1851,7 +1895,7 @@ function renderTargetBoard(){
     var valStr = isMoney ? fmtK(item.val) : (item.fmt === 'pct2' ? Number(item.val).toFixed(2)+'%' : (isPct ? Number(item.val).toFixed(1)+'%' : Number(item.val).toLocaleString()));
     var tgtStr = isMoney ? ('目标 '+fmtK(item.tgt)) : ('目标 '+item.tgt.toLocaleString());
     if(item.fmt === 'pct2') tgtStr = '目标 ≥15%';
-    else if(item.fmt === 'pct') tgtStr = '本月已过 '+dayOfMonth+'天/共'+monthLastDay+'天';
+    else if(item.fmt === 'pct') tgtStr = '本月已过 '+completedWeeks+'周/共'+totalWeeks+'周';
     else if(item.fmt === 'pct_completion') tgtStr = '目标 ≥100%';
     var pctStr = (item.fmt !== 'pct2' && !isPct) ? '<span style="font-size:11px;color:#64748b"> '+pct.toFixed(2)+'%</span>' : '';
     var extraHtml = '';
@@ -2243,7 +2287,7 @@ function renderProdTable(){
   var newNote = document.getElementById('newProdNote') || {};
   if (!prodTable || !info) return;
   if (!WEEK_DATA) {
-    prodTable.getElementsByTagName('tbody')[0].innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">产品明细数据加载中，请稍候…<br><small style="color:#cbd5e1">（若长时间未显示，请刷新页面）</small></td></tr>';
+    prodTable.getElementsByTagName('tbody')[0].innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">产品明细数据加载中，请稍候…<br><small style="color:#cbd5e1">（若长时间未显示，请刷新页面）</small></td></tr>';
     info.textContent = '等待详细数据…';
     newNote.textContent = '';
     // Still render shop grid and charts with available data
@@ -2254,7 +2298,7 @@ function renderProdTable(){
   var products = getMultiWeekProducts();
 
   if(products.length === 0){
-    tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">暂无产品维度明细数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">暂无产品维度明细数据</td></tr>';
     info.textContent = '该周产品数据暂未收录';
     newNote.textContent = '';
     return;
@@ -2315,8 +2359,22 @@ function renderProdTable(){
     });
   }
 
+  // 类目筛选
+  if(CAT_FILTER !== 'all'){
+    products = products.filter(function(p){
+      return (SKU_CATEGORY[p.sku] || '') === CAT_FILTER;
+    });
+  }
+
+  // 店铺筛选（产品维度）
+  if(PROD_SHOP_FILTER !== 'all'){
+    products = products.filter(function(p){
+      return p.shop === PROD_SHOP_FILTER;
+    });
+  }
+
   if(products.length === 0){
-    tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">暂无符合筛选条件的产品</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">暂无符合筛选条件的产品</td></tr>';
     info.textContent = '';
     newNote.textContent = '';
     return;
@@ -2328,7 +2386,7 @@ function renderProdTable(){
   if(skuQuery){
     products = products.filter(function(p){ return p.sku.toLowerCase().indexOf(skuQuery) !== -1; });
     if(products.length === 0){
-      tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">未找到匹配 "'+escHtml(skuQuery)+'" 的SKU</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">未找到匹配 "'+escHtml(skuQuery)+'" 的SKU</td></tr>';
       info.textContent = '';
       newNote.textContent = '';
       return;
@@ -2358,7 +2416,7 @@ function renderProdTable(){
     if(newProducts.length === 0){
       var swWeeks = getSelectedWeeks();
       var _weekLabel = swWeeks.length === 1 ? WEEK_LABELS[WEEKS.indexOf(swWeeks[0])] : swWeeks.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
-      tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">'+_weekLabel+'暂无新品数据</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">'+_weekLabel+'暂无新品数据</td></tr>';
       info.textContent = '新品判定：上架天数≤45天（首次可售库存日期起算）';
       newNote.textContent = '';
       return;
@@ -2379,7 +2437,7 @@ function renderProdTable(){
     if(new2026Products.length === 0){
       var swWeeks = getSelectedWeeks();
       var _weekLabel = swWeeks.length === 1 ? WEEK_LABELS[WEEKS.indexOf(swWeeks[0])] : swWeeks.map(function(w){return WEEK_LABELS[WEEKS.indexOf(w)];}).join('+');
-      tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:20px;color:#94a3b8">'+_weekLabel+'暂无2026新品数据</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#94a3b8">'+_weekLabel+'暂无2026新品数据</td></tr>';
       info.textContent = '';
       newNote.textContent = '2026新品：首次库存日期在2026年';
       return;
@@ -2506,6 +2564,7 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
       '<td data-full="'+(Number(p.return_rate)||0).toFixed(2)+'%'+'">'+(Number(p.return_rate)||0).toFixed(2)+'%</td>'+
       '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtml+'</td>'+
+      '<td data-full="'+ (function(){var ap=(p.qty>0&&p.gmv!==undefined)?p.gmv/p.qty:0;return ap>0?'¥'+Math.round(ap).toLocaleString():'-';})() +'">'+ (function(){var ap=(p.qty>0&&p.gmv!==undefined)?p.gmv/p.qty:0;return ap>0?'¥'+Math.round(ap).toLocaleString():'-';})() +'</td>'+
       '<td data-full="'+escHtml(adSpend)+'">'+adSpend+'</td>'+
       '<td data-full="'+escHtml(adRatio)+'">'+adRatio+'</td>'+
       '<td style="color:'+(typeof daysOnSale === 'number' && daysOnSale <= 45 ? '#10b981' : '#64748b')+'" data-full="'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'">'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'</td>'+
@@ -2514,7 +2573,7 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td style="cursor:pointer;padding:7px 12px;text-align:center" onclick="event.stopPropagation();openCommentPanel(\''+p.sku.replace(/\'/g,"\\\'")+'\',\''+p.shop.replace(/\'/g,"\\\'")+'\')"><span style="font-size:16px;font-weight:600;color:#3b5cf6;display:inline-block;min-width:24px;line-height:1.4">'+(noteText?'&#9998;':'+')+'</span></td>'+
     '</tr>'+
     '<tr class="note-row" id="note-'+p.sku.replace(/[^a-zA-Z0-9]/g,'_')+'">'+
-      '<td colspan="23" style="text-align:left">'+
+      '<td colspan="24" style="text-align:left">'+
         '<input type="text" id="noteInp-'+p.sku.replace(/[^a-zA-Z0-9]/g,'_')+'" placeholder="输入备注..." value="'+escHtml(noteText)+'" style="width:calc(100% - 80px);max-width:400px">'+
         '<button class="btn-sv-sm" onclick="saveNote(\''+p.sku+'\')">保存</button>'+
       '</td>'+
@@ -5333,6 +5392,8 @@ var PROFIT_MANUAL_FILTER = 'all';
 var NEW_GRADE_FILTER = 'all';
 var SALES_GRADE_FILTER = 'all';
 var PRODUCT_GRADE_FILTER = 'all';
+var CAT_FILTER = 'all';
+var PROD_SHOP_FILTER = 'all';
 var manualOverrides = (function(){try{var d=localStorage.getItem('sabc_manual_overrides');return d?JSON.parse(d):{};}catch(e){return{};}})();
 
 function getSabcWindowWeeks(targetWeekNum) {
@@ -5767,6 +5828,9 @@ function setProductGradeFilter(grade) {
   PRODUCT_GRADE_FILTER = grade;
   renderProdTable();
 }
+
+function setCatFilter(v){ CAT_FILTER=v; renderProdTable(); }
+function setProdShopFilter(v){ PROD_SHOP_FILTER=v; renderProdTable(); }
 
 function setProfitManualFilter(grade) {
   PROFIT_MANUAL_FILTER = grade;
