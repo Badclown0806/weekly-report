@@ -24,6 +24,15 @@ SRC_DIR = r"D:\周汇报文件"
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "data_women.js")
 
+# 俄语→中文类目映射
+CATEGORY_CN = {
+    "Шорты": "短裤", "Брюки": "长裤", "Брюки спортивные": "运动裤",
+    "Джинсы": "牛仔裤", "Куртки": "夹克", "Пальто": "大衣",
+    "Парки": "派克服", "Рубашки": "衬衫", "Свитеры": "毛衣",
+    "Свитшоты": "卫衣", "Толстовки": "卫衣", "Футболки": "T恤",
+    "Футболки-поло": "Polo衫", "Худи": "帽衫", "Юбки": "半身裙",
+}
+
 # ── 工具函数 ──────────────────────────────────────────
 
 def sanitize_value(v):
@@ -716,11 +725,10 @@ def main():
     weeks, weeks_iso, week_labels = generate_weeks()
     print(f"  共 {len(weeks)} 周: {weeks_iso[0]} → {weeks_iso[-1]}")
 
-    # 阶段 1.5: 计算 MONTH_WEEK_MAP
+    # 阶段 1.5: 计算 MONTH_WEEK_MAP（total 按日历维度计算）
     month_week_map = {}
     from datetime import date as dt_date, timedelta as dt_timedelta
     for iso, w in zip(weeks_iso, weeks):
-        # Parse ISO week to get Monday date
         iso_year, iso_wn = int(iso[:4]), int(iso[6:])
         monday = dt_date.fromisocalendar(iso_year, iso_wn, 1)
         sunday = monday + dt_timedelta(days=6)
@@ -728,7 +736,17 @@ def main():
         if month_key not in month_week_map:
             month_week_map[month_key] = {"weeks": [], "total": 0}
         month_week_map[month_key]["weeks"].append(w)
-        month_week_map[month_key]["total"] = len(month_week_map[month_key]["weeks"])
+    # 按日历维度计算每个月实际包含的 ISO 周数（total）
+    for month_key in month_week_map:
+        y, m = int(month_key[:4]), int(month_key[5:])
+        month_start = dt_date(y, m, 1)
+        month_end = dt_date(y, m + 1, 1) - dt_timedelta(days=1) if m < 12 else dt_date(y, 12, 31)
+        iso_weeks_in_month = set()
+        d = month_start
+        while d <= month_end:
+            iso_weeks_in_month.add(d.isocalendar()[1])
+            d += dt_timedelta(days=1)
+        month_week_map[month_key]["total"] = len(iso_weeks_in_month)
     print(f"  MONTH_WEEK_MAP: {len(month_week_map)} months")
 
     # 阶段 2: 产品列表
@@ -924,6 +942,12 @@ def main():
         week_data, merged_sku_first_date, weeks_iso, sku_inventory
     )
 
+    # 类目中文化
+    sku_category_cn = {}
+    for sku, cat in sku_category.items():
+        sku_category_cn[sku] = CATEGORY_CN.get(cat, cat)
+    print(f"  SKU_CATEGORY 中文化: {len(sku_category_cn)} entries")
+
     print("\n" + "=" * 60)
     print("组装 data_women.js...")
 
@@ -950,7 +974,7 @@ def main():
             "江凯伦": ["林梓蕾", "陈欣诺"],
             "张梦瑶": ["何欢洁", "郑志远"]
         },
-        "SKU_CATEGORY": sku_category,
+        "SKU_CATEGORY": sku_category_cn,
         "MONTH_WEEK_MAP": month_week_map,
     }
 

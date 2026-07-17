@@ -2283,6 +2283,57 @@ function isNewProduct(sku, shop, wbId){
   return typeof days === 'number' && days <= 45;
 }
 
+// ========== 环比对比着色辅助函数 ==========
+function getPrevPeriodWeeks(){
+  var sw = getSelectedWeeks();
+  if (!sw || sw.length === 0) return [];
+  var firstIdx = WEEKS.indexOf(sw[0]);
+  if (firstIdx < 0) return [];
+  var periodLen = sw.length;
+  var prevStart = firstIdx - periodLen;
+  if (prevStart < 0) return [];
+  return WEEKS.slice(prevStart, prevStart + periodLen);
+}
+function getPrevProdVal(sku, shop, field){
+  var prevWeeks = getPrevPeriodWeeks();
+  if (prevWeeks.length === 0) return null;
+  var total = 0, count = 0;
+  for (var i = 0; i < prevWeeks.length; i++) {
+    var wk = prevWeeks[i];
+    var wd = WEEK_DATA[wk];
+    if (!wd) continue;
+    var prods = wd.allProducts || [];
+    for (var j = 0; j < prods.length; j++) {
+      if (prods[j].sku === sku && prods[j].shop === shop) {
+        var v = prods[j][field];
+        if (v != null && !isNaN(v)) { total += Number(v); count++; }
+        break;
+      }
+    }
+  }
+  if (count === 0) return null;
+  return (field === 'return_rate' || field === 'margin') ? total / count : total;
+}
+function getPrevTrafficVal(sku, idx){
+  var prevWeeks = getPrevPeriodWeeks();
+  if (prevWeeks.length === 0) return null;
+  var total = 0, count = 0;
+  for (var i = 0; i < prevWeeks.length; i++) {
+    var wk = prevWeeks[i];
+    var tw = TRAFFIC_WEEKLY[wk];
+    if (!tw || !tw[sku]) continue;
+    var v = tw[sku][idx];
+    if (v != null && !isNaN(v)) { total += Number(v); count++; }
+  }
+  if (count === 0) return null;
+  return total / count;
+}
+function colorWrap(curVal, prevVal, html){
+  if (prevVal === null || prevVal === undefined || curVal === prevVal) return html;
+  var color = curVal > prevVal ? '#16a34a' : '#dc2626';
+  return '<span style="color:' + color + '">' + html + '</span>';
+}
+
 function renderProdTable(){
   var prodTable = document.getElementById('prodTable');
   var info = document.getElementById('tableInfo');
@@ -2551,6 +2602,32 @@ function renderProdTable(){
       : '<span style="color:#94a3b8;font-size:10px">-</span>';
     productGradeHtml += ' <span style="cursor:pointer;font-size:11px;opacity:0.45" onclick="editProductGrade(\''+escHtml(p.shop).replace(/'/g,"\\'")+'\',\''+escHtml(p.sku).replace(/'/g,"\\'")+'\',event)" title="手动编辑产品等级">&#9998;</span>';
 
+    // 环比对比着色
+    var returnRateVal = Number(p.return_rate) || 0;
+    var returnRateDisplay = returnRateVal.toFixed(2) + '%';
+    var returnRateHtml = colorWrap(returnRateVal, getPrevProdVal(p.sku, p.shop, 'return_rate'), returnRateDisplay);
+    var prevQty = getPrevProdVal(p.sku, p.shop, 'qty');
+    var qtyHtmlColored = prevQty !== null ? colorWrap(p.qty || 0, prevQty, qtyHtml) : qtyHtml;
+    var asp = (p.qty > 0 && p.gmv !== undefined) ? p.gmv / p.qty : 0;
+    var aspDisplay = asp > 0 ? '₽' + Math.round(asp).toLocaleString() : '-';
+    var aspFull = asp > 0 ? '₽' + Math.round(asp).toLocaleString() : '-';
+    var prevAsp = getPrevProdVal(p.sku, p.shop, 'gmv') !== null && prevQty !== null && prevQty > 0 ? getPrevProdVal(p.sku, p.shop, 'gmv') / prevQty : null;
+    var aspHtml = colorWrap(asp || 0, prevAsp, aspDisplay);
+    var prevAd = getPrevProdVal(p.sku, p.shop, 'ad_spend');
+    var adSpendHtml = prevAd !== null ? colorWrap(p.ad_spend || 0, prevAd, adSpend) : adSpend;
+    var clickVal = trafficData && trafficData[0] !== null ? Number(trafficData[0]) : null;
+    var prevClick = getPrevTrafficVal(p.sku, 0);
+    var clickDisplay = clickVal !== null ? (clickVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var clickHtml2 = prevClick !== null && clickVal !== null ? colorWrap(clickVal, prevClick, clickDisplay) : clickDisplay;
+    var cartVal = trafficData && trafficData[1] !== null ? Number(trafficData[1]) : null;
+    var prevCart = getPrevTrafficVal(p.sku, 1);
+    var cartDisplay = cartVal !== null ? (cartVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var cartHtml2 = prevCart !== null && cartVal !== null ? colorWrap(cartVal, prevCart, cartDisplay) : cartDisplay;
+    var convVal = trafficData && trafficData[2] !== null ? Number(trafficData[2]) : null;
+    var prevConv = getPrevTrafficVal(p.sku, 2);
+    var convDisplay = convVal !== null ? (convVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var convHtml2 = prevConv !== null && convVal !== null ? colorWrap(convVal, prevConv, convDisplay) : convDisplay;
+
 return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.replace(/'/g,"\\'")+'\',\''+p.shop.replace(/'/g,"\\'")+'\')">'+
       '<td>'+imgHtml+'</td>'+
       '<td><strong>'+escHtml(p.sku)+'</strong></td>'+
@@ -2564,14 +2641,14 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td data-full="'+escHtml(fmtK(p.gsv))+'">'+fmtK(p.gsv)+'</td>'+
       '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'">'+fmtK(p.profit)+'</td>'+
       '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
-      '<td data-full="'+(Number(p.return_rate)||0).toFixed(2)+'%'+'">'+(Number(p.return_rate)||0).toFixed(2)+'%</td>'+
-      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtml+'</td>'+
-      '<td data-full="'+ (function(){var ap=(p.qty>0&&p.gmv!==undefined)?p.gmv/p.qty:0;return ap>0?'₽'+Math.round(ap).toLocaleString():'-';})() +'">'+ (function(){var ap=(p.qty>0&&p.gmv!==undefined)?p.gmv/p.qty:0;return ap>0?'₽'+Math.round(ap).toLocaleString():'-';})() +'</td>'+
-      '<td data-full="'+escHtml(adSpend)+'">'+adSpend+'</td>'+
+      '<td data-full="'+returnRateDisplay+'">'+returnRateHtml+'</td>'+
+      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtmlColored+'</td>'+
+      '<td data-full="'+aspFull+'">'+aspHtml+'</td>'+
+      '<td data-full="'+escHtml(adSpend)+'">'+adSpendHtml+'</td>'+
       '<td data-full="'+escHtml(adRatio)+'">'+adRatio+'</td>'+
       '<td style="color:'+(typeof daysOnSale === 'number' && daysOnSale <= 45 ? '#10b981' : '#64748b')+'" data-full="'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'">'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'</td>'+
       '<td style="text-align:right" data-full="'+(SKU_INVENTORY[p.sku+'|'+p.shop] != null ? SKU_INVENTORY[p.sku+'|'+p.shop].toLocaleString() : (SKU_INVENTORY[p.sku] != null ? SKU_INVENTORY[p.sku].toLocaleString() : '-'))+'">'+(SKU_INVENTORY[p.sku+'|'+p.shop] != null ? SKU_INVENTORY[p.sku+'|'+p.shop].toLocaleString() : (SKU_INVENTORY[p.sku] != null ? SKU_INVENTORY[p.sku].toLocaleString() : '<span style="color:#94a3b8;font-size:11px">-</span>'))+'</td>'+
-      '<td data-full="'+escHtml(clickHtml)+'">'+clickHtml+'</td><td data-full="'+escHtml(cartHtml)+'">'+cartHtml+'</td><td data-full="'+escHtml(convHtml)+'">'+convHtml+'</td>'+
+      '<td data-full="'+escHtml(clickHtml)+'">'+clickHtml2+'</td><td data-full="'+escHtml(cartHtml)+'">'+cartHtml2+'</td><td data-full="'+escHtml(convHtml)+'">'+convHtml2+'</td>'+
       '<td style="cursor:pointer;padding:7px 12px;text-align:center" onclick="event.stopPropagation();openCommentPanel(\''+p.sku.replace(/\'/g,"\\\'")+'\',\''+p.shop.replace(/\'/g,"\\\'")+'\')"><span style="font-size:16px;font-weight:600;color:#3b5cf6;display:inline-block;min-width:24px;line-height:1.4">'+(noteText?'&#9998;':'+')+'</span></td>'+
     '</tr>'+
     '<tr class="note-row" id="note-'+p.sku.replace(/[^a-zA-Z0-9]/g,'_')+'">'+
