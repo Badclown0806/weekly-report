@@ -121,6 +121,7 @@ def read_product_list():
     sku_owner = {}
     sku_first_date = {}
     sku_wb_id = {}
+    sku_category = {}
     shop_owner_set = defaultdict(set)
 
     # 列: 0=WB商品ID, 1=卖家SKU, ..., 9=主图, 10=店铺名称, 13=负责人, 14=创建时间
@@ -134,6 +135,7 @@ def read_product_list():
         shop = vals[10] if len(vals) > 10 else None
         owner = vals[13] if len(vals) > 13 else None
         create_time = vals[14] if len(vals) > 14 else None
+        cat_name = vals[6] if len(vals) > 6 else None
 
         if not sku or not wb_id:
             continue
@@ -170,13 +172,17 @@ def read_product_list():
         if shop:
             sku_wb_id[sku_wb_key_shop] = wb_id_str
 
+        if cat_name:
+            sku_category[str(sku)] = str(cat_name)
+
     # 转换 shop_owner_set → dict
     shop_owners = {s: {o: True for o in owners} for s, owners in shop_owner_set.items()}
 
     wb.close()
     print(f"  产品列表: {len(sku_img)} SKU图片, {len(sku_owner)} SKU负责人, "
-          f"{len(shop_owners)} 店铺负责人, {len(sku_wb_id)} SKU-WB映射, {len(sku_first_date)} 首次日期")
-    return sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners
+          f"{len(shop_owners)} 店铺负责人, {len(sku_wb_id)} SKU-WB映射, {len(sku_first_date)} 首次日期, "
+          f"{len(sku_category)} SKU类目")
+    return sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners, sku_category
 
 
 # ── 阶段 3: 读取LX利润表 ──────────────────────────────
@@ -358,7 +364,7 @@ def read_traffic_weekly(weeks_iso):
     #     5=可售数量(F), 8=访客(I), 11=加购数(L), 13=销量(N), 23=财报退货率(X), 27=广告点击率(AB)
     # 按 ISO周 + SKU 汇总: visitors, add_to_cart_count, sales_qty, click_cnt, return_qty, total_qty
     weekly_agg = defaultdict(lambda: defaultdict(lambda: {
-        "visitors": 0, "atc": 0, "qty": 0,
+        "visitors": 0, "atc": 0, "qty": 0, "gmv": 0,
         "click_cnt": 0, "click_impressions": 0,
         "return_qty": 0, "total_qty_ref": 0
     }))
@@ -380,6 +386,7 @@ def read_traffic_weekly(weeks_iso):
         visitors = row[8].value if len(row) > 8 else None  # 访客 I列
         atc = row[11].value if len(row) > 11 else None     # 加购数 L列
         qty = row[13].value if len(row) > 13 else None     # 销量 N列
+        gmv = row[14].value if len(row) > 14 else None      # GMV O列
         click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 AB列
         return_rate_raw = row[23].value if len(row) > 23 else None  # 财报退货率 X列
 
@@ -408,6 +415,7 @@ def read_traffic_weekly(weeks_iso):
         agg["visitors"] += float(visitors) if visitors else 0
         agg["atc"] += float(atc) if atc else 0
         agg["qty"] += float(qty) if qty else 0
+        agg["gmv"] += float(gmv) if gmv else 0
 
         # 追踪每个SKU首次出现库存>0的日期（E列可售数量>0）
         if inventory is not None:
@@ -430,7 +438,7 @@ def read_traffic_weekly(weeks_iso):
                 agg["click_impressions"] += float(visitors)
 
     # 转换为 TRAFFIC_WEEKLY 格式
-    # [click_rate, add_to_cart_rate, conversion_rate, return_rate, sales_qty]
+    # [click_rate, add_to_cart_rate, conversion_rate, return_rate, sales_qty, gmv]
     traffic_weekly = {}
     for w_key, sku_data in sorted(weekly_agg.items(), key=lambda x: int(x[0][1:])):
         traffic_weekly[w_key] = {}
@@ -446,7 +454,8 @@ def read_traffic_weekly(weeks_iso):
             # 财报退货率暂不在 TRAFFIC_WEEKLY 中, 用 null 占位
             return_rate = None
             sales_qty = round(agg["qty"], 0)
-            traffic_weekly[w_key][sku] = [click_rate, atc_rate, conv_rate, return_rate, sales_qty]
+            gmv_val = round(agg["gmv"], 2)
+            traffic_weekly[w_key][sku] = [click_rate, atc_rate, conv_rate, return_rate, sales_qty, gmv_val]
 
     wb.close()
     total_entries = sum(len(v) for v in traffic_weekly.values())
@@ -740,9 +749,23 @@ def main():
     weeks, weeks_iso, week_labels = generate_weeks()
     print(f"  共 {len(weeks)} 周: {weeks_iso[0]} → {weeks_iso[-1]}")
 
+    # 阶段 1.5: 计算 MONTH_WEEK_MAP
+    from datetime import date as dt_date, timedelta as dt_timedelta
+    month_week_map = {}
+    for iso, w in zip(weeks_iso, weeks):
+        iso_year, iso_wn = int(iso[:4]), int(iso[6:])
+        monday = dt_date.fromisocalendar(iso_year, iso_wn, 1)
+        sunday = monday + dt_timedelta(days=6)
+        month_key = f"{sunday.year:04d}-{sunday.month:02d}"
+        if month_key not in month_week_map:
+            month_week_map[month_key] = {"weeks": [], "total": 0}
+        month_week_map[month_key]["weeks"].append(w)
+        month_week_map[month_key]["total"] = len(month_week_map[month_key]["weeks"])
+    print(f"  MONTH_WEEK_MAP: {len(month_week_map)} months")
+
     # 阶段 2: 产品列表
     print("\n[2/5] 读取产品列表...")
-    sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners = read_product_list()
+    sku_img, sku_owner, sku_first_date, sku_wb_id, shop_owners, sku_category = read_product_list()
 
     # 阶段 3: 利润表
     print("\n[3/5] 读取LX利润表...")
@@ -758,7 +781,7 @@ def main():
     for w_key in week_data:
         if w_key not in traffic_weekly:
             continue
-        sku_qty = traffic_weekly[w_key]  # dict: sku -> [click_rate, atc_rate, conv_rate, return_rate, sales_qty]
+        sku_qty = traffic_weekly[w_key]  # dict: sku -> [click_rate, atc_rate, conv_rate, return_rate, sales_qty, gmv]
         for p in week_data[w_key]["allProducts"]:
             sku = p["sku"]
             if sku in sku_qty and len(sku_qty[sku]) > 4:
@@ -766,6 +789,8 @@ def main():
                 if new_qty and new_qty > 0:
                     p["qty"] = new_qty
                     qty_merged += 1
+                gmv_val = sku_qty[sku][5] if len(sku_qty[sku]) > 5 else 0
+                p["gmv"] = gmv_val if gmv_val else 0
     print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 M列)")
 
     # 构建 SKU 到 WB_IDs 的映射
@@ -932,6 +957,8 @@ def main():
         "SKU_INVENTORY": sku_inventory,
         "NEW_PRODUCT_GRADE": new_product_grades,
         "SALES_GRADE": sales_grades,
+        "SKU_CATEGORY": sku_category,
+        "MONTH_WEEK_MAP": month_week_map,
         "OWNERS": sorted(set(o for owners in shop_owners.values() for o in owners) | set(v for v in lx_owner_map.values() if v)) + ["其他/待定"],
         "OWNER_HIERARCHY": {
             "江凯伦": ["林梓蕾", "陈欣诺"],
