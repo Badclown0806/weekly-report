@@ -2481,8 +2481,8 @@ function getPrevTrafficVal(sku, idx){
 }
 function arrowWrap(curVal, prevVal, html){
   if (prevVal === null || prevVal === undefined || curVal === prevVal) return html;
-  var color = curVal > prevVal ? '#16a34a' : '#dc2626';
-  var up = curVal > prevVal; var color = up ? '#16a34a' : '#dc2626'; var symbol = up ? '▲' : '▼'; return html + ' <span style="color:' + color + ';font-size:10px;font-weight:bold">' + symbol + '</span>';
+  var up = curVal > prevVal;
+  return html + ' <span style="color:' + (up ? '#16a34a' : '#dc2626') + ';font-size:11px;font-weight:bold">' + (up ? '↑' : '↓') + '</span>';
 }
 
 function renderProdTable(){
