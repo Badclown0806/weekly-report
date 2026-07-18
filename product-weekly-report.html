@@ -6007,6 +6007,7 @@ function renderProductTargetBoard() {
   html += '</tr></thead><tbody>';
 
   var totalR = { blue: 0, green: 0, yellow: 0 };
+  var totalCur = { blue: 0, green: 0, yellow: 0 };
 
   // 预计算：上级负责人汇总数据（含自身+所有子负责人）
   var aggregatedCur = {};
@@ -6069,6 +6070,7 @@ function renderProductTargetBoard() {
     for (var mi6 = 0; mi6 < markers.length; mi6++) {
       var m6 = markers[mi6];
       totalR[m6] += reqVal[m6];
+      totalCur[m6] += (cur[m6] || 0);
     }
 
     var monthTgtStr = ownerTarget > 0 ? Math.round(ownerTarget / 10000) + '万' : '-';
@@ -6122,9 +6124,9 @@ function renderProductTargetBoard() {
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px;color:#64748b">' + fmtK(filteredMonthTotal / 4) + '</td>';
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">' + fmtK(totalRealized) + '</td>';
   html += '<td style="padding:6px 8px;text-align:center;border:1px solid #e2e8f0;font-size:11px">-</td>';
-  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap">总 <b>' + totalR.blue + '</b></td>';
-  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap">总 <b>' + totalR.green + '</b></td>';
-  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap">总 <b>' + totalR.yellow + '</b></td>';
+  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap"><b style="color:' + (totalCur.blue >= totalR.blue ? '#16a34a' : '#dc2626') + '">' + totalCur.blue + '</b>/' + totalR.blue + '</td>';
+  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap"><b style="color:' + (totalCur.green >= totalR.green ? '#16a34a' : '#dc2626') + '">' + totalCur.green + '</b>/' + totalR.green + '</td>';
+  html += '<td style="padding:4px 6px;text-align:center;border:1px solid #e2e8f0;font-size:11px;white-space:nowrap"><b style="color:' + (totalCur.yellow >= totalR.yellow ? '#16a34a' : '#dc2626') + '">' + totalCur.yellow + '</b>/' + totalR.yellow + '</td>';
   html += '</tr>';
 
   html += '</tbody></table>';
