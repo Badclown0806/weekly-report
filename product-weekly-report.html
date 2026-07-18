@@ -540,14 +540,6 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <!-- Product Table -->
 <div class="sc" id="prodSection">
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- SABC 达标追踪入口 -->
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:20px">
-  <a href="sabc-tracker-v2.html" target="_blank" style="font-size:14px;font-weight:600;color:#3b5cf6;text-decoration:none">SABC 达标追踪 →</a>
-  <span style="font-size:11px;color:#94a3b8;margin-left:8px">独立追踪页面</span>
-</div>
-
-
 <div id="prodCard" style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
 <h2 onclick="toggleProdSection()" style="cursor:pointer;user-select:none;margin:0;padding:0"><div style="display:flex;justify-content:space-between;align-items:center"><span>产品维度</span><span style="font-size:11px;font-weight:400;color:#64748b;cursor:pointer" id="prodExpandHint">点击展开</span></div></h2>
 <div id="prodTabBar" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
@@ -1270,8 +1262,7 @@ function initFromDataJs() {
     OWNERS = DATA.OWNERS || ["毛立新", "陈欣诺", "其他/待定"];
     selectedOwners = new Set(OWNERS);
     DEPARTMENT_OWNERS = DATA.DEPARTMENT_OWNERS || {
-      "运营一部": ["江凯伦", "陈敏华", "包家豪", "林梓蕾", "陈欣诺"],
-      "运营二部": ["毛立新", "张梦瑶"]
+      "运营": ["江凯伦", "包家豪", "林梓蕾", "陈欣诺", "毛立新", "张梦瑶"]
     };
     curProdTab = 'all';
     prodExpanded = false;
