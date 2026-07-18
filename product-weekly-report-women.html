@@ -7793,6 +7793,14 @@ function renderProdTable(){
     var adSpend = (p.ad_spend && p.ad_spend > 0) ? formatMoney(p.ad_spend) : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
 
+    // GSV/利润/利润率/广告费占比环比数据
+    var prevGsv2 = getPrevProdVal(p.sku, p.shop, 'gsv');
+    var prevProfit2 = getPrevProdVal(p.sku, p.shop, 'profit');
+    var prevMargin2 = (prevGsv2 !== null && prevGsv2 > 0 && prevProfit2 !== null) ? prevProfit2 / prevGsv2 * 100 : null;
+    var prevPrevAd = getPrevProdVal(p.sku, p.shop, 'ad_spend');
+    var prevAdRatio2 = (prevGsv2 !== null && prevGsv2 > 0 && prevPrevAd !== null) ? prevPrevAd / prevGsv2 : null;
+    
+    var adRatioNum = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100) : null;
     var adRatio = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
 
@@ -8024,13 +8032,13 @@ return '<tr class="prod-row '+qtyClass+'" style="'+rowBgStyle+'" onclick="openCo
       '<td style="text-align:center" onclick="event.stopPropagation()">'+productGradeHtml+'</td>'+
 
 
-      '<td data-full="'+escHtml(fmtK(p.gsv))+'">'+fmtK(p.gsv)+'</td>'+
+      '<td data-full="'+escHtml(fmtK(p.gsv))+'"'+'>'+(prevGsv2 !== null ? arrowWrap(p.gsv || 0, prevGsv2, fmtK(p.gsv)) : fmtK(p.gsv))+'</td>'+
 
 
-      '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'">'+fmtK(p.profit)+'</td>'+
+      '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'"'+'>'+(prevProfit2 !== null ? arrowWrap(p.profit || 0, prevProfit2, fmtK(p.profit)) : fmtK(p.profit))+'</td>'+
 
 
-      '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
+      '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'"'+'>'+(prevMargin2 !== null ? arrowWrap(Number(p.margin)||0, prevMargin2, (Number(p.margin)||0).toFixed(2)+'%') : (Number(p.margin)||0).toFixed(2)+'%')+'</td>'+
 
 
       '<td data-full="'+returnRateDisplay+'">'+returnRateHtml+'</td>'+
@@ -8051,7 +8059,7 @@ return '<tr class="prod-row '+qtyClass+'" style="'+rowBgStyle+'" onclick="openCo
       '<td data-full="'+escHtml(adSpend)+'">'+adSpendHtml+'</td>'+
 
 
-      '<td data-full="'+escHtml(adRatio)+'">'+adRatio+'</td>'+
+      '<td data-full="'+escHtml(adRatio)+'"'+'>'+(prevAdRatio2 !== null && adRatioNum !== null ? arrowWrap(adRatioNum, prevAdRatio2, adRatio) : adRatio)+'</td>'+
 
 
       '<td style="color:'+(typeof daysOnSale === 'number' && daysOnSale <= 45 ? '#10b981' : '#64748b')+'" data-full="'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'">'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'</td>'+

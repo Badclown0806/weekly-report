@@ -2701,6 +2701,14 @@ function renderProdTable(){
 
     // 广告费
     var adSpend = (p.ad_spend && p.ad_spend > 0) ? formatMoney(p.ad_spend) : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    // GSV/利润/利润率/广告费占比环比数据
+    var prevGsv2 = getPrevProdVal(p.sku, p.shop, 'gsv');
+    var prevProfit2 = getPrevProdVal(p.sku, p.shop, 'profit');
+    var prevMargin2 = (prevGsv2 !== null && prevGsv2 > 0 && prevProfit2 !== null) ? prevProfit2 / prevGsv2 * 100 : null;
+    var prevPrevAd = getPrevProdVal(p.sku, p.shop, 'ad_spend');
+    var prevAdRatio2 = (prevGsv2 !== null && prevGsv2 > 0 && prevPrevAd !== null) ? prevPrevAd / prevGsv2 : null;
+    
+    var adRatioNum = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100) : null;
     var adRatio = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
     // 销量颜色标记 (需求3: 全部产品 SKU 按销量颜色)
@@ -2794,16 +2802,16 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td style="text-align:center" onclick="event.stopPropagation()">'+salesGradeHtml+'</td>'+
       '<td style="text-align:center" onclick="event.stopPropagation()">'+manualGradeHtml+'</td>'+
       '<td style="text-align:center" onclick="event.stopPropagation()">'+productGradeHtml+'</td>'+
-      '<td data-full="'+escHtml(fmtK(p.gsv))+'">'+fmtK(p.gsv)+'</td>'+
-      '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'">'+fmtK(p.profit)+'</td>'+
-      '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
+      '<td data-full="'+escHtml(fmtK(p.gsv))+'"'+'>'+(prevGsv2 !== null ? arrowWrap(p.gsv || 0, prevGsv2, fmtK(p.gsv)) : fmtK(p.gsv))+'</td>'+
+      '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'"'+'>'+(prevProfit2 !== null ? arrowWrap(p.profit || 0, prevProfit2, fmtK(p.profit)) : fmtK(p.profit))+'</td>'+
+      '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'"'+'>'+(prevMargin2 !== null ? arrowWrap(Number(p.margin)||0, prevMargin2, (Number(p.margin)||0).toFixed(2)+'%') : (Number(p.margin)||0).toFixed(2)+'%')+'</td>'+
       '<td data-full="'+returnRateDisplay+'">'+returnRateHtml+'</td>'+
       '<td data-full="'+unitDelVal.toFixed(2)+'">'+unitDelHtml+'</td>'+
       '<td data-full="'+unitRetVal.toFixed(2)+'">'+unitRetHtml+'</td>'+
       '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtmlColored+'</td>'+
       '<td data-full="'+aspFull+'">'+aspHtml+'</td>'+
       '<td data-full="'+escHtml(adSpend)+'">'+adSpendHtml+'</td>'+
-      '<td data-full="'+escHtml(adRatio)+'">'+adRatio+'</td>'+
+      '<td data-full="'+escHtml(adRatio)+'"'+'>'+(prevAdRatio2 !== null && adRatioNum !== null ? arrowWrap(adRatioNum, prevAdRatio2, adRatio) : adRatio)+'</td>'+
       '<td style="color:'+(typeof daysOnSale === 'number' && daysOnSale <= 45 ? '#10b981' : '#64748b')+'" data-full="'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'">'+(typeof daysOnSale === 'number' ? daysOnSale+'天' : daysOnSale)+'</td>'+
       '<td style="text-align:right" data-full="'+(SKU_INVENTORY[p.sku+'|'+p.shop] != null ? SKU_INVENTORY[p.sku+'|'+p.shop].toLocaleString() : (SKU_INVENTORY[p.sku] != null ? SKU_INVENTORY[p.sku].toLocaleString() : '-'))+'">'+(SKU_INVENTORY[p.sku+'|'+p.shop] != null ? SKU_INVENTORY[p.sku+'|'+p.shop].toLocaleString() : (SKU_INVENTORY[p.sku] != null ? SKU_INVENTORY[p.sku].toLocaleString() : '<span style="color:#94a3b8;font-size:11px">-</span>'))+'</td>'+
       '<td data-full="'+escHtml(clickHtml)+'">'+clickHtml2+'</td><td data-full="'+escHtml(cartHtml)+'">'+cartHtml2+'</td><td data-full="'+escHtml(convHtml)+'">'+convHtml2+'</td>'+
