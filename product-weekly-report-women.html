@@ -7097,10 +7097,10 @@ function getPrevTrafficVal(sku, idx){
   if (count === 0) return null;
   return total / count;
 }
-function colorWrap(curVal, prevVal, html){
+function arrowWrap(curVal, prevVal, html){
   if (prevVal === null || prevVal === undefined || curVal === prevVal) return html;
   var color = curVal > prevVal ? '#16a34a' : '#dc2626';
-  return '<span style="color:' + color + '">' + html + '</span>';
+  var arrow = curVal > prevVal ? '<span style="color:#16a34a">↑</span>' : '<span style="color:#dc2626">↓</span>'; return html + ' ' + arrow;
 }
 
 function renderProdTable(){
@@ -7961,34 +7961,34 @@ function renderProdTable(){
     // 环比对比着色
     var returnRateVal = Number(p.return_rate) || 0;
     var returnRateDisplay = returnRateVal.toFixed(2) + '%';
-    var returnRateHtml = colorWrap(returnRateVal, getPrevProdVal(p.sku, p.shop, 'return_rate'), returnRateDisplay);
+    var returnRateHtml = arrowWrap(returnRateVal, getPrevProdVal(p.sku, p.shop, 'return_rate'), returnRateDisplay);
     var prevQty = getPrevProdVal(p.sku, p.shop, 'qty');
-    var qtyHtmlColored = prevQty !== null ? colorWrap(p.qty || 0, prevQty, qtyHtml) : qtyHtml;
+    var qtyHtmlColored = prevQty !== null ? arrowWrap(p.qty || 0, prevQty, qtyHtml) : qtyHtml;
     var asp = (p.qty > 0 && p.gmv !== undefined) ? p.gmv / p.qty : 0;
     var aspDisplay = asp > 0 ? '₽' + Math.round(asp).toLocaleString() : '-';
     var aspFull = asp > 0 ? '₽' + Math.round(asp).toLocaleString() : '-';
     var prevAsp = getPrevProdVal(p.sku, p.shop, 'gmv') !== null && prevQty !== null && prevQty > 0 ? getPrevProdVal(p.sku, p.shop, 'gmv') / prevQty : null;
-    var aspHtml = colorWrap(asp || 0, prevAsp, aspDisplay);
+    var aspHtml = arrowWrap(asp || 0, prevAsp, aspDisplay);
     var prevAd = getPrevProdVal(p.sku, p.shop, 'ad_spend');
-    var adSpendHtml = prevAd !== null ? colorWrap(p.ad_spend || 0, prevAd, adSpend) : adSpend;
+    var adSpendHtml = prevAd !== null ? arrowWrap(p.ad_spend || 0, prevAd, adSpend) : adSpend;
     var prevUnitDel = getPrevProdVal(p.sku, p.shop, 'unit_delivery');
     var unitDelVal = Number(p.unit_delivery) || 0;
-    var unitDelHtml = prevUnitDel !== null ? colorWrap(unitDelVal, prevUnitDel, unitDelVal.toFixed(2)) : unitDelVal.toFixed(2);
+    var unitDelHtml = prevUnitDel !== null ? arrowWrap(unitDelVal, prevUnitDel, unitDelVal.toFixed(2)) : unitDelVal.toFixed(2);
     var prevUnitRet = getPrevProdVal(p.sku, p.shop, 'unit_return_fee');
     var unitRetVal = Number(p.unit_return_fee) || 0;
-    var unitRetHtml = prevUnitRet !== null ? colorWrap(unitRetVal, prevUnitRet, unitRetVal.toFixed(2)) : unitRetVal.toFixed(2);
+    var unitRetHtml = prevUnitRet !== null ? arrowWrap(unitRetVal, prevUnitRet, unitRetVal.toFixed(2)) : unitRetVal.toFixed(2);
     var clickVal = trafficData && trafficData[0] !== null ? Number(trafficData[0]) : null;
     var prevClick = getPrevTrafficVal(p.sku, 0);
     var clickDisplay = clickVal !== null ? (clickVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
-    var clickHtml2 = prevClick !== null && clickVal !== null ? colorWrap(clickVal, prevClick, clickDisplay) : clickDisplay;
+    var clickHtml2 = prevClick !== null && clickVal !== null ? arrowWrap(clickVal, prevClick, clickDisplay) : clickDisplay;
     var cartVal = trafficData && trafficData[1] !== null ? Number(trafficData[1]) : null;
     var prevCart = getPrevTrafficVal(p.sku, 1);
     var cartDisplay = cartVal !== null ? (cartVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
-    var cartHtml2 = prevCart !== null && cartVal !== null ? colorWrap(cartVal, prevCart, cartDisplay) : cartDisplay;
+    var cartHtml2 = prevCart !== null && cartVal !== null ? arrowWrap(cartVal, prevCart, cartDisplay) : cartDisplay;
     var convVal = trafficData && trafficData[2] !== null ? Number(trafficData[2]) : null;
     var prevConv = getPrevTrafficVal(p.sku, 2);
     var convDisplay = convVal !== null ? (convVal * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
-    var convHtml2 = prevConv !== null && convVal !== null ? colorWrap(convVal, prevConv, convDisplay) : convDisplay;
+    var convHtml2 = prevConv !== null && convVal !== null ? arrowWrap(convVal, prevConv, convDisplay) : convDisplay;
 
 
 
