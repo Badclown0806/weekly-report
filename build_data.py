@@ -962,6 +962,16 @@ def main():
         sku_category_cn[sku] = CATEGORY_CN.get(cat, cat)
     print(f"  SKU_CATEGORY 中文化: {len(sku_category_cn)} entries")
 
+    # ── 排除女装店 ──
+    EXCLUDE_SHOPS = {"Z-NZTF1店", "G-NZTF1店"}
+    shop_weekly = {s: v for s, v in shop_weekly.items() if s not in EXCLUDE_SHOPS}
+    for w_key in week_data:
+        wd = week_data[w_key]
+        wd["shops"] = {s: v for s, v in wd["shops"].items() if s not in EXCLUDE_SHOPS}
+        wd["allProducts"] = [p for p in wd["allProducts"] if p.get("shop") not in EXCLUDE_SHOPS]
+    shop_owners = {s: v for s, v in shop_owners.items() if s not in EXCLUDE_SHOPS}
+    print(f"  已排除女装店: {EXCLUDE_SHOPS}")
+
     # ── 组装 data.json ──
     print("\n" + "=" * 60)
     print("组装 data.json...")
