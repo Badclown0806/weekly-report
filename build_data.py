@@ -621,69 +621,49 @@ def read_person_targets():
     return all_targets
 
 
-# ── 阶段 5.2: 读取新版年规进度（2026WB年规进度-男装.xlsx）──
+# ── 阶段 5.2: 从 PERSON_TARGETS 派生月度目标值（年规Excel含外部公式，不可直接读）──
 
-def read_annual_targets():
-    """从2026WB年规进度-男装.xlsx 读取月度目标值
-    实际数据位于 Rows 7(利润), 11(销量), 15(实销), 19(GMV), 23(GSV)
-    Cols 3-14: 2月~1月（12个自然月）
+def read_annual_targets(person_targets):
+    """从已加载的 PERSON_TARGETS 提取月度目标值
+    PERSON_TARGETS 月键: "2"→2026-02 ... "12"→2026-12, "1"→2027-01
     """
-    path = os.path.join(SRC_DIR, "2026WB年规进度-男装.xlsx")
-    wb = load_workbook_safe(path)
-    if wb is None:
-        return {}
-
-    # 指标行映射: row → metric_name
-    metric_rows = {
-        7: "profit_target",
-        11: "sales_target",
-        15: "net_sales_target",
-        19: "gmv_target",
-        23: "gsv_target"
-    }
-
-    # 月份映射: Col 3→2月, Col 4→3月, ..., Col 14→1月
-    # 输出月份格式 "2026-02" ~ "2027-01"
-    all_targets = {}
     months_output = []
-    for col in range(3, 15):
-        if col <= 13:
-            m = col - 1  # Col3→2, Col4→3, ..., Col13→12
-            months_output.append(f"2026-{m:02d}")
-        else:
-            months_output.append("2027-01")  # Col14→1月→2027-01
+    for m in range(2, 13):
+        months_output.append(f"2026-{m:02d}")
+    months_output.append("2027-01")
 
-    for sheet_name in wb.sheetnames:
-        ws = wb[sheet_name]
-        person_name = sheet_name.strip()
-
-        person_data = {
+    all_targets = {}
+    for person_name, monthly in person_targets.items():
+        data = {
             "months": months_output,
             "profit_target": [0.0] * 12,
             "sales_target": [0.0] * 12,
-            "net_sales_target": [0.0] * 12,
+            "net_sales_target": [0.0] * 12,  # PERSON_TARGETS 无实销目标，保留零值
             "gmv_target": [0.0] * 12,
             "gsv_target": [0.0] * 12
         }
+        # 月键映射: PERSON_TARGETS 的 key 是字符串 "2"~"12" + "1"
+        for mk_str in [str(m) for m in range(2, 13)] + ["1"]:
+            if mk_str not in monthly:
+                continue
+            mdata = monthly[mk_str]
+            if mk_str == "1":
+                idx = 11  # 2027-01
+            else:
+                idx = int(mk_str) - 2  # "2"→0, "3"→1, ..., "12"→10
+            data["profit_target"][idx] = sanitize_value(mdata.get("profit_target", 0)) or 0.0
+            data["sales_target"][idx] = sanitize_value(mdata.get("sales_target", 0)) or 0.0
+            data["gmv_target"][idx] = sanitize_value(mdata.get("gmv_target", 0)) or 0.0
+            data["gsv_target"][idx] = sanitize_value(mdata.get("gsv_target", 0)) or 0.0
 
-        for row_num, metric_key in metric_rows.items():
-            for col_idx, col in enumerate(range(3, 15)):
-                v = ws.cell(row=row_num, column=col).value
-                v_sane = sanitize_value(v)
-                if isinstance(v_sane, (int, float)):
-                    person_data[metric_key][col_idx] = v_sane
-
-        all_targets[person_name] = person_data
-
-    wb.close()
+        all_targets[person_name] = data
 
     # 打印摘要
     for name, data in sorted(all_targets.items()):
-        has = [k for k in metric_rows.values() if any(v > 0 for v in data[k])]
-        # Calculate totals
         profit_total = sum(data["profit_target"])
         gsv_total = sum(data["gsv_target"])
-        print(f"  {name}: {has}, 全年利润={profit_total:.0f}, 全年GSV={gsv_total:.0f}")
+        has_target = any(v > 0 for v in data["profit_target"])
+        print(f"  {name}: {'有目标' if has_target else '无目标'}, 全年利润={profit_total:.0f}, 全年GSV={gsv_total:.0f}")
 
     print(f"  read_annual_targets: {len(all_targets)} people")
     return all_targets
@@ -983,7 +963,7 @@ def main():
 
     # 阶段 5.2: 新版年规进度（月度目标值）
     print("\n[5.2/5.2] 读取新版年规进度（2026WB年规进度-男装.xlsx）...")
-    annual_targets = read_annual_targets()
+    annual_targets = read_annual_targets(person_targets)
 
     # ── 阶段 5.3: 聚合月度实际完成值 & 生成 MONTHLY_TARGETS ──
     print("\n[5.3] 聚合月度实际完成值...")
