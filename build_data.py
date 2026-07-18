@@ -287,6 +287,9 @@ def read_lx_profit(weeks_iso):
         p_del = sanitize_value(unit_delivery)
         p_ret = sanitize_value(unit_return_fee)
 
+        net_sales = vals[17] if len(vals) > 17 else None  # Col 18 财报净销量
+        p_ns = sanitize_value(net_sales)
+
         product = {
             "sku": sku_str or "",
             "shop": str(shop) if shop else "",
@@ -296,6 +299,7 @@ def read_lx_profit(weeks_iso):
             "margin": sanitize_value(margin_rate),
             "gsv": p_gsv if isinstance(p_gsv, (int, float)) else 0,
             "qty": p_qty if isinstance(p_qty, (int, float)) else 0,
+            "net_sales": p_ns if isinstance(p_ns, (int, float)) else 0,
             "return_rate": sanitize_value(return_rate),
             "ad_spend": p_ad if isinstance(p_ad, (int, float)) else 0,
             "unit_delivery": p_del if isinstance(p_del, (int, float)) else 0,
@@ -617,6 +621,74 @@ def read_person_targets():
     return all_targets
 
 
+# ── 阶段 5.2: 读取新版年规进度（2026WB年规进度-男装.xlsx）──
+
+def read_annual_targets():
+    """从2026WB年规进度-男装.xlsx 读取月度目标值
+    实际数据位于 Rows 7(利润), 11(销量), 15(实销), 19(GMV), 23(GSV)
+    Cols 3-14: 2月~1月（12个自然月）
+    """
+    path = os.path.join(SRC_DIR, "2026WB年规进度-男装.xlsx")
+    wb = load_workbook_safe(path)
+    if wb is None:
+        return {}
+
+    # 指标行映射: row → metric_name
+    metric_rows = {
+        7: "profit_target",
+        11: "sales_target",
+        15: "net_sales_target",
+        19: "gmv_target",
+        23: "gsv_target"
+    }
+
+    # 月份映射: Col 3→2月, Col 4→3月, ..., Col 14→1月
+    # 输出月份格式 "2026-02" ~ "2027-01"
+    all_targets = {}
+    months_output = []
+    for col in range(3, 15):
+        if col <= 13:
+            m = col - 1  # Col3→2, Col4→3, ..., Col13→12
+            months_output.append(f"2026-{m:02d}")
+        else:
+            months_output.append("2027-01")  # Col14→1月→2027-01
+
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        person_name = sheet_name.strip()
+
+        person_data = {
+            "months": months_output,
+            "profit_target": [0.0] * 12,
+            "sales_target": [0.0] * 12,
+            "net_sales_target": [0.0] * 12,
+            "gmv_target": [0.0] * 12,
+            "gsv_target": [0.0] * 12
+        }
+
+        for row_num, metric_key in metric_rows.items():
+            for col_idx, col in enumerate(range(3, 15)):
+                v = ws.cell(row=row_num, column=col).value
+                v_sane = sanitize_value(v)
+                if isinstance(v_sane, (int, float)):
+                    person_data[metric_key][col_idx] = v_sane
+
+        all_targets[person_name] = person_data
+
+    wb.close()
+
+    # 打印摘要
+    for name, data in sorted(all_targets.items()):
+        has = [k for k in metric_rows.values() if any(v > 0 for v in data[k])]
+        # Calculate totals
+        profit_total = sum(data["profit_target"])
+        gsv_total = sum(data["gsv_target"])
+        print(f"  {name}: {has}, 全年利润={profit_total:.0f}, 全年GSV={gsv_total:.0f}")
+
+    print(f"  read_annual_targets: {len(all_targets)} people")
+    return all_targets
+
+
 # ── 阶段 5.5: 全量预计算新品等级和销售等级 ──────────────
 
 def compute_new_product_grades(week_data, sku_first_date, weeks_iso):
@@ -909,6 +981,139 @@ def main():
     print("\n[5/5] 读取年规进度...")
     person_targets = read_person_targets()
 
+    # 阶段 5.2: 新版年规进度（月度目标值）
+    print("\n[5.2/5.2] 读取新版年规进度（2026WB年规进度-男装.xlsx）...")
+    annual_targets = read_annual_targets()
+
+    # ── 阶段 5.3: 聚合月度实际完成值 & 生成 MONTHLY_TARGETS ──
+    print("\n[5.3] 聚合月度实际完成值...")
+    monthly_targets = {}
+    all_persons = sorted(set(
+        list(annual_targets.keys()) +
+        [o for owners in shop_owners.values() for o in owners]
+    ))
+    # 排除非人名条目
+    valid_persons = [p for p in all_persons if p not in ("其他/待定", "无负责人")]
+
+    # 全年总周数
+    total_year_weeks = len(weeks)
+
+    for person in valid_persons:
+        # 从 annual_targets 获取目标（若无则填充零值）
+        targets = annual_targets.get(person, {
+            "months": [f"2026-{m:02d}" if m <= 11 else "2027-01" for m in range(2, 14)],
+            "profit_target": [0.0]*12, "sales_target": [0.0]*12,
+            "net_sales_target": [0.0]*12, "gmv_target": [0.0]*12, "gsv_target": [0.0]*12
+        })
+
+        months_list = targets["months"]  # ["2026-02", ..., "2027-01"]
+
+        # 初始化该人每月实际值累加器
+        month_actuals = {}
+        for mk in months_list:
+            month_actuals[mk] = {
+                "profit_actual": 0.0, "gsv_actual": 0.0,
+                "qty_actual": 0.0, "gmv_actual": 0.0, "net_sales_actual": 0.0
+            }
+
+        # 遍历 WEEK_DATA 所有周的所有产品，按 owner 归属并按月汇总
+        completed_weeks_set = set()
+        for w_key, wd in week_data.items():
+            # 获取该周的 month_key
+            wk_month = None
+            for mk, mdata in month_week_map.items():
+                if w_key in mdata["weeks"]:
+                    wk_month = mk
+                    break
+            if wk_month is None or wk_month not in month_actuals:
+                continue
+
+            completed_weeks_set.add(w_key)
+
+            for p in wd.get("allProducts", []):
+                p_owner = p.get("owner", "")
+                # 空负责人或无负责人的跳过
+                if not p_owner or p_owner == "无负责人":
+                    continue
+                if p_owner != person:
+                    continue
+
+                act = month_actuals[wk_month]
+                act["profit_actual"] += p.get("profit", 0) or 0
+                act["gsv_actual"] += p.get("gsv", 0) or 0
+                act["qty_actual"] += p.get("qty", 0) or 0
+                act["gmv_actual"] += p.get("gmv", 0) or 0
+                act["net_sales_actual"] += p.get("net_sales", 0) or 0
+
+        # 构建 monthly 数组
+        monthly = []
+        annual_profit_target = 0.0
+        annual_profit_actual = 0.0
+        annual_gsv_target = 0.0
+        annual_gsv_actual = 0.0
+        annual_sales_target = 0.0
+        annual_sales_actual = 0.0
+        annual_net_sales_target = 0.0
+        annual_net_sales_actual = 0.0
+        annual_gmv_target = 0.0
+        annual_gmv_actual = 0.0
+
+        for i, mk in enumerate(months_list):
+            act = month_actuals[mk]
+            entry = {
+                "month": mk,
+                "profit_target": targets["profit_target"][i],
+                "profit_actual": round(act["profit_actual"], 2),
+                "sales_target": targets["sales_target"][i],
+                "sales_actual": round(act["qty_actual"], 2),
+                "net_sales_target": targets["net_sales_target"][i],
+                "net_sales_actual": round(act["net_sales_actual"], 2),
+                "gmv_target": targets["gmv_target"][i],
+                "gmv_actual": round(act["gmv_actual"], 2),
+                "gsv_target": targets["gsv_target"][i],
+                "gsv_actual": round(act["gsv_actual"], 2)
+            }
+            monthly.append(entry)
+
+            annual_profit_target += entry["profit_target"]
+            annual_profit_actual += entry["profit_actual"]
+            annual_gsv_target += entry["gsv_target"]
+            annual_gsv_actual += entry["gsv_actual"]
+            annual_sales_target += entry["sales_target"]
+            annual_sales_actual += entry["sales_actual"]
+            annual_net_sales_target += entry["net_sales_target"]
+            annual_net_sales_actual += entry["net_sales_actual"]
+            annual_gmv_target += entry["gmv_target"]
+            annual_gmv_actual += entry["gmv_actual"]
+
+        # 时间进度 = 已完成周数 / 全年总周数
+        completed_weeks = len(completed_weeks_set)
+        time_progress = round(completed_weeks / total_year_weeks * 100, 2) if total_year_weeks > 0 else 0
+
+        monthly_targets[person] = {
+            "monthly": monthly,
+            "time_progress": time_progress,
+            "completed_weeks": completed_weeks,
+            "total_weeks": total_year_weeks,
+            "annual": {
+                "profit_target": round(annual_profit_target, 2),
+                "profit_actual": round(annual_profit_actual, 2),
+                "sales_target": round(annual_sales_target, 2),
+                "sales_actual": round(annual_sales_actual, 2),
+                "net_sales_target": round(annual_net_sales_target, 2),
+                "net_sales_actual": round(annual_net_sales_actual, 2),
+                "gmv_target": round(annual_gmv_target, 2),
+                "gmv_actual": round(annual_gmv_actual, 2),
+                "gsv_target": round(annual_gsv_target, 2),
+                "gsv_actual": round(annual_gsv_actual, 2)
+            }
+        }
+
+    print(f"  MONTHLY_TARGETS: {len(monthly_targets)} persons")
+    for p, data in sorted(monthly_targets.items()):
+        p_count = sum(1 for e in data["monthly"] if e["profit_actual"] > 0)
+        print(f"    {p}: {p_count} months with profit data, time_progress={data['time_progress']:.1f}%")
+
     # ── 构建 SKU_OWNER_LOOKUP 映射表 ──
     # 将 SKU_OWNER 的原始 key（sku|shop|wb_id 或 sku|wb_id）映射为
     # JS 端可直接查询的扁平格式：sku|shop → owner, sku → owner
@@ -984,6 +1189,7 @@ def main():
         "WEEK_DATA": week_data,
         "TRAFFIC_WEEKLY": traffic_weekly,
         "PERSON_TARGETS": person_targets,
+        "MONTHLY_TARGETS": monthly_targets,
         "SKU_IMG": sku_img,
         "SKU_FIRST_DATE": merged_sku_first_date,
         "SKU_OWNER": sku_owner,
