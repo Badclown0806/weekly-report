@@ -369,14 +369,14 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <span class="shop-cat-btn on" id="catBtnAll" onclick="setShopCategory('all')">全部</span>
 <span class="lb" style="margin-left:12px">店铺筛选</span>
 <div class="tags" id="shopTags"></div>
-<span class="clr" onclick="clearShopFilter()">清除</span>
+<span class="clr" onclick="selectAllShops()">全选</span><span class="clr" onclick="clearShopFilter()">取消全选</span>
 </div>
 
 <!-- Row 3: Owner filter -->
 <div class="frow">
 <span class="lb">负责人筛选</span>
 <div class="tags" id="ownerTags"></div>
-<span class="clr" onclick="clearOwnerFilter()">清除</span>
+<span class="clr" onclick="selectAllOwners()">全选</span><span class="clr" onclick="clearOwnerFilter()">取消全选</span>
 <span class="clr" onclick="toggleOwnerSummaryPanel()" style="cursor:pointer;color:#3b5cf6;margin-left:8px;font-weight:500">&#x1F4AC; 评论总结</span>
 </div>
 
@@ -1468,6 +1468,20 @@ function tglS(s){
 
 function clearShopFilter(){
   currentShopCategory = 'all';
+  selectedShops = new Set();
+  renderShopTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+  renderProductTargetBoard();
+  SABC_GRADE_CACHE = {};
+}
+
+function selectAllShops(){
+  currentShopCategory = 'all';
   selectedShops = new Set(SHOPS);
   renderShopTags();
   renderShopGrid();
@@ -1559,6 +1573,21 @@ function tglO(o){
 }
 
 function clearOwnerFilter(){
+  selectedOwners = new Set();
+  selectedShops = new Set();
+  renderOwnerTags();
+  renderShopTags();
+  renderShopGrid();
+  renderProdTable();
+  drawCharts();
+  renderProgress();
+  renderActivityLog();
+  renderTargetBoard();
+  renderProductTargetBoard();
+  SABC_GRADE_CACHE = {};
+}
+
+function selectAllOwners(){
   selectedOwners = new Set(OWNERS);
   selectedShops = new Set(SHOPS);
   renderOwnerTags();
