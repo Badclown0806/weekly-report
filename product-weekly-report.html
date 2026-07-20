@@ -842,7 +842,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202607201133';
+  var ver = '202607201139';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -946,7 +946,7 @@ var DETAIL_DATA = null;
     function fetchAndCache() {
       var controller = new AbortController();
       var timeoutId = setTimeout(function(){ controller.abort(); }, 90000);
-      fetch('data-detail.js?' + ver, { signal: controller.signal })
+      fetch('data.js?' + ver, { signal: controller.signal })
         .then(function(r){
           clearTimeout(timeoutId);
           if(!r.ok) throw new Error('HTTP ' + r.status);
@@ -955,7 +955,7 @@ var DETAIL_DATA = null;
         .then(function(jsText){
           var start = jsText.indexOf('{');
           var end = jsText.lastIndexOf('}');
-          if(start < 0 || end < 0) throw new Error('Invalid data-detail.js format');
+          if(start < 0 || end < 0) throw new Error('Invalid data.js format');
           var jsonStr = jsText.substring(start, end + 1).replace(/\bNaN\b/g,'null').replace(/\bInfinity\b/g,'null').replace(/-\bInfinity\b/g,'null');
           var detailData = JSON.parse(jsonStr);
           // Always update cache
