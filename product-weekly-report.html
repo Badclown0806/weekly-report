@@ -1911,53 +1911,84 @@ function renderTargetBoard(){
   var tgtGrid = document.getElementById('tgtGrid');
   if (!tgtGrid) return;
 
-  // Derive person from page-level owner filter
-  var personOpts = getMonthlyTargetPersonOptions();
-  if (personOpts.length === 0) {
-    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无月度目标数据（需运行build_data.py生成MONTHLY_TARGETS）</div>';
+  // === 1. Resolve selected persons ===
+  var selPersons = [];
+  var selOwnersArr = Array.from(selectedOwners);
+  for (var i = 0; i < selOwnersArr.length; i++) {
+    if (MONTHLY_TARGETS && MONTHLY_TARGETS[selOwnersArr[i]]) {
+      selPersons.push(selOwnersArr[i]);
+    }
+  }
+  if (selPersons.length === 0) {
+    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">请在负责人筛选中选择负责人</div>';
     return;
   }
 
-  // Pick the first selected owner that exists in MONTHLY_TARGETS
-  var selectedPerson = '';
-  var selOwners = Array.from(selectedOwners);
-  for (var i = 0; i < selOwners.length; i++) {
-    if (MONTHLY_TARGETS[selOwners[i]]) { selectedPerson = selOwners[i]; break; }
-  }
-  if (!selectedPerson) {
-    // Fallback: first person with data
-    for (var p in MONTHLY_TARGETS) { selectedPerson = p; break; }
-  }
-
-  // Derive month from page-level month filter
-  // selectedMonths has numeric strings like "7"; map to "2026-07" / "2027-01" format
+  // === 2. Resolve months ===
   var selMonths = Array.from(selectedMonths);
   if (selMonths.length === 0) selMonths = [String(new Date().getMonth() + 1)];
-  var latestMonthNum = selMonths.reduce(function(a,b){ return parseInt(a)>parseInt(b) ? a : b; });
-  var mNum = parseInt(latestMonthNum);
-  var selectedMonthStr = (mNum >= 2 ? '2026-' : '2027-') + String(mNum).padStart(2,'0');
 
-  // Get data
-  var mtData = MONTHLY_TARGETS[selectedPerson];
-  if (!mtData || !mtData.monthly) {
-    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + selectedPerson + ' 的数据</div>';
-    return;
+  // Map numeric month to "YYYY-MM": month>=2 → 2026, month==1 → 2027
+  function numToYM(mStr) {
+    var m = parseInt(mStr);
+    return (m >= 2 ? '2026-' : '2027-') + String(m).padStart(2, '0');
   }
 
-  // Find monthly entry
-  var entry = null;
-  for (var i = 0; i < mtData.monthly.length; i++) {
-    if (mtData.monthly[i].month === selectedMonthStr) { entry = mtData.monthly[i]; break; }
-  }
-  if (!entry) {
-    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + selectedMonthStr + ' 的数据</div>';
-    return;
+  // All 12 months in fiscal year: 2026-02 through 2027-01
+  var all12 = [];
+  for (var m12 = 2; m12 <= 12; m12++) all12.push('2026-' + String(m12).padStart(2, '0'));
+  all12.push('2027-01');
+
+  var selectedYM = [];
+  for (var si = 0; si < selMonths.length; si++) {
+    selectedYM.push(numToYM(selMonths[si]));
   }
 
-  // Annual data
-  var ann = mtData.annual || {};
-  var timeProgress = mtData.time_progress || 0;
-  var profitRate = entry.gsv_actual > 0 ? (entry.profit_actual / entry.gsv_actual * 100) : 0;
+  // === 3. Aggregate: annual (all12) + monthly (selectedYM) across all persons ===
+  var totals = {
+    annProfitAct: 0, annProfitTgt: 0, annGsvAct: 0, annGsvTgt: 0,
+    monGsvAct: 0, monGsvTgt: 0,
+    monGmvAct: 0, monGmvTgt: 0,
+    monSalesAct: 0, monSalesTgt: 0,
+    monNetAct: 0, monNetTgt: 0,
+    monProfitAct: 0, monProfitTgt: 0
+  };
+
+  for (var pi = 0; pi < selPersons.length; pi++) {
+    var pd = MONTHLY_TARGETS[selPersons[pi]];
+    if (!pd || !pd.monthly) continue;
+    for (var mi = 0; mi < pd.monthly.length; mi++) {
+      var me = pd.monthly[mi];
+      if (all12.indexOf(me.month) >= 0) {
+        totals.annProfitAct += me.profit_actual || 0;
+        totals.annProfitTgt += me.profit_target || 0;
+        totals.annGsvAct += me.gsv_actual || 0;
+        totals.annGsvTgt += me.gsv_target || 0;
+      }
+      if (selectedYM.indexOf(me.month) >= 0) {
+        totals.monGsvAct += me.gsv_actual || 0;
+        totals.monGsvTgt += me.gsv_target || 0;
+        totals.monGmvAct += me.gmv_actual || 0;
+        totals.monGmvTgt += me.gmv_target || 0;
+        totals.monSalesAct += me.sales_actual || 0;
+        totals.monSalesTgt += me.sales_target || 0;
+        totals.monNetAct += me.net_sales_actual || 0;
+        totals.monNetTgt += me.net_sales_target || 0;
+        totals.monProfitAct += me.profit_actual || 0;
+        totals.monProfitTgt += me.profit_target || 0;
+      }
+    }
+  }
+
+  var profitRate = totals.monGsvAct > 0 ? (totals.monProfitAct / totals.monGsvAct * 100) : 0;
+
+  // === 4. Time progress: latest selected month's weeks ÷ total ===
+  var latestYM = selectedYM[selectedYM.length - 1];
+  var timeProgress = 0;
+  if (MONTH_WEEK_MAP && MONTH_WEEK_MAP[latestYM]) {
+    var mw = MONTH_WEEK_MAP[latestYM];
+    timeProgress = mw.total > 0 ? (mw.weeks.length / mw.total * 100) : 0;
+  }
 
   // --- Card-based KPI Dashboard helpers ---
   function fmtWan(v) {
@@ -2042,17 +2073,20 @@ function renderTargetBoard(){
 
   var cardHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px">';
 
-  // Row 1: Annual overview
-  cardHtml += renderCard('全年利润', ann.profit_actual, ann.profit_target, 'money', 'annual');
-  cardHtml += renderCard('全年GSV', ann.gsv_actual, ann.gsv_target, 'money', 'annual');
+  // Row 1: Annual overview (summed across all selected persons, all 12 months)
+  cardHtml += renderCard('全年利润', totals.annProfitAct, totals.annProfitTgt, 'money', 'annual');
+  cardHtml += renderCard('全年GSV', totals.annGsvAct, totals.annGsvTgt, 'money', 'annual');
 
-  // Row 2-3: Monthly KPIs
-  cardHtml += renderCard('当月GSV', entry.gsv_actual, entry.gsv_target, 'money', 'monthly');
-  cardHtml += renderCard('当月GMV', entry.gmv_actual, entry.gmv_target, 'money', 'monthly');
-  cardHtml += renderCard('当月销量', entry.sales_actual, entry.sales_target, 'num', 'monthly');
-  cardHtml += renderCard('当月实销', entry.net_sales_actual, entry.net_sales_target, 'num', 'monthly');
+  // Row 2-3: Monthly KPIs (summed across selected persons + selected months)
+  cardHtml += renderCard('当月GSV', totals.monGsvAct, totals.monGsvTgt, 'money', 'monthly');
+  cardHtml += renderCard('当月GMV', totals.monGmvAct, totals.monGmvTgt, 'money', 'monthly');
+  cardHtml += renderCard('当月销量', totals.monSalesAct, totals.monSalesTgt, 'num', 'monthly');
+  cardHtml += renderCard('当月实销', totals.monNetAct, totals.monNetTgt, 'num', 'monthly');
   cardHtml += renderCard('当月利润率', profitRate, 0, 'pct', 'rate');
-  cardHtml += renderCard('当月利润', entry.profit_actual, entry.profit_target, 'money', 'monthly');
+  cardHtml += renderCard('当月利润', totals.monProfitAct, totals.monProfitTgt, 'money', 'monthly');
+
+  // Time progress card
+  cardHtml += renderCard('时间进度', timeProgress, 0, 'pct', 'time');
 
   cardHtml += '</div>';
 
