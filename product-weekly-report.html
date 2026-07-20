@@ -867,6 +867,7 @@ var DETAIL_DATA = null;
       initFromDataJs();
       if(typeof renderProdTable==='function') renderProdTable();
       if(typeof renderProductTargetBoard==='function') renderProductTargetBoard();
+      if(typeof renderTargetBoard==='function') renderTargetBoard();
     } catch(e) {
       console.error('[Load] Phase 2 initFromDataJs crashed: ' + e.message, e.stack);
     }
