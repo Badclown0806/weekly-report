@@ -1982,12 +1982,33 @@ function renderTargetBoard(){
 
   var profitRate = totals.monGsvAct > 0 ? (totals.monProfitAct / totals.monGsvAct * 100) : 0;
 
-  // === 4. Time progress: latest selected month's weeks ÷ total ===
-  var latestYM = selectedYM[selectedYM.length - 1];
+  // === 4. Time progress: latest selected week's position in month ===
   var timeProgress = 0;
-  if (MONTH_WEEK_MAP && MONTH_WEEK_MAP[latestYM]) {
-    var mw = MONTH_WEEK_MAP[latestYM];
-    timeProgress = mw.total > 0 ? (mw.weeks.length / mw.total * 100) : 0;
+  // Find latest selected week
+  var latestWeek = '';
+  if (typeof selectedWeeks !== 'undefined' && selectedWeeks && selectedWeeks.size > 0) {
+    var swArr = Array.from(selectedWeeks);
+    swArr.sort(function(a,b){ return parseInt(a.slice(1)) - parseInt(b.slice(1)); });
+    latestWeek = swArr[swArr.length - 1];
+  }
+  // Find which month this week belongs to, then its 1-based position
+  if (latestWeek && MONTH_WEEK_MAP) {
+    for (var wm in MONTH_WEEK_MAP) {
+      var mwData = MONTH_WEEK_MAP[wm];
+      if (mwData.weeks.indexOf(latestWeek) >= 0) {
+        var pos = mwData.weeks.indexOf(latestWeek) + 1;
+        timeProgress = mwData.total > 0 ? (pos / mwData.total * 100) : 0;
+        break;
+      }
+    }
+  }
+  // Fallback: if no week selected, use latest data week count for latest selected month
+  if (timeProgress === 0) {
+    var latestYM = selectedYM[selectedYM.length - 1];
+    if (MONTH_WEEK_MAP && MONTH_WEEK_MAP[latestYM]) {
+      var mw0 = MONTH_WEEK_MAP[latestYM];
+      timeProgress = mw0.total > 0 ? (mw0.weeks.length / mw0.total * 100) : 0;
+    }
   }
 
   // --- Card-based KPI Dashboard helpers ---
@@ -2056,7 +2077,7 @@ function renderTargetBoard(){
     else accent = '#3b82f6';
 
     var bg = cardStyle === 'annual' ? '#fffbeb' : '#ffffff';
-    var barWidth = isRate ? 0 : (targetZero ? 0 : Math.min(100, pct));
+    var barWidth = isRate ? 0 : (isTime ? Math.min(100, pct) : (targetZero ? 0 : Math.min(100, pct)));
 
     var barHtml = !isRate
       ? '<div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:8px"><div style="width:' + barWidth + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width .3s"></div></div>'
