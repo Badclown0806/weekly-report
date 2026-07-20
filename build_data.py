@@ -551,6 +551,20 @@ def read_person_targets():
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["sales_done"] = sanitize_value(v) or 0
 
+            # 实销目标
+            elif label == "实销目标":
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["net_sales_target"] = sanitize_value(v) or 0
+
+            # 实销完成
+            elif label == "实销完成":
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["net_sales_done"] = sanitize_value(v) or 0
+
             # GMV目标
             elif label == "GMV目标":
                 for col, month in col_to_month.items():
@@ -655,6 +669,7 @@ def read_annual_targets(person_targets):
             data["sales_target"][idx] = sanitize_value(mdata.get("sales_target", 0)) or 0.0
             data["gmv_target"][idx] = sanitize_value(mdata.get("gmv_target", 0)) or 0.0
             data["gsv_target"][idx] = sanitize_value(mdata.get("gsv_target", 0)) or 0.0
+            data["net_sales_target"][idx] = sanitize_value(mdata.get("net_sales_target", 0)) or 0.0
 
         all_targets[person_name] = data
 
