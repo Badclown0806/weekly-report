@@ -1710,7 +1710,7 @@ function computeDynamicMonthlyDone(months, weeks, persons){
   }
 
   // Step 4: Sum data for those weeks
-  var totalGsv = 0, totalGmv = 0, totalSales = 0, totalProfit = 0;
+  var totalGsv = 0, totalGmv = 0, totalSales = 0, totalProfit = 0, totalNetSales = 0;
   for(var pi = 0; pi < persons.length; pi++){
     var shops = ownerShops[persons[pi]] || [];
     for(var si = 0; si < shops.length; si++){
@@ -1720,19 +1720,24 @@ function computeDynamicMonthlyDone(months, weeks, persons){
         if(SHOP_WEEKLY[shop] && SHOP_WEEKLY[shop][wk] && typeof SHOP_WEEKLY[shop][wk].gsv === 'number'){
           totalGsv += SHOP_WEEKLY[shop][wk].gsv;
         }
-        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
-          totalProfit += DATA.WEEK_DATA[wk].shops[shop].profit;
+        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop]){
+          if(typeof DATA.WEEK_DATA[wk].shops[shop].profit === 'number'){
+            totalProfit += DATA.WEEK_DATA[wk].shops[shop].profit;
+          }
+          if(typeof DATA.WEEK_DATA[wk].shops[shop].qty === 'number'){
+            totalSales += DATA.WEEK_DATA[wk].shops[shop].qty;
+          }
+          if(typeof DATA.WEEK_DATA[wk].shops[shop].net_sales === 'number'){
+            totalNetSales += DATA.WEEK_DATA[wk].shops[shop].net_sales;
+          }
         }
         if(DATA && DATA.TRAFFIC_WEEKLY && DATA.TRAFFIC_WEEKLY[wk] && DATA.TRAFFIC_WEEKLY[wk][shop] && typeof DATA.TRAFFIC_WEEKLY[wk][shop].gmv === 'number'){
           totalGmv += DATA.TRAFFIC_WEEKLY[wk][shop].gmv;
         }
-        if(DATA && DATA.WEEK_DATA && DATA.WEEK_DATA[wk] && DATA.WEEK_DATA[wk].shops && DATA.WEEK_DATA[wk].shops[shop] && typeof DATA.WEEK_DATA[wk].shops[shop].products === 'number'){
-          totalSales += DATA.WEEK_DATA[wk].shops[shop].products;
-        }
       }
     }
   }
-  return {gsv: totalGsv, gmv: totalGmv, sales: totalSales, profit: totalProfit};
+  return {gsv: totalGsv, gmv: totalGmv, sales: totalSales, profit: totalProfit, net_sales: totalNetSales};
 }
 
 function renderTargetBoard(){
@@ -1761,7 +1766,7 @@ function renderTargetBoard(){
   }
 
   // Aggregate data across all selected persons and months
-  var agg = {gsv_done:0, gsv_target:0, gmv_done:0, gmv_target:0, sales_done:0, sales_target:0, profit_done:0, profit_target:0};
+  var agg = {gsv_done:0, gsv_target:0, gmv_done:0, gmv_target:0, sales_done:0, sales_target:0, profit_done:0, profit_target:0, net_sales_done:0, net_sales_target:0};
   var profitRate = 0;
   var hasData = false;
 
@@ -1779,6 +1784,8 @@ function renderTargetBoard(){
       agg.sales_target += t.sales_target || 0;
       agg.profit_done += t.profit_done || 0;
       agg.profit_target += t.profit_target || 0;
+      agg.net_sales_done += t.net_sales_done || 0;
+      agg.net_sales_target += t.net_sales_target || 0;
     }
     // Use PERSON_TARGETS pre-computed profit_rate from Excel for single month
     if(months.length === 1){
@@ -1806,6 +1813,8 @@ function renderTargetBoard(){
         agg.sales_target += pt.sales_target || 0;
         agg.profit_done += pt.profit_done || 0;
         agg.profit_target += pt.profit_target || 0;
+        agg.net_sales_done += pt.net_sales_done || 0;
+        agg.net_sales_target += pt.net_sales_target || 0;
       }
     }
     profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
@@ -1820,6 +1829,7 @@ function renderTargetBoard(){
       if(dynamic.profit > 0) agg.profit_done = dynamic.profit;
       if(dynamic.sales > 0) agg.sales_done = dynamic.sales;
       if(dynamic.gmv > 0) agg.gmv_done = dynamic.gmv;
+      if(dynamic.net_sales > 0) agg.net_sales_done = dynamic.net_sales;
       profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
       hasData = true;
     }
@@ -1947,6 +1957,7 @@ function renderTargetBoard(){
   cardHtml += renderCard('当月GSV', agg.gsv_done, agg.gsv_target, 'money', 'monthly');
   cardHtml += renderCard('当月GMV', agg.gmv_done, agg.gmv_target, 'money', 'monthly');
   cardHtml += renderCard('当月销量', agg.sales_done, agg.sales_target, 'num', 'monthly');
+  cardHtml += renderCard('当月实销', agg.net_sales_done, agg.net_sales_target, 'ruble', 'monthly');
   cardHtml += renderCard('当月利润率', profitRate, 14, 'pct', 'rate');
   cardHtml += renderCard('当月利润', agg.profit_done, agg.profit_target, 'money', 'monthly');
   cardHtml += renderCard('时间进度', timePct, 0, 'pct', 'time');

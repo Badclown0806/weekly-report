@@ -254,6 +254,7 @@ def read_lx_profit(weeks_iso):
         margin_rate = vals[10]
         gsv = vals[11]
         qty = vals[15]
+        net_sales = vals[17] if len(vals) > 17 else None  # Col 18 财报净销量
         return_rate = vals[22] if len(vals) > 22 else None
         ad_spend = vals[36] if len(vals) > 36 else None
         unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
@@ -273,6 +274,7 @@ def read_lx_profit(weeks_iso):
         p_profit = sanitize_value(profit)
         p_gsv = sanitize_value(gsv)
         p_qty = sanitize_value(qty)
+        p_ns = sanitize_value(net_sales)
         p_ad = sanitize_value(ad_spend)
         p_del = sanitize_value(unit_delivery)
         p_ret = sanitize_value(unit_return_fee)
@@ -286,6 +288,7 @@ def read_lx_profit(weeks_iso):
             "margin": sanitize_value(margin_rate),
             "gsv": p_gsv if isinstance(p_gsv, (int, float)) else 0,
             "qty": p_qty if isinstance(p_qty, (int, float)) else 0,
+            "net_sales": p_ns if isinstance(p_ns, (int, float)) else 0,
             "return_rate": sanitize_value(return_rate),
             "ad_spend": p_ad if isinstance(p_ad, (int, float)) else 0,
             "unit_delivery": p_del if isinstance(p_del, (int, float)) else 0,
@@ -311,13 +314,15 @@ def read_lx_profit(weeks_iso):
         products = week_data_raw[w_key]
         products.sort(key=lambda p: p["profit"], reverse=True)
 
-        shop_summary = defaultdict(lambda: {"gsv": 0, "profit": 0, "margin": 0, "products": 0, "ad_spend": 0})
+        shop_summary = defaultdict(lambda: {"gsv": 0, "profit": 0, "margin": 0, "products": 0, "ad_spend": 0, "qty": 0, "net_sales": 0})
         for p in products:
             s = shop_summary[p["shop"]]
             s["gsv"] += p["gsv"]
             s["profit"] += p["profit"]
             s["products"] += 1
             s["ad_spend"] += p.get("ad_spend", 0) or 0
+            s["qty"] += p.get("qty", 0) or 0
+            s["net_sales"] += p.get("net_sales", 0) or 0
 
         for s in shop_summary.values():
             if s["gsv"] > 0:
@@ -536,6 +541,18 @@ def read_person_targets():
                     if v is not None and month >= 1 and month <= 12:
                         targets_by_month[month]["gsv_done"] = sanitize_value(v) or 0
 
+            elif label == "实销目标":
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["net_sales_target"] = sanitize_value(v) or 0
+
+            elif label == "实销完成":
+                for col, month in col_to_month.items():
+                    v = vals[col]
+                    if v is not None and month >= 1 and month <= 12:
+                        targets_by_month[month]["net_sales_done"] = sanitize_value(v) or 0
+
             elif "利润率" in label and "率" in label:
                 for col, month in col_to_month.items():
                     v = vals[col]
@@ -565,6 +582,7 @@ def read_person_targets():
                     "gmv_target": 0, "gmv_done": 0,
                     "sales_target": 0, "sales_done": 0,
                     "profit_target": 0, "profit_done": 0,
+                    "net_sales_target": 0, "net_sales_done": 0,
                     "profit_rate": 0
                 }
         return {str(m): dict(targets_by_month[m]) for m in range(1, 13)}
@@ -952,6 +970,112 @@ def main():
         sku_category_cn[sku] = CATEGORY_CN.get(cat, cat)
     print(f"  SKU_CATEGORY 中文化: {len(sku_category_cn)} entries")
 
+    # ── 阶段 6: 构建 MONTHLY_TARGETS（按负责人聚合月度净销量/实销等）──
+    print("\n[6/6] 构建 MONTHLY_TARGETS...")
+    monthly_targets = {}
+    valid_persons = [p for p in person_targets if p not in ("其他/待定",)]
+    total_year_weeks = len(weeks)
+
+    for person in valid_persons:
+        targets = person_targets.get(person, {})
+        months_list = sorted(targets.keys())  # e.g. ["1","2",...]
+
+        month_actuals = {}
+        for mk in months_list:
+            month_actuals[mk] = {
+                "profit_actual": 0.0, "gsv_actual": 0.0,
+                "qty_actual": 0.0, "gmv_actual": 0.0, "net_sales_actual": 0.0
+            }
+
+        completed_weeks_set = set()
+        for w_key, wd in week_data.items():
+            wk_month = None
+            for mk, mdata in month_week_map.items():
+                if w_key in mdata["weeks"]:
+                    wk_month = str(int(mk[5:]))  # "2026-07" → "7"
+                    break
+            if wk_month is None or wk_month not in month_actuals:
+                continue
+
+            completed_weeks_set.add(w_key)
+
+            for p in wd.get("allProducts", []):
+                p_owner = p.get("owner", "")
+                if not p_owner or p_owner == "无负责人":
+                    continue
+                if p_owner != person:
+                    continue
+
+                act = month_actuals[wk_month]
+                act["profit_actual"] += p.get("profit", 0) or 0
+                act["gsv_actual"] += p.get("gsv", 0) or 0
+                act["qty_actual"] += p.get("qty", 0) or 0
+                act["gmv_actual"] += p.get("gmv", 0) or 0
+                act["net_sales_actual"] += p.get("net_sales", 0) or 0
+
+        monthly = []
+        annual_profit_target = 0.0; annual_profit_actual = 0.0
+        annual_gsv_target = 0.0; annual_gsv_actual = 0.0
+        annual_sales_target = 0.0; annual_sales_actual = 0.0
+        annual_net_sales_target = 0.0; annual_net_sales_actual = 0.0
+        annual_gmv_target = 0.0; annual_gmv_actual = 0.0
+
+        for mk in months_list:
+            act = month_actuals[mk]
+            tm = targets.get(mk, {})
+            entry = {
+                "month": mk,
+                "profit_target": tm.get("profit_target", 0) or 0,
+                "profit_actual": round(act["profit_actual"], 2),
+                "sales_target": tm.get("sales_target", 0) or 0,
+                "sales_actual": round(act["qty_actual"], 2),
+                "net_sales_target": tm.get("net_sales_target", 0) or 0,
+                "net_sales_actual": round(act["net_sales_actual"], 2),
+                "gmv_target": tm.get("gmv_target", 0) or 0,
+                "gmv_actual": round(act["gmv_actual"], 2),
+                "gsv_target": tm.get("gsv_target", 0) or 0,
+                "gsv_actual": round(act["gsv_actual"], 2)
+            }
+            monthly.append(entry)
+
+            annual_profit_target += entry["profit_target"]
+            annual_profit_actual += entry["profit_actual"]
+            annual_gsv_target += entry["gsv_target"]
+            annual_gsv_actual += entry["gsv_actual"]
+            annual_sales_target += entry["sales_target"]
+            annual_sales_actual += entry["sales_actual"]
+            annual_net_sales_target += entry["net_sales_target"]
+            annual_net_sales_actual += entry["net_sales_actual"]
+            annual_gmv_target += entry["gmv_target"]
+            annual_gmv_actual += entry["gmv_actual"]
+
+        completed_weeks = len(completed_weeks_set)
+        time_progress = round(completed_weeks / total_year_weeks * 100, 2) if total_year_weeks > 0 else 0
+
+        monthly_targets[person] = {
+            "monthly": monthly,
+            "time_progress": time_progress,
+            "completed_weeks": completed_weeks,
+            "total_weeks": total_year_weeks,
+            "annual": {
+                "profit_target": round(annual_profit_target, 2),
+                "profit_actual": round(annual_profit_actual, 2),
+                "sales_target": round(annual_sales_target, 2),
+                "sales_actual": round(annual_sales_actual, 2),
+                "net_sales_target": round(annual_net_sales_target, 2),
+                "net_sales_actual": round(annual_net_sales_actual, 2),
+                "gmv_target": round(annual_gmv_target, 2),
+                "gmv_actual": round(annual_gmv_actual, 2),
+                "gsv_target": round(annual_gsv_target, 2),
+                "gsv_actual": round(annual_gsv_actual, 2)
+            }
+        }
+
+    print(f"  MONTHLY_TARGETS: {len(monthly_targets)} persons")
+    for p, data in sorted(monthly_targets.items()):
+        p_count = sum(1 for e in data["monthly"] if e["profit_actual"] > 0)
+        print(f"    {p}: {p_count} months with profit data, time_progress={data['time_progress']:.1f}%")
+
     print("\n" + "=" * 60)
     print("组装 data_women.js...")
 
@@ -980,6 +1104,7 @@ def main():
         },
         "SKU_CATEGORY": sku_category_cn,
         "MONTH_WEEK_MAP": month_week_map,
+        "MONTHLY_TARGETS": monthly_targets,
     }
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
