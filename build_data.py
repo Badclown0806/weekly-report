@@ -1254,6 +1254,23 @@ def main():
         else:
             print(f"\n  ⚠ HTML 中未找到 data.js?v= 模式，请手动检查")
 
+    # ── 同步 HTML 内嵌 CORE_DATA（防止 Phase 1 显示旧数据）──
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_lines = f.readlines()
+        core_line = f'var CORE_DATA = {json_str};\n'
+        replaced = False
+        for i, line in enumerate(html_lines):
+            if line.startswith('var CORE_DATA = {'):
+                old_len = len(line)
+                html_lines[i] = core_line
+                replaced = True
+                print(f"\n  已同步 HTML 内嵌 CORE_DATA: {old_len:,} → {len(core_line):,} 字符")
+                break
+        if replaced:
+            with open(html_path, 'w', encoding='utf-8') as f:
+                f.writelines(html_lines)
+
     # ── 数据质量诊断 ──
     print("\n数据质量诊断:")
     # 检查 return_rate 是否为百分比
