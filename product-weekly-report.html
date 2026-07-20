@@ -842,7 +842,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202607201148';
+  var ver = '202607201152';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -2032,6 +2032,8 @@ function renderTargetBoard(){
     var valDisplay;
     if (unit === 'money') {
       valDisplay = '¥' + fmtWan(actual);
+    } else if (unit === 'ruble') {
+      valDisplay = '₽' + fmtWan(actual);
     } else if (unit === 'pct') {
       valDisplay = actual.toFixed(2) + '%';
     } else {
@@ -2045,6 +2047,8 @@ function renderTargetBoard(){
         tgtDisplay = '目标 ——';
       } else if (unit === 'money') {
         tgtDisplay = '目标 ¥' + fmtWan(target);
+      } else if (unit === 'ruble') {
+        tgtDisplay = '目标 ₽' + fmtWan(target);
       } else {
         tgtDisplay = '目标 ' + fmtInt(target);
       }
@@ -2101,7 +2105,7 @@ function renderTargetBoard(){
 
   // Row 2-3: Monthly KPIs (summed across selected persons + selected months)
   cardHtml += renderCard('当月GSV', totals.monGsvAct, totals.monGsvTgt, 'money', 'monthly');
-  cardHtml += renderCard('当月GMV', totals.monGmvAct, totals.monGmvTgt, 'money', 'monthly');
+  cardHtml += renderCard('当月GMV', totals.monGmvAct, totals.monGmvTgt, 'ruble', 'monthly');
   cardHtml += renderCard('当月销量', totals.monSalesAct, totals.monSalesTgt, 'num', 'monthly');
   cardHtml += renderCard('当月实销', totals.monNetAct, totals.monNetTgt, 'num', 'monthly');
   cardHtml += renderCard('当月利润率', profitRate, 0, 'pct', 'rate');
