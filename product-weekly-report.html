@@ -602,9 +602,9 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <div id="algoDesc" style="display:none;margin-top:6px;padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:4px">
 <strong>颜色标注说明：</strong>
 <ul style="margin:4px 0 4px 16px;padding:0">
-<li><span style="color:#2563eb;font-weight:500">蓝色边框(▼▼▼)</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
-<li><span style="color:#16a34a;font-weight:500">绿色边框(▼▼)</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
-<li><span style="color:#ca8a04;font-weight:500">黄色边框(▼)</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
+<li><span style="color:#2563eb;font-weight:500">蓝色边框</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
+<li><span style="color:#16a34a;font-weight:500">绿色边框</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
+<li><span style="color:#ca8a04;font-weight:500">黄色边框</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
 </ul>
 <strong>广告费占比解读：</strong>
 <ul style="margin:4px 0 0 16px;padding:0">
@@ -842,7 +842,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202607201447';
+  var ver = '202607201507';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -2808,19 +2808,18 @@ function renderProdTable(){
     // 销量颜色标记 (需求3: 全部产品 SKU 按销量颜色)
     var qtyVal = (p.qty || 0);
     var qtyClass = '';
-    var qtyMark = '';
     if(curProdTab === 'newProd'){
       // 新品阈值 (需求4): 175/84/56
-      if(qtyVal >= 175){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 84){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 56){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      if(qtyVal >= 175){ qtyClass = 'qty-tier-3'; }
+      else if(qtyVal >= 84){ qtyClass = 'qty-tier-2'; }
+      else if(qtyVal >= 56){ qtyClass = 'qty-tier-1'; }
     } else {
       // 全部产品阈值 (需求3): 350/175/105
-      if(qtyVal >= 350){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 175){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 105){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      if(qtyVal >= 350){ qtyClass = 'qty-tier-3'; }
+      else if(qtyVal >= 175){ qtyClass = 'qty-tier-2'; }
+      else if(qtyVal >= 105){ qtyClass = 'qty-tier-1'; }
     }
-    var qtyHtml = (p.qty||0).toLocaleString() + qtyMark;
+    var qtyHtml = (p.qty||0).toLocaleString();
 
 
     // Manual grade by profit/inventory rule
@@ -2902,7 +2901,7 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td data-full="'+returnRateDisplay+'">'+returnRateHtml+'</td>'+
       '<td data-full="'+unitDelVal.toFixed(2)+'">'+unitDelHtml+'</td>'+
       '<td data-full="'+unitRetVal.toFixed(2)+'">'+unitRetHtml+'</td>'+
-      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtmlColored+'</td>'+
+      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+'">'+qtyHtmlColored+'</td>'+
       '<td data-full="'+aspFull+'">'+aspHtml+'</td>'+
       '<td data-full="'+escHtml(adSpend)+'">'+adSpendHtml+'</td>'+
       '<td data-full="'+escHtml(adRatio)+'"'+'>'+(prevAdRatio2 !== null && adRatioNum !== null ? arrowWrap(adRatioNum, prevAdRatio2, adRatio) : adRatio)+'</td>'+

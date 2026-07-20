@@ -1578,13 +1578,13 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <ul style="margin:4px 0 4px 16px;padding:0">
 
 
-<li><span style="color:#2563eb;font-weight:500">蓝色边框(▼▼▼)</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
+<li><span style="color:#2563eb;font-weight:500">蓝色边框</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
 
 
-<li><span style="color:#16a34a;font-weight:500">绿色边框(▼▼)</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
+<li><span style="color:#16a34a;font-weight:500">绿色边框</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
 
 
-<li><span style="color:#ca8a04;font-weight:500">黄色边框(▼)</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
+<li><span style="color:#ca8a04;font-weight:500">黄色边框</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
 
 
 </ul>
@@ -7638,22 +7638,19 @@ function renderProdTable(){
     var qtyClass = '';
 
 
-    var qtyMark = '';
-
-
     if(curProdTab === 'newProd'){
 
 
       // 新品: S≥105 蓝底, A≥70 绿底, B≥35 黄底
 
 
-      if(qtyVal >= 105){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
+      if(qtyVal >= 105){ qtyClass = 'qty-tier-3'; }
 
 
-      else if(qtyVal >= 70){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
+      else if(qtyVal >= 70){ qtyClass = 'qty-tier-2'; }
 
 
-      else if(qtyVal >= 35){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      else if(qtyVal >= 35){ qtyClass = 'qty-tier-1'; }
 
 
     } else {
@@ -7662,19 +7659,19 @@ function renderProdTable(){
       // 全部款: S≥210 蓝底, A≥140 绿底, B≥70 黄底
 
 
-      if(qtyVal >= 210){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
+      if(qtyVal >= 210){ qtyClass = 'qty-tier-3'; }
 
 
-      else if(qtyVal >= 140){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
+      else if(qtyVal >= 140){ qtyClass = 'qty-tier-2'; }
 
 
-      else if(qtyVal >= 70){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      else if(qtyVal >= 70){ qtyClass = 'qty-tier-1'; }
 
 
     }
 
 
-    var qtyHtml = (p.qty||0).toLocaleString() + qtyMark;
+    var qtyHtml = (p.qty||0).toLocaleString();
 
 
 
@@ -7872,7 +7869,7 @@ return '<tr class="prod-row '+qtyClass+'" style="'+rowBgStyle+'" onclick="openCo
       '<td data-full="'+unitRetVal.toFixed(2)+'">'+unitRetHtml+'</td>'+
 
 
-      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtmlColored+'</td>'+
+      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+'">'+qtyHtmlColored+'</td>'+
 
 
       '<td data-full="'+aspFull+'">'+aspHtml+'</td>'+

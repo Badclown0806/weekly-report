@@ -478,9 +478,9 @@ tr.qty-tier-1 td:first-child{border-left:2px solid #ca8a04}
 <div id="algoDesc" style="display:none;margin-top:6px;padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:4px">
 <strong>颜色标注说明：</strong>
 <ul style="margin:4px 0 4px 16px;padding:0">
-<li><span style="color:#2563eb;font-weight:500">蓝色边框(▼▼▼)</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
-<li><span style="color:#16a34a;font-weight:500">绿色边框(▼▼)</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
-<li><span style="color:#ca8a04;font-weight:500">黄色边框(▼)</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
+<li><span style="color:#2563eb;font-weight:500">蓝色边框</span>: 销量 ≥ 350（全部产品）或 ≥ 175（新品）</li>
+<li><span style="color:#16a34a;font-weight:500">绿色边框</span>: 销量 ≥ 175（全部产品）或 ≥ 84（新品）</li>
+<li><span style="color:#ca8a04;font-weight:500">黄色边框</span>: 销量 ≥ 105（全部产品）或 ≥ 56（新品）</li>
 </ul>
 <strong>广告费占比解读：</strong>
 <ul style="margin:4px 0 0 16px;padding:0">
@@ -2649,19 +2649,18 @@ function renderProdTable(){
     // 销量颜色标记 (需求3: 全部产品 SKU 按销量颜色)
     var qtyVal = (p.qty || 0);
     var qtyClass = '';
-    var qtyMark = '';
     if(curProdTab === 'newProd'){
       // 新品: S≥105 蓝底, A≥70 绿底, B≥35 黄底
-      if(qtyVal >= 105){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 70){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 35){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      if(qtyVal >= 105){ qtyClass = 'qty-tier-3'; }
+      else if(qtyVal >= 70){ qtyClass = 'qty-tier-2'; }
+      else if(qtyVal >= 35){ qtyClass = 'qty-tier-1'; }
     } else {
       // 全部款: S≥210 蓝底, A≥140 绿底, B≥70 黄底
-      if(qtyVal >= 210){ qtyClass = 'qty-tier-3'; qtyMark = ' ▼▼▼'; }
-      else if(qtyVal >= 140){ qtyClass = 'qty-tier-2'; qtyMark = ' ▼▼'; }
-      else if(qtyVal >= 70){ qtyClass = 'qty-tier-1'; qtyMark = ' ▼'; }
+      if(qtyVal >= 210){ qtyClass = 'qty-tier-3'; }
+      else if(qtyVal >= 140){ qtyClass = 'qty-tier-2'; }
+      else if(qtyVal >= 70){ qtyClass = 'qty-tier-1'; }
     }
-    var qtyHtml = (p.qty||0).toLocaleString() + qtyMark;
+    var qtyHtml = (p.qty||0).toLocaleString();
 
 
     // Manual grade by profit/inventory rule
@@ -2735,7 +2734,7 @@ return '<tr class="prod-row '+qtyClass+'" onclick="openCommentPanel(\''+p.sku.re
       '<td class="'+(p.profit<0?'neg':'')+'" data-full="'+escHtml(fmtK(p.profit))+'">'+fmtK(p.profit)+'</td>'+
       '<td class="'+marginCls+'" data-full="'+(Number(p.margin)||0).toFixed(2)+'%'+'">'+(Number(p.margin)||0).toFixed(2)+'%</td>'+
       '<td data-full="'+returnRateDisplay+'">'+returnRateHtml+'</td>'+
-      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+qtyMark+'">'+qtyHtmlColored+'</td>'+
+      '<td class="'+qtyClass+'" data-full="'+(p.qty||0).toLocaleString()+'">'+qtyHtmlColored+'</td>'+
       '<td data-full="'+aspFull+'">'+aspHtml+'</td>'+
       '<td data-full="'+escHtml(adSpend)+'">'+adSpendHtml+'</td>'+
       '<td data-full="'+escHtml(adRatio)+'">'+adRatio+'</td>'+
