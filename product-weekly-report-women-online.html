@@ -1881,7 +1881,7 @@ function renderTargetBoard(){
     {lbl: 'GSV(G)', val: agg.gsv_done, tgt: agg.gsv_target, fmt: 'money'},
     {lbl: 'GMV(G)', val: agg.gmv_done, tgt: agg.gmv_target, fmt: 'money'},
     {lbl: '销量', val: agg.sales_done, tgt: agg.sales_target, fmt: 'num'},
-    {lbl: '利润率', val: profitRate, tgt: 15, fmt: 'pct2'},
+    {lbl: '利润率', val: profitRate, tgt: 14, fmt: 'pct2'},
     {lbl: '利润(G)', val: agg.profit_done, tgt: agg.profit_target, fmt: 'money2'},
     {lbl: '时间进度', val: timePct, tgt: 100, fmt: 'pct'},
     {lbl: '完成进度', val: completionPct, tgt: 100, fmt: 'pct_completion'}
@@ -1896,7 +1896,7 @@ function renderTargetBoard(){
     var cls = pct >= 100 ? 'ok' : (pct >= 70 ? 'warn' : 'low');
     var valStr = isMoney ? fmtK(item.val) : (item.fmt === 'pct2' ? Number(item.val).toFixed(2)+'%' : (isPct ? Number(item.val).toFixed(1)+'%' : Number(item.val).toLocaleString()));
     var tgtStr = isMoney ? ('目标 '+fmtK(item.tgt)) : ('目标 '+item.tgt.toLocaleString());
-    if(item.fmt === 'pct2') tgtStr = '目标 ≥15%';
+    if(item.fmt === 'pct2') tgtStr = '目标 14.00%';
     else if(item.fmt === 'pct') tgtStr = '本月已过 '+completedWeeks+'周/共'+totalWeeks+'周';
     else if(item.fmt === 'pct_completion') tgtStr = '目标 ≥100%';
     var pctStr = (item.fmt !== 'pct2' && !isPct) ? '<span style="font-size:11px;color:#64748b"> '+pct.toFixed(2)+'%</span>' : '';
@@ -1905,7 +1905,7 @@ function renderTargetBoard(){
       '<div class="tlbl">'+item.lbl+' <span style="font-size:10px;color:#94a3b8">'+monthLabel+'</span></div>'+
       '<div class="tval">'+valStr+pctStr+'</div>'+
       '<div class="ttgt">'+tgtStr+'</div>'+
-      (item.fmt === 'pct2' ? '' : (item.fmt === 'pct' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:#8b5cf6"></div></div>' : (item.fmt === 'pct_completion' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:'+(pct>=100?'#16a34a':'#dc2626')+'"></div></div>' : '<div class="tgt-bar-wrap"><div class="tgt-bar-fill '+cls+'" style="width:'+Math.min(100,pct)+'%"></div></div>')))+
+      (item.fmt === 'pct2' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:'+(pct>=100?'#16a34a':'#dc2626')+'"></div></div>' : (item.fmt === 'pct' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:#8b5cf6"></div></div>' : (item.fmt === 'pct_completion' ? '<div class="tgt-bar-wrap"><div class="tgt-bar-fill" style="width:'+Math.min(100,pct)+'%;background:'+(pct>=100?'#16a34a':'#dc2626')+'"></div></div>' : '<div class="tgt-bar-wrap"><div class="tgt-bar-fill '+cls+'" style="width:'+Math.min(100,pct)+'%"></div></div>')))+
       extraHtml+
     '</div>';
   }).join('');
