@@ -1240,36 +1240,22 @@ def main():
         print(f"  ❌ DATA 无效: {e}")
         return 1
 
-    # ── 自动更新 HTML 中 data.js 的版本号（强制浏览器刷新缓存）──
+    # ── 自动更新 HTML 中缓存版本号（强制刷新 localStorage + data.js 缓存）──
     html_path = os.path.join(OUTPUT_DIR, "product-weekly-report.html")
     if os.path.exists(html_path):
         new_ver = datetime.now().strftime("%Y%m%d%H%M")
         with open(html_path, 'r', encoding='utf-8') as f:
             html = f.read()
-        updated_html = re.sub(r'data\.js\?v=\d+', f'data.js?v={new_ver}', html)
+        # Update ver variable (invalidates localStorage cache key)
+        updated_html = re.sub(r"var ver = '\d+'", f"var ver = '{new_ver}'", html)
+        # Update data.js version query string
+        updated_html = re.sub(r'data\.js\?v=\d+', f'data.js?v={new_ver}', updated_html)
         if updated_html != html:
             with open(html_path, 'w', encoding='utf-8') as f:
                 f.write(updated_html)
-            print(f"\n  已更新 HTML 缓存版本号: ?v={new_ver}")
+            print(f"\n  已更新 HTML 缓存版本: ver={new_ver}")
         else:
-            print(f"\n  ⚠ HTML 中未找到 data.js?v= 模式，请手动检查")
-
-    # ── 同步 HTML 内嵌 CORE_DATA（防止 Phase 1 显示旧数据）──
-    if os.path.exists(html_path):
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html_lines = f.readlines()
-        core_line = f'var CORE_DATA = {json_str};\n'
-        replaced = False
-        for i, line in enumerate(html_lines):
-            if line.startswith('var CORE_DATA = {'):
-                old_len = len(line)
-                html_lines[i] = core_line
-                replaced = True
-                print(f"\n  已同步 HTML 内嵌 CORE_DATA: {old_len:,} → {len(core_line):,} 字符")
-                break
-        if replaced:
-            with open(html_path, 'w', encoding='utf-8') as f:
-                f.writelines(html_lines)
+            print(f"\n  ⚠ HTML 中未找到版本号模式，请手动检查")
 
     # ── 数据质量诊断 ──
     print("\n数据质量诊断:")
