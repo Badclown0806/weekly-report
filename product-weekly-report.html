@@ -1876,10 +1876,6 @@ function getTargetPersons(){
 
 // ========== MONTHLY TARGET BOARD (NEW - based on MONTHLY_TARGETS) ==========
 
-// Default month and person selectors
-var monthlyTargetMonth = '';  // default set on init
-var monthlyTargetPerson = ''; // default set on init
-
 function getMonthlyTargetMonthOptions(){
   var months = [];
   if (typeof MONTHLY_TARGETS !== 'undefined' && MONTHLY_TARGETS) {
@@ -1911,55 +1907,50 @@ function getMonthlyTargetPersonOptions(){
   return persons;
 }
 
-function onMTPersonChange(){
-  var sel = document.getElementById('mtPersonSelect');
-  monthlyTargetPerson = sel ? sel.value : '';
-  renderTargetBoard();
-}
-
-function onMTMonthChange(){
-  var sel = document.getElementById('mtMonthSelect');
-  monthlyTargetMonth = sel ? sel.value : '';
-  renderTargetBoard();
-}
-
 function renderTargetBoard(){
   var tgtGrid = document.getElementById('tgtGrid');
   if (!tgtGrid) return;
 
-  var monthOpts = getMonthlyTargetMonthOptions();
+  // Derive person from page-level owner filter
   var personOpts = getMonthlyTargetPersonOptions();
-
   if (personOpts.length === 0) {
     tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无月度目标数据（需运行build_data.py生成MONTHLY_TARGETS）</div>';
     return;
   }
 
-  // Set defaults
-  if (!monthlyTargetMonth || monthOpts.indexOf(monthlyTargetMonth) < 0) {
-    monthlyTargetMonth = monthOpts[monthOpts.length - 1]; // latest month
+  // Pick the first selected owner that exists in MONTHLY_TARGETS
+  var selectedPerson = '';
+  var selOwners = Array.from(selectedOwners);
+  for (var i = 0; i < selOwners.length; i++) {
+    if (MONTHLY_TARGETS[selOwners[i]]) { selectedPerson = selOwners[i]; break; }
   }
-  if (!monthlyTargetPerson || personOpts.indexOf(monthlyTargetPerson) < 0) {
-    monthlyTargetPerson = personOpts[0];
+  if (!selectedPerson) {
+    // Fallback: first person with data
+    for (var p in MONTHLY_TARGETS) { selectedPerson = p; break; }
   }
 
+  // Derive month from page-level month filter
+  // selectedMonths has numeric strings like "7"; map to "2026-07" / "2027-01" format
+  var selMonths = Array.from(selectedMonths);
+  if (selMonths.length === 0) selMonths = [String(new Date().getMonth() + 1)];
+  var latestMonthNum = selMonths.reduce(function(a,b){ return parseInt(a)>parseInt(b) ? a : b; });
+  var mNum = parseInt(latestMonthNum);
+  var selectedMonthStr = (mNum >= 2 ? '2026-' : '2027-') + String(mNum).padStart(2,'0');
+
   // Get data
-  var mtData = MONTHLY_TARGETS[monthlyTargetPerson];
+  var mtData = MONTHLY_TARGETS[selectedPerson];
   if (!mtData || !mtData.monthly) {
-    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + monthlyTargetPerson + ' 的数据</div>';
+    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + selectedPerson + ' 的数据</div>';
     return;
   }
 
   // Find monthly entry
   var entry = null;
-  var yearEntries = [];
   for (var i = 0; i < mtData.monthly.length; i++) {
-    var e = mtData.monthly[i];
-    yearEntries.push(e);
-    if (e.month === monthlyTargetMonth) entry = e;
+    if (mtData.monthly[i].month === selectedMonthStr) { entry = mtData.monthly[i]; break; }
   }
   if (!entry) {
-    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + monthlyTargetMonth + ' 的数据</div>';
+    tgtGrid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:16px">暂无 ' + selectedMonthStr + ' 的数据</div>';
     return;
   }
 
@@ -1968,21 +1959,11 @@ function renderTargetBoard(){
   var timeProgress = mtData.time_progress || 0;
   var profitRate = entry.gsv_actual > 0 ? (entry.profit_actual / entry.gsv_actual * 100) : 0;
 
-  // Render selectors
+  // Compact header (no independent selectors — synced with page-level filters)
   var selectorHtml = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">';
   selectorHtml += '<span style="font-weight:600;font-size:13px;color:#1e293b">月度目标完成情况</span>';
-  selectorHtml += '<select id="mtMonthSelect" onchange="onMTMonthChange()" style="padding:4px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff;color:#334155">';
-  for (var mi = 0; mi < monthOpts.length; mi++) {
-    var sel = monthOpts[mi] === monthlyTargetMonth ? ' selected' : '';
-    selectorHtml += '<option value="' + monthOpts[mi] + '"' + sel + '>' + monthOpts[mi] + '</option>';
-  }
-  selectorHtml += '</select>';
-  selectorHtml += '<select id="mtPersonSelect" onchange="onMTPersonChange()" style="padding:4px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff;color:#334155">';
-  for (var pi = 0; pi < personOpts.length; pi++) {
-    var psel = personOpts[pi] === monthlyTargetPerson ? ' selected' : '';
-    selectorHtml += '<option value="' + personOpts[pi] + '"' + psel + '>' + personOpts[pi] + '</option>';
-  }
-  selectorHtml += '</select>';
+  selectorHtml += '<span style="font-size:11px;color:#475569;background:#e2e8f0;padding:2px 10px;border-radius:4px">' + selectedPerson + '</span>';
+  selectorHtml += '<span style="font-size:11px;color:#475569;background:#e2e8f0;padding:2px 10px;border-radius:4px">' + selectedMonthStr + '</span>';
   selectorHtml += '<span style="font-size:11px;color:#64748b">时间进度: <b style="color:#8b5cf6">' + timeProgress.toFixed(1) + '%</b></span>';
   selectorHtml += '</div>';
 
