@@ -726,7 +726,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail-women.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202607211312';
+  var ver = '202607211327';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -871,6 +871,7 @@ function initFromDataJs() {
     WEEK_DATA = DATA.WEEK_DATA;
     TRAFFIC_WEEKLY = DATA.TRAFFIC_WEEKLY;
     PERSON_TARGETS = DATA.PERSON_TARGETS;
+    MONTHLY_TARGETS = DATA.MONTHLY_TARGETS || {};
     MONTH_WEEK_MAP = DATA.MONTH_WEEK_MAP || {};
     SKU_CATEGORY = DATA.SKU_CATEGORY || {};
     if(!PERSON_TARGETS) PERSON_TARGETS = {};
@@ -1847,6 +1848,34 @@ function renderTargetBoard(){
       }
     }
     profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
+  }
+
+  // ── 用 MONTHLY_TARGETS 覆盖 done 值（动态累加，比年规手工行更准）──
+  if (typeof MONTHLY_TARGETS !== 'undefined' && MONTHLY_TARGETS) {
+    var mtDone0 = {gsv:0, gmv:0, sales:0, profit:0, net_sales:0};
+    var mtHasData = false;
+    for (var _pi = 0; _pi < aggregationPersons.length; _pi++) {
+      var _mt = MONTHLY_TARGETS[aggregationPersons[_pi]];
+      if (!_mt || !_mt.monthly) continue;
+      for (var _mi = 0; _mi < _mt.monthly.length; _mi++) {
+        var _me = _mt.monthly[_mi];
+        if (months.indexOf(_me.month) < 0) continue;
+        mtHasData = true;
+        mtDone0.gsv += _me.gsv_actual || 0;
+        mtDone0.gmv += _me.gmv_actual || 0;
+        mtDone0.sales += _me.sales_actual || 0;
+        mtDone0.profit += _me.profit_actual || 0;
+        mtDone0.net_sales += _me.net_sales_actual || 0;
+      }
+    }
+    if (mtHasData) {
+      agg.gsv_done = mtDone0.gsv;
+      agg.gmv_done = mtDone0.gmv;
+      agg.sales_done = mtDone0.sales;
+      agg.profit_done = mtDone0.profit;
+      agg.net_sales_done = mtDone0.net_sales;
+      profitRate = agg.gsv_done > 0 ? agg.profit_done / agg.gsv_done * 100 : 0;
+    }
   }
 
   // 根据选中的周动态覆盖 done 值
