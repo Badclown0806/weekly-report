@@ -2292,7 +2292,7 @@ var DEFAULT_MEETING_SUMMARY = JSON.parse(JSON.stringify(MEETING_SUMMARY));
 (function loadDataJs() {
 
 
-  var ver = '202607211207';
+  var ver = '202607211312';
 
 
 
@@ -5643,9 +5643,9 @@ function renderTargetBoard(){
   cardHtml += renderCard('全年利润', annProfitAct, annProfitTgt, 'money', 'annual');
   cardHtml += renderCard('全年GSV', annGsvAct, annGsvTgt, 'money', 'annual');
   cardHtml += renderCard('当月GSV', agg.gsv_done, agg.gsv_target, 'money', 'monthly');
-  cardHtml += renderCard('当月GMV', agg.gmv_done, agg.gmv_target, 'money', 'monthly');
+  cardHtml += renderCard('当月GMV', agg.gmv_done, agg.gmv_target, 'ruble', 'monthly');
   cardHtml += renderCard('当月销量', agg.sales_done, agg.sales_target, 'num', 'monthly');
-  cardHtml += renderCard('当月实销', agg.net_sales_done, agg.net_sales_target, 'ruble', 'monthly');
+  cardHtml += renderCard('当月实销', agg.net_sales_done, agg.net_sales_target, 'num', 'monthly');
   cardHtml += renderCard('当月利润率', profitRate, 14, 'pct', 'rate');
   cardHtml += renderCard('当月利润', agg.profit_done, agg.profit_target, 'money', 'monthly');
   cardHtml += renderCard('时间进度', timePct, 0, 'pct', 'time');
