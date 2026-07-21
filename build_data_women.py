@@ -1165,6 +1165,13 @@ def main():
                     f.write(updated_html)
                 print(f"  已更新 {html_name} 缓存版本: ver={new_ver}")
 
+    # ── 同步 data-detail-women.js（Phase 2 加载用）──
+    detail_path = os.path.join(OUTPUT_DIR, "data-detail-women.js")
+    with open(OUTPUT_PATH, 'r', encoding='utf-8') as src:
+        with open(detail_path, 'w', encoding='utf-8') as dst:
+            dst.write(src.read())
+    print(f"  已同步 data-detail-women.js")
+
     print("完成!")
     return 0
 
