@@ -1,0 +1,81 @@
+============================================================
+build_data_women.py - 生成 data_women.js (女装版)
+============================================================
+
+[1/5] 生成周数组...
+  共 26 周: 2026-W05 → 2026-W30
+  MONTH_WEEK_MAP: 6 months
+
+[2/5] 读取产品列表...
+  产品列表: 1866 SKU图片, 1990 SKU负责人, 22 店铺负责人, 1990 SKU-WB映射, 1912 首次日期, 980 SKU类目
+
+[3/5] 读取LX利润表...
+  SHOP_WEEKLY: 22 shops
+  WEEK_DATA: 25 weeks, 18119 total product-weeks
+
+[4/5] 读取运营日数据...
+  TRAFFIC_WEEKLY: 26 weeks, 21791 total SKU-week entries
+  SKU首次库存日期 (运营日数据): 824 个SKU
+  SKU最新可售数量 (运营日数据): 842 个SKU
+  合并运营日数据 M列(销量) 到 WEEK_DATA...
+  已合并 14704 条销量数据 (来源: 运营日数据 M列)
+  SKU_FIRST_DATE: 3576 个 (合并产品列表+运营日数据), 新增 shop|sku 映射 840 个
+    无库存记录的SKU将不显示上架天数（显示为 '-'）
+  SKU_INVENTORY: 842 个SKU (最新日期可售数量), 新增 shop|sku 映射 0 个
+
+[5/5] 读取年规进度 (女装)...
+  PERSON_TARGETS: 3 people
+  SKU_OWNER_LOOKUP: 1971 entries
+  G-NZTF1店 负责人强制归属陈欣诺: 63 条
+  SKU_OWNER_LOOKUP: 1996 entries (after LX merge, +847)
+  SHOP_OWNERS updated with LX sub-owners (per-shop accurate)
+
+  [女装过滤] 仅保留 5 家店铺: {'G-NZTF1店', 'OZ-NZBG2店', 'Z-NZTF1店', 'OZ-OZTF1店', 'WB-TZBG1店'}
+    SHOP_WEEKLY: 22 → 2
+    WEEK_DATA products: 18119 → 2679
+    SHOP_OWNERS: 25 → 2
+
+[5.5] 预计算新品等级和销售等级...
+  NEW_PRODUCT_GRADE (按销量): 118 SKUs (S=44, A=25, B=12)
+  SALES_GRADE (单周最高销量): 118 SKUs (S=2, A=8, B=20, None=88)
+  SKU_CATEGORY 中文化: 980 entries
+
+[6/6] 构建 MONTHLY_TARGETS...
+  MONTHLY_TARGETS: 2 persons
+    毛立新: 6 months with profit data, time_progress=96.2%
+    陈欣诺: 4 months with profit data, time_progress=96.2%
+
+============================================================
+组装 data_women.js...
+  输出: D:\周汇报文件\data_women.js
+  大小: 2.39 MB
+
+验证 data_women.js 有效性...
+  OK DATA 有效: 22 个顶级字段
+    WEEKS: 26 entries (list)
+    WEEKS_ISO: 26 entries (list)
+    WEEK_LABELS: 26 entries (list)
+    SHOP_WEEKLY: 2 entries (dict)
+    WEEK_DATA: 25 entries (dict)
+    TRAFFIC_WEEKLY: 26 entries (dict)
+    PERSON_TARGETS: 3 entries (dict)
+    SKU_IMG: 1866 entries (dict)
+    SKU_FIRST_DATE: 3576 entries (dict)
+    SKU_OWNER: 1990 entries (dict)
+    SKU_OWNER_LOOKUP: 1996 entries (dict)
+    SHOP_OWNERS: 2 entries (dict)
+    SKU_WB_ID: 1990 entries (dict)
+    PRODUCT_NOTES: 0 entries (dict)
+    NEW_PRODUCT_CREATED: 0 entries (list)
+    SKU_INVENTORY: 842 entries (dict)
+    NEW_PRODUCT_GRADE: 118 entries (dict)
+    SALES_GRADE: 118 entries (dict)
+    OWNER_HIERARCHY: 2 entries (dict)
+    SKU_CATEGORY: 980 entries (dict)
+    MONTH_WEEK_MAP: 6 entries (dict)
+    MONTHLY_TARGETS: 2 entries (dict)
+
+============================================================
+  已更新 product-weekly-report-women.html 缓存版本: ver=202607211131
+  已更新 product-weekly-report-women-online.html 缓存版本: ver=202607211131
+完成!

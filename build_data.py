@@ -59,7 +59,7 @@ def sanitize_value(v):
                 return None
             return round(f, 6) if abs(f) < 10 else round(f, 2)
         except (ValueError, TypeError):
-            return v
+            return 0
     if isinstance(v, datetime):
         return v.strftime("%Y-%m-%d")
     if isinstance(v, date):

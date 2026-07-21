@@ -1,0 +1,104 @@
+============================================================
+build_data.py - 生成 data.json
+============================================================
+
+[1/5] 生成周数组...
+  共 52 周: 2025-W30 → 2026-W29
+  MONTH_WEEK_MAP: 13 months
+
+[2/5] 读取产品列表...
+  产品列表: 1866 SKU图片, 1990 SKU负责人, 22 店铺负责人, 1990 SKU-WB映射, 1912 首次日期, 980 SKU类目
+
+[3/5] 读取LX利润表...
+  SHOP_WEEKLY: 22 shops
+  WEEK_DATA: 52 weeks, 29942 total product-weeks
+
+[4/5] 读取运营日数据...
+  TRAFFIC_WEEKLY: 27 weeks, 22450 total SKU-week entries
+  SKU首次库存日期 (运营日数据): 818 个SKU
+  SKU最新可售数量 (运营日数据): 837 个SKU
+  合并运营日数据 M列(销量) 到 WEEK_DATA...
+  已合并 15669 条销量数据 (来源: 运营日数据 M列)
+  SKU_FIRST_DATE: 3607 个 (合并产品列表+运营日数据), 新增 shop|sku 映射 877 个
+    无库存记录的SKU将不显示上架天数（显示为 '-'）
+  SKU_INVENTORY: 837 个SKU (最新日期可售数量), 新增 shop|sku 映射 0 个
+
+[5/5] 读取年规进度...
+  PERSON_TARGETS: 10 people
+
+[5.2/5.2] 读取新版年规进度（2026WB年规进度-男装.xlsx）...
+  何欢洁: 有目标, 全年利润=3064618, 全年GSV=0
+  包家豪: 有目标, 全年利润=1844131, 全年GSV=13376960
+  张梦瑶: 有目标, 全年利润=8755270, 全年GSV=64543091
+  杨皓: 有目标, 全年利润=4216567, 全年GSV=25480202
+  林梓蕾: 有目标, 全年利润=3974275, 全年GSV=30509786
+  毛立新: 有目标, 全年利润=6720000, 全年GSV=41661563
+  江凯伦: 有目标, 全年利润=8392422, 全年GSV=57624982
+  郑志远: 有目标, 全年利润=5690652, 全年GSV=0
+  陈敏华: 无目标, 全年利润=0, 全年GSV=0
+  陈欣诺: 有目标, 全年利润=3974275, 全年GSV=27115195
+  read_annual_targets: 10 people
+
+[5.3] 聚合月度实际完成值...
+  MONTHLY_TARGETS: 10 persons
+    何欢洁: 6 months with profit data, time_progress=48.1%
+    包家豪: 5 months with profit data, time_progress=48.1%
+    张梦瑶: 0 months with profit data, time_progress=48.1%
+    杨皓: 6 months with profit data, time_progress=48.1%
+    林梓蕾: 6 months with profit data, time_progress=48.1%
+    毛立新: 6 months with profit data, time_progress=48.1%
+    江凯伦: 5 months with profit data, time_progress=48.1%
+    郑志远: 6 months with profit data, time_progress=48.1%
+    陈敏华: 0 months with profit data, time_progress=48.1%
+    陈欣诺: 6 months with profit data, time_progress=48.1%
+  SKU_OWNER_LOOKUP: 1971 entries (before LX merge)
+  SKU_OWNER_LOOKUP: 1997 entries (after LX merge, +874)
+  SHOP_OWNERS updated with LX sub-owners (per-shop accurate)
+
+[5.5] 预计算新品等级和销售等级...
+  NEW_PRODUCT_GRADE (按销量): 878 SKUs (S=424, A=134, B=47)
+  SALES_GRADE (单周最高销量): 878 SKUs (S=40, A=106, B=159, None=573)
+  SKU_CATEGORY 中文化: 980 entries
+  已排除女装店: {'Z-NZTF1店', 'G-NZTF1店'}
+
+============================================================
+组装 data.json...
+  输出: D:\周汇报文件\data.js
+  大小: 7.98 MB
+
+验证 data.js 有效性...
+  ✓ DATA 有效: 23 个顶级字段
+    WEEKS: 52 entries (list)
+    WEEKS_ISO: 52 entries (list)
+    WEEK_LABELS: 52 entries (list)
+    SHOP_WEEKLY: 20 entries (dict)
+    WEEK_DATA: 52 entries (dict)
+    TRAFFIC_WEEKLY: 27 entries (dict)
+    PERSON_TARGETS: 10 entries (dict)
+    MONTHLY_TARGETS: 10 entries (dict)
+    SKU_IMG: 1866 entries (dict)
+    SKU_FIRST_DATE: 3607 entries (dict)
+    SKU_OWNER: 1990 entries (dict)
+    SKU_OWNER_LOOKUP: 1997 entries (dict)
+    SHOP_OWNERS: 20 entries (dict)
+    SKU_WB_ID: 1990 entries (dict)
+    PRODUCT_NOTES: 0 entries (dict)
+    NEW_PRODUCT_CREATED: 0 entries (list)
+    SKU_INVENTORY: 837 entries (dict)
+    NEW_PRODUCT_GRADE: 878 entries (dict)
+    SALES_GRADE: 878 entries (dict)
+    SKU_CATEGORY: 980 entries (dict)
+    MONTH_WEEK_MAP: 13 entries (dict)
+    OWNERS: 12 entries (list)
+    OWNER_HIERARCHY: 2 entries (dict)
+
+  已更新 HTML 缓存版本: ver=202607211131
+
+数据质量诊断:
+  return_rate 百分比格式: 21393/21393 (小数值 0)
+  qty (来源 M列): 21601 个产品
+  TRAFFIC_WEEKLY: 27 周
+  SKU_OWNER: 1990 个 SKU
+
+============================================================
+完成!
