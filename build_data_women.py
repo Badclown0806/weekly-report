@@ -1151,6 +1151,20 @@ def main():
         return 1
 
     print("\n" + "=" * 60)
+
+    # ── 自动更新 HTML 中缓存版本号（强制刷新 data_women.js 缓存）──
+    new_ver = datetime.now().strftime("%Y%m%d%H%M")
+    for html_name in ["product-weekly-report-women.html", "product-weekly-report-women-online.html"]:
+        html_path = os.path.join(OUTPUT_DIR, html_name)
+        if os.path.exists(html_path):
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html = f.read()
+            updated_html = re.sub(r"var ver = '\d+'", f"var ver = '{new_ver}'", html)
+            if updated_html != html:
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(updated_html)
+                print(f"  已更新 {html_name} 缓存版本: ver={new_ver}")
+
     print("完成!")
     return 0
 
