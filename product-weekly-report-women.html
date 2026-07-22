@@ -2292,7 +2292,7 @@ var DEFAULT_MEETING_SUMMARY = JSON.parse(JSON.stringify(MEETING_SUMMARY));
 (function loadDataJs() {
 
 
-  var ver = '202607221018';
+  var ver = '202607221031';
 
 
 
@@ -2491,7 +2491,7 @@ var DEFAULT_MEETING_SUMMARY = JSON.parse(JSON.stringify(MEETING_SUMMARY));
     function processDetailData(detailData){
 
 
-      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY' || k === 'SKU_INVENTORY')) window.DATA[k] = detailData[k]; }
+      for(var k in detailData){ if(detailData.hasOwnProperty(k) && (k === 'WEEK_DATA' || k === 'TRAFFIC_WEEKLY' || k === 'SHOP_OWNERS' || k === 'SHOP_WEEKLY' || k === 'SKU_INVENTORY' || k === 'PERSON_TARGETS' || k === 'MONTHLY_TARGETS' || k === 'WEEKS' || k === 'WEEKS_ISO' || k === 'WEEK_LABELS' || k === 'OWNERS' || k === 'OWNER_HIERARCHY' || k === 'MONTH_WEEK_MAP')) window.DATA[k] = detailData[k]; }
 
 
       onDetailLoaded();
