@@ -2292,7 +2292,7 @@ var DEFAULT_MEETING_SUMMARY = JSON.parse(JSON.stringify(MEETING_SUMMARY));
 (function loadDataJs() {
 
 
-  var ver = '202607221057';
+  var ver = '202607221132';
 
 
 
@@ -7608,31 +7608,39 @@ function renderProdTable(){
         }
       }
       if (cnt > 0) {
+        var tcR = totalClick / cnt, tcaR = totalCart / cnt, tcoR = totalConv / cnt;
         skuTraffic = {
-          click_rate: totalClick / cnt,
-          cart_rate: totalCart / cnt,
-          conv_rate: totalConv / cnt
+          click_rate: isNaN(tcR) ? 0 : tcR,
+          cart_rate: isNaN(tcaR) ? 0 : tcaR,
+          conv_rate: isNaN(tcoR) ? 0 : tcoR
         };
       }
     }
 
     var clickHtml = (skuTraffic && skuTraffic.click_rate != null)
-      ? (skuTraffic.click_rate * 100).toFixed(2) + '%'
+      ? (Number(skuTraffic.click_rate) * 100).toFixed(2) + '%'
       : (trafficData && trafficData.click_rate != null)
         ? (Number(trafficData.click_rate) * 100).toFixed(2) + '%'
         : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
+    // Prevent NaN display
+    if (clickHtml.indexOf('NaN') >= 0) clickHtml = '<span style="color:#94a3b8;font-size:11px">-</span>';
+
     var cartHtml = (skuTraffic && skuTraffic.cart_rate != null)
-      ? (skuTraffic.cart_rate * 100).toFixed(2) + '%'
+      ? (Number(skuTraffic.cart_rate) * 100).toFixed(2) + '%'
       : (trafficData && trafficData.cart_rate != null)
         ? (Number(trafficData.cart_rate) * 100).toFixed(2) + '%'
         : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
+    if (cartHtml.indexOf('NaN') >= 0) cartHtml = '<span style="color:#94a3b8;font-size:11px">-</span>';
+
     var convHtml = (skuTraffic && skuTraffic.conv_rate != null)
-      ? (skuTraffic.conv_rate * 100).toFixed(2) + '%'
+      ? (Number(skuTraffic.conv_rate) * 100).toFixed(2) + '%'
       : (trafficData && trafficData.conv_rate != null)
         ? (Number(trafficData.conv_rate) * 100).toFixed(2) + '%'
         : '<span style="color:#94a3b8;font-size:11px">-</span>';
+
+    if (convHtml.indexOf('NaN') >= 0) convHtml = '<span style="color:#94a3b8;font-size:11px">-</span>';
 
 
 
