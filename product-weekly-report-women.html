@@ -17596,6 +17596,9 @@ function renderProductTargetBoard() {
 
   html += '<span style="font-weight:600;font-size:14px;color:#1e293b">产品目标拆解</span>';
 
+  // 需达/当前算法说明
+  html += '<span style="font-size:11px;color:#94a3b8;cursor:help" title="需达 = 周利润目标 × 各标占比 ÷ 该标单产品平均周利润（向上取整）">&#9432; 蓝30%/绿25%/黄15% · 需达=⌈周目标×占比÷均利⌉ · 当前=筛选下该标产品数</span>';
+
 
   html += '<span style="font-size:12px;color:#64748b">' + monthStr + '月目标合计 <b style="color:#1e293b">' + (filteredMonthTotal / 10000).toFixed(2) + '万</b> (' + fmtK(filteredMonthTotal) + ')</span>';
 
