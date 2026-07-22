@@ -865,7 +865,7 @@ def main():
     traffic_weekly, sku_first_inventory_date, sku_latest_inventory = read_traffic_weekly(weeks_iso)
 
     # 阶段 4.5: 将运营日数据 M列(销量) 合并到 WEEK_DATA.qty
-    print("  合并运营日数据 M列(销量) 到 WEEK_DATA...")
+    print("  合并运营日数据 N列(销量) 到 WEEK_DATA...")
     qty_merged = 0
     for w_key in week_data:
         if w_key not in traffic_weekly:

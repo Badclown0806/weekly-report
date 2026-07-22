@@ -783,7 +783,7 @@ def main():
     print("\n[4/5] 读取运营日数据...")
     traffic_weekly, sku_first_inventory_date, sku_latest_inventory = read_traffic_weekly(weeks_iso)
 
-    print("  合并运营日数据 M列(销量) 到 WEEK_DATA...")
+    print("  合并运营日数据 N列(销量) 到 WEEK_DATA...")
     qty_merged = 0
     for w_key in week_data:
         if w_key not in traffic_weekly:
@@ -798,7 +798,7 @@ def main():
                     qty_merged += 1
                 gmv_val = sku_qty[sku][5] if len(sku_qty[sku]) > 5 else 0
                 p["gmv"] = gmv_val if gmv_val else 0
-    print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 M列)")
+    print(f"  已合并 {qty_merged} 条销量数据 (来源: 运营日数据 N列)")
 
     sku_to_wb_ids = {}
     for key in sku_wb_id:
