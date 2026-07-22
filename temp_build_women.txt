@@ -30,7 +30,7 @@ build_data_women.py - 生成 data_women.js (女装版)
   SKU_OWNER_LOOKUP: 1996 entries (after LX merge, +847)
   SHOP_OWNERS updated with LX sub-owners (per-shop accurate)
 
-  [女装过滤] 仅保留 5 家店铺: {'G-NZTF1店', 'OZ-NZBG2店', 'Z-NZTF1店', 'OZ-OZTF1店', 'WB-TZBG1店'}
+  [女装过滤] 仅保留 5 家店铺: {'OZ-OZTF1店', 'Z-NZTF1店', 'WB-TZBG1店', 'G-NZTF1店', 'OZ-NZBG2店'}
     SHOP_WEEKLY: 22 → 2
     WEEK_DATA products: 18119 → 2679
     SHOP_OWNERS: 25 → 2
@@ -76,6 +76,7 @@ build_data_women.py - 生成 data_women.js (女装版)
     MONTHLY_TARGETS: 2 entries (dict)
 
 ============================================================
-  已更新 product-weekly-report-women.html 缓存版本: ver=202607211131
-  已更新 product-weekly-report-women-online.html 缓存版本: ver=202607211131
+  已更新 product-weekly-report-women.html 缓存版本: ver=202607220916
+  已更新 product-weekly-report-women-online.html 缓存版本: ver=202607220916
+  已同步 data-detail-women.js
 完成!
