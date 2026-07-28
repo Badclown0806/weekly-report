@@ -97,22 +97,28 @@ def load_workbook_safe(path):
 # ── 阶段 1: 生成WEEKS等基础数据 ───────────────────────
 
 def generate_weeks():
-    """生成52周的数组"""
+    """动态生成周数组：从 2025-W30 到今天所在周"""
+    from datetime import date as dt_date, timedelta
+    # 起始周：2025-W30 (2025-07-21)
+    first_monday = dt_date(2025, 7, 21)
+    today = dt_date.today()
+    delta_days = (today - first_monday).days
+    if delta_days < 0:
+        delta_days = 0
+    total_weeks = (delta_days // 7) + 1
+
     weeks = []
     weeks_iso = []
     week_labels = []
-    year, wn = 2025, 30
-    for i in range(52):
-        iso = f"{year}-W{wn:02d}"
-        start, end = iso_week_to_date_range(iso)
-        label = f"{iso} (W{i+1}·{start.month:02d}.{start.day:02d}-{end.month:02d}.{end.day:02d})"
+    for i in range(total_weeks):
+        week_start = first_monday + timedelta(weeks=i)
+        week_end = week_start + timedelta(days=6)
+        iso_year, iso_wn, _ = week_start.isocalendar()
+        iso = f"{iso_year}-W{iso_wn:02d}"
+        label = f"{iso} (W{i+1}·{week_start.month:02d}.{week_start.day:02d}-{week_end.month:02d}.{week_end.day:02d})"
         weeks.append(f"W{i+1}")
         weeks_iso.append(iso)
         week_labels.append(label)
-        wn += 1
-        if wn > 52:
-            wn = 1
-            year += 1
     return weeks, weeks_iso, week_labels
 
 
