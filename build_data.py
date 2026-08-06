@@ -215,14 +215,14 @@ def read_lx_profit(weeks_iso):
     ws_shop = wb["店铺分周利润表"]
     shop_weekly = defaultdict(dict)
 
-    for i, row in enumerate(ws_shop.iter_rows(min_row=3)):
+    for i, row in enumerate(ws_shop.iter_rows(min_row=2)):
         if i > 5000:
             break
         vals = [cell.value for cell in row[:10]]
-        week_end = vals[1]  # 星期结束值
-        shop_name = vals[2]
-        margin_val = vals[4]  # 毛利率CNY
-        gsv_val = vals[6]    # 后台价GSV.CNY
+        week_end = vals[0]  # 星期结束值
+        shop_name = vals[1]
+        margin_val = vals[4]  # 毛利率.NS_d.v2
+        gsv_val = vals[6]    # 销售收入_后台价CNY
 
         if not week_end or not shop_name:
             continue
@@ -248,33 +248,34 @@ def read_lx_profit(weeks_iso):
 
     # ─── 分周SKU → WEEK_DATA ───
     ws_sku = wb["分周SKU"]
-    # 列: 0=数据范围, 1=星期结束值, 2=店铺名称, 3=负责人, 4=子负责人, 5=类目,
-    #     6=WB商品ID, 7=卖家SKU, 8=主图, 9=毛利量CNY, 10=毛利率CNY,
-    #     11=GSV(后台价), 12=周订单量售完天数, 13=每周日库存量, 14=货值CNY,
-    #     15=销售数量, 16=退款数量, 17=财报净销量, ..., 22=送达退货率,
-    #     36=广告花费CNY
+    # 列: 0=星期结束值, 1=店铺名称, 2=负责人, 3=子负责人, 4=类目名称中文,
+    #     5=WB商品ID, 6=卖家SKU, 7=主图, 8=毛利量CNY, 9=毛利率,
+    #     10=销售收入_后台价CNY, 14=周结算销量售完天数, 15=每周日库存量,
+    #     16=货值CNY, 17=销售数量, 18=退款数量, 19=财报净销量,
+    #     20=单件送货费用CNY, 21=单件退货费用CNY, 24=送达退货率,
+    #     52=广告费CNY
 
     week_data_raw = defaultdict(list)
     lx_owner_map = {}  # sku|shop → 子负责人（LX利润表 Col 4）
 
     sku_count = 0
-    for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
+    for i, row in enumerate(ws_sku.iter_rows(min_row=2)):
         if i > 40000:
             break
-        vals = [cell.value for cell in row[:38]]
-        week_end = vals[1]
-        shop = vals[2]
-        cat = vals[5]
-        sku = vals[7]
-        profit = vals[9]     # 毛利量CNY
-        margin_rate = vals[10]  # 毛利率CNY (as decimal e.g., 0.2507)
-        gsv = vals[11]       # GSV(后台价)
-        qty = vals[15]       # 销售数量
-        return_rate = vals[22] if len(vals) > 22 else None  # 送达退货率
-        ad_spend = vals[36] if len(vals) > 36 else None  # 广告花费CNY
-        unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
-        unit_return_fee = vals[19] if len(vals) > 19 else None  # 单件退货费CNY
-        sub_owner = str(vals[4]).strip() if vals[4] else ""    # 子负责人
+        vals = [cell.value for cell in row[:60]]
+        week_end = vals[0]
+        shop = vals[1]
+        cat = vals[4]
+        sku = vals[6]
+        profit = vals[8]     # 毛利量CNY
+        margin_rate = vals[9]  # 毛利率 (as decimal e.g., 0.2507)
+        gsv = vals[10]       # 销售收入_后台价CNY
+        qty = vals[17]       # 销售数量
+        return_rate = vals[24] if len(vals) > 24 else None  # 送达退货率
+        ad_spend = vals[52] if len(vals) > 52 else None  # 广告费CNY
+        unit_delivery = vals[20] if len(vals) > 20 else None  # 单件送货费用CNY
+        unit_return_fee = vals[21] if len(vals) > 21 else None  # 单件退货费用CNY
+        sub_owner = str(vals[3]).strip() if vals[3] else ""    # 子负责人
 
         if not week_end or not sku:
             continue
@@ -293,7 +294,7 @@ def read_lx_profit(weeks_iso):
         p_del = sanitize_value(unit_delivery)
         p_ret = sanitize_value(unit_return_fee)
 
-        net_sales = vals[17] if len(vals) > 17 else None  # Col 18 财报净销量
+        net_sales = vals[19] if len(vals) > 19 else None  # 财报净销量
         p_ns = sanitize_value(net_sales)
 
         product = {
@@ -1291,7 +1292,7 @@ def main():
                 rr_check += 1
                 if rr < 1:
                     rr_small += 1
-            if p.get("qty", 0) > 0:
+            if (p.get("qty") or 0) > 0:
                 qty_from_m += 1
     print(f"  return_rate 百分比格式: {rr_check - rr_small}/{rr_check} (小数值 {rr_small})")
     print(f"  qty (来源 M列): {qty_from_m} 个产品")

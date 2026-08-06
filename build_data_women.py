@@ -209,12 +209,12 @@ def read_lx_profit(weeks_iso):
     ws_shop = wb["店铺分周利润表"]
     shop_weekly = defaultdict(dict)
 
-    for i, row in enumerate(ws_shop.iter_rows(min_row=3)):
+    for i, row in enumerate(ws_shop.iter_rows(min_row=2)):
         if i > 5000:
             break
         vals = [cell.value for cell in row[:10]]
-        week_end = vals[1]
-        shop_name = vals[2]
+        week_end = vals[0]
+        shop_name = vals[1]
         margin_val = vals[4]
         gsv_val = vals[6]
 
@@ -242,24 +242,24 @@ def read_lx_profit(weeks_iso):
     lx_owner_map = {}  # sku|shop → 子负责人（LX利润表 Col 4）
 
     sku_count = 0
-    for i, row in enumerate(ws_sku.iter_rows(min_row=3)):
+    for i, row in enumerate(ws_sku.iter_rows(min_row=2)):
         if i > 40000:
             break
-        vals = [cell.value for cell in row[:38]]
-        week_end = vals[1]
-        shop = vals[2]
-        cat = vals[5]
-        sku = vals[7]
-        profit = vals[9]
-        margin_rate = vals[10]
-        gsv = vals[11]
-        qty = vals[15]
-        net_sales = vals[17] if len(vals) > 17 else None  # Col 18 财报净销量
-        return_rate = vals[22] if len(vals) > 22 else None
-        ad_spend = vals[36] if len(vals) > 36 else None
-        unit_delivery = vals[18] if len(vals) > 18 else None  # 单件尾程配送CNY
-        unit_return_fee = vals[19] if len(vals) > 19 else None  # 单件退货费CNY
-        sub_owner = str(vals[4]).strip() if vals[4] else ""    # 子负责人
+        vals = [cell.value for cell in row[:60]]
+        week_end = vals[0]
+        shop = vals[1]
+        cat = vals[4]
+        sku = vals[6]
+        profit = vals[8]
+        margin_rate = vals[9]
+        gsv = vals[10]
+        qty = vals[17]
+        net_sales = vals[19] if len(vals) > 19 else None  # 财报净销量
+        return_rate = vals[24] if len(vals) > 24 else None
+        ad_spend = vals[52] if len(vals) > 52 else None
+        unit_delivery = vals[20] if len(vals) > 20 else None  # 单件送货费用CNY
+        unit_return_fee = vals[21] if len(vals) > 21 else None  # 单件退货费用CNY
+        sub_owner = str(vals[3]).strip() if vals[3] else ""    # 子负责人
 
         if not week_end or not sku:
             continue
