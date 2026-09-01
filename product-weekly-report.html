@@ -842,7 +842,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202608311803';
+  var ver = '202609011721';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -2400,7 +2400,7 @@ function renderShopGrid(){
         '<td style="text-align:right;padding:1px 3px">'+(a.gsv>0?fmtK(a.gsv):'-')+'</td>'+
         '<td style="text-align:right;font-weight:600;padding:1px 3px;color:'+(a.profit>=0?'#16a34a':'#dc2626')+'">'+fmtK(a.profit)+'</td>'+
         '<td style="text-align:right;padding:1px 3px">'+a.orders.toLocaleString()+'</td>'+
-        '<td style="text-align:right;padding:1px 3px">'+(a.ad_spend>0?fmtK(a.ad_spend):'-')+'</td></tr>';
+        '<td style="text-align:right;padding:1px 3px">'+(a.ad_spend?fmtK(a.ad_spend):'-')+'</td></tr>';
     });
     crossShopHtml += '<tr style="border-top:2px solid #93c5fd;background:#dbeafe;font-weight:700">'+
       '<td style="padding:2px 3px">合计</td>'+
@@ -2794,7 +2794,7 @@ function renderProdTable(){
     var convHtml = trafficData && trafficData[2] !== null ? (Number(trafficData[2])*100).toFixed(2)+"%" : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
     // 广告费
-    var adSpend = (p.ad_spend && p.ad_spend > 0) ? formatMoney(p.ad_spend) : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var adSpend = (p.ad_spend) ? formatMoney(p.ad_spend) : '<span style="color:#94a3b8;font-size:11px">-</span>';
     // GSV/利润/利润率/广告费占比环比数据
     var prevGsv2 = getPrevProdVal(p.sku, p.shop, 'gsv');
     var prevProfit2 = getPrevProdVal(p.sku, p.shop, 'profit');
@@ -2802,8 +2802,8 @@ function renderProdTable(){
     var prevPrevAd = getPrevProdVal(p.sku, p.shop, 'ad_spend');
     var prevAdRatio2 = (prevGsv2 !== null && prevGsv2 > 0 && prevPrevAd !== null) ? prevPrevAd / prevGsv2 : null;
     
-    var adRatioNum = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100) : null;
-    var adRatio = (p.ad_spend && p.ad_spend > 0 && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
+    var adRatioNum = (p.ad_spend && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100) : null;
+    var adRatio = (p.ad_spend && p.gsv && p.gsv > 0) ? (p.ad_spend / p.gsv * 100).toFixed(2) + '%' : '<span style="color:#94a3b8;font-size:11px">-</span>';
 
     // 销量颜色标记 (需求3: 全部产品 SKU 按销量颜色)
     var qtyVal = (p.qty || 0);

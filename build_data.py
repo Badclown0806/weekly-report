@@ -402,13 +402,13 @@ def read_traffic_weekly(weeks_iso):
 
         d_val = row[0].value if len(row) > 0 else None  # 日期 A列
         sku = row[4].value if len(row) > 4 else None     # 卖家SKU E列
-        inventory = row[5].value if len(row) > 5 else None  # 可售数量 F列
-        visitors = row[8].value if len(row) > 8 else None  # 访客 I列
-        atc = row[11].value if len(row) > 11 else None     # 加购数 L列
-        qty = row[13].value if len(row) > 13 else None     # 销量 N列
-        gmv = row[14].value if len(row) > 14 else None      # GMV O列
-        click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 AB列
-        return_rate_raw = row[23].value if len(row) > 23 else None  # 财报退货率 X列
+        inventory = row[6].value if len(row) > 6 else None  # 可售数量 G列
+        visitors = row[9].value if len(row) > 9 else None  # 访客 J列
+        atc = row[12].value if len(row) > 12 else None     # 加购数 M列
+        qty = row[14].value if len(row) > 14 else None     # 销量 O列
+        gmv = row[15].value if len(row) > 15 else None      # GMV P列
+        click_rate_val = row[28].value if len(row) > 28 else None  # 广告点击率 AC列
+        return_rate_raw = row[24].value if len(row) > 24 else None  # 财报退货率 Y列
 
         if not d_val or not sku:
             continue

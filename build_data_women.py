@@ -373,13 +373,13 @@ def read_traffic_weekly(weeks_iso):
 
         d_val = row[0].value if len(row) > 0 else None
         sku = row[4].value if len(row) > 4 else None          # 卖家SKU (col 4)
-        inventory = row[5].value if len(row) > 5 else None     # 可售数量 (col 5)
-        visitors = row[8].value if len(row) > 8 else None      # 访客 (col 8)
-        atc = row[11].value if len(row) > 11 else None         # 加购数 (col 11)
-        qty = row[13].value if len(row) > 13 else None         # 销量 (col 13)
-        gmv = row[14].value if len(row) > 14 else None          # GMV (col 14)
-        click_rate_val = row[27].value if len(row) > 27 else None  # 广告点击率 (col 27)
-        return_rate_raw = row[23].value if len(row) > 23 else None # 财报退货率 (col 23)
+        inventory = row[6].value if len(row) > 6 else None     # 可售数量 (col 6)
+        visitors = row[9].value if len(row) > 9 else None      # 访客 (col 9)
+        atc = row[12].value if len(row) > 12 else None         # 加购数 (col 12)
+        qty = row[14].value if len(row) > 14 else None         # 销量 (col 14)
+        gmv = row[15].value if len(row) > 15 else None          # GMV (col 15)
+        click_rate_val = row[28].value if len(row) > 28 else None  # 广告点击率 (col 28)
+        return_rate_raw = row[24].value if len(row) > 24 else None # 财报退货率 (col 24)
 
         if not d_val or not sku:
             continue
