@@ -842,7 +842,7 @@ var CORE_DETAIL = {}; /* loaded async from data-detail.js */
 var DETAIL_DATA = null;
 // ── Two-phase data loading: core first (fast), detail async ──
 (function loadDataJs() {
-  var ver = '202609011721';
+  var ver = '202609091044';
 
   function parseVarJson(code) {
     // Parse "var XXX = {...};" format
@@ -5940,6 +5940,29 @@ function renderProductTargetBoard() {
     lwpMap[lwp.shop + '|' + lwp.sku] = lwp;
   }
 
+  // 周利润映射：优先 RAW_PROFIT_DATA（内嵌旧数据），缺失时回退 WEEK_DATA.allProducts（data.js 最新数据）
+  var weekProfitMap = {};
+  for (var wpmI = 0; wpmI < windowWeeks.length; wpmI++) {
+    var wpmW = windowWeeks[wpmI];
+    weekProfitMap[wpmW] = {};
+    if (RAW_PROFIT_DATA && RAW_PROFIT_DATA[wpmW]) {
+      for (var wpmK in RAW_PROFIT_DATA[wpmW]) {
+        var wpmD = RAW_PROFIT_DATA[wpmW][wpmK];
+        if (wpmD[2] !== -1) weekProfitMap[wpmW][wpmK] = wpmD[0];
+      }
+    }
+    if (WEEK_DATA && WEEK_DATA[wpmW] && WEEK_DATA[wpmW].allProducts) {
+      var wpmList = WEEK_DATA[wpmW].allProducts;
+      for (var wpmP = 0; wpmP < wpmList.length; wpmP++) {
+        var wpmProd = wpmList[wpmP];
+        var wpmKey = wpmProd.shop + '|' + wpmProd.sku;
+        if (weekProfitMap[wpmW][wpmKey] === undefined) {
+          weekProfitMap[wpmW][wpmKey] = wpmProd.profit || 0;
+        }
+      }
+    }
+  }
+
   var ownerMarkerProfits = {};
   var ownerCur = {};
   var seen = {};
@@ -5957,11 +5980,8 @@ function renderProductTargetBoard() {
     var totalProfit = 0, weeksWithData = 0;
     for (var i = 0; i < windowWeeks.length; i++) {
       var w = windowWeeks[i];
-      var wData = RAW_PROFIT_DATA[w];
-      if (wData && wData[key]) {
-        var d = wData[key];
-        if (d[2] !== -1) { totalProfit += d[0]; weeksWithData++; }
-      }
+      var wm = weekProfitMap[w];
+      if (wm && wm[key] !== undefined) { totalProfit += wm[key]; weeksWithData++; }
     }
 
     if (weeksWithData > 0) {
