@@ -49,13 +49,15 @@ def main():
     with open(DATA_JS, 'r', encoding='utf-8') as f:
         js_content = f.read()
 
-    # 提取 JSON：var DATA = {...};
+    # 提取 JSON：var DATA = {...};  （兼容末尾多余空白/换行/分号）
     prefix = 'var DATA = '
-    if not js_content.startswith(prefix) or not js_content.rstrip().endswith(';'):
-        print("[ERROR] data.js 格式非预期，期望 'var DATA = {...};'")
+    if not js_content.startswith(prefix):
+        print("[ERROR] data.js 格式非预期，期望以 'var DATA = ' 开头")
         return 1
 
-    json_str = js_content[len(prefix):-1]  # 去掉前缀和末尾分号
+    json_str = js_content[len(prefix):].rstrip()
+    if json_str.endswith(';'):
+        json_str = json_str[:-1]
     data = json.loads(json_str)
     print(f"  解析成功: {len(data)} 个顶级字段")
 

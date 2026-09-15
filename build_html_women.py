@@ -14,7 +14,9 @@ build_html_women.py - 女装版：一键从 Excel 生成带内嵌数据的 produ
 """
 
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 
@@ -23,6 +25,22 @@ DATA_JS = os.path.join(SRC_DIR, "data_women.js")
 HTML_PATH = os.path.join(SRC_DIR, "product-weekly-report-women.html")
 
 DETAIL_FIELDS = {"WEEK_DATA", "TRAFFIC_WEEKLY"}
+
+
+# 与男装版 build_html.py 一致：防止 NaN/Infinity 进入嵌入 HTML 的 JSON（否则前端 JSON.parse 白屏）
+class SanitizedEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+        return super().default(obj)
+
+
+def sanitize_nan(json_str):
+    json_str = re.sub(r':\s*NaN\b', ':null', json_str)
+    json_str = re.sub(r':\s*Infinity\b', ':null', json_str)
+    json_str = re.sub(r':\s*-Infinity\b', ':null', json_str)
+    return json_str
 
 
 def main():
@@ -47,11 +65,13 @@ def main():
         js_content = f.read()
 
     prefix = 'var DATA = '
-    if not js_content.startswith(prefix) or not js_content.rstrip().endswith(';'):
-        print("[ERROR] data_women.js 格式非预期，期望 'var DATA = {...};'")
+    if not js_content.startswith(prefix):
+        print("[ERROR] data_women.js 格式非预期，期望以 'var DATA = ' 开头")
         return 1
 
-    json_str = js_content[len(prefix):-1]
+    json_str = js_content[len(prefix):].rstrip()
+    if json_str.endswith(';'):
+        json_str = json_str[:-1]
     data = json.loads(json_str)
     print(f"  解析成功: {len(data)} 个顶级字段")
 
@@ -65,8 +85,8 @@ def main():
         else:
             core_data[key] = value
 
-    core_json = json.dumps(core_data, ensure_ascii=False, separators=(',', ':'))
-    detail_json = json.dumps(detail_data, ensure_ascii=False, separators=(',', ':'))
+    core_json = sanitize_nan(json.dumps(core_data, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    detail_json = sanitize_nan(json.dumps(detail_data, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
 
     print(f"  CORE_DATA: {len(core_data)} 字段, {len(core_json)} 字符")
     print(f"  DETAIL_DATA: {len(detail_data)} 字段, {len(detail_json)} 字符")
@@ -96,8 +116,8 @@ def main():
                 round(float(p.get('gsv', 0) or 0), 2),
                 round(float(p.get('margin', 0) or 0), 4)
             ]
-    raw_sales_json = json.dumps(raw_sales, ensure_ascii=False, separators=(',', ':'))
-    raw_profit_json = json.dumps(raw_profit, ensure_ascii=False, separators=(',', ':'))
+    raw_sales_json = sanitize_nan(json.dumps(raw_sales, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
+    raw_profit_json = sanitize_nan(json.dumps(raw_profit, ensure_ascii=False, separators=(',', ':'), cls=SanitizedEncoder))
     print(f"  RAW_SALES_DATA: {len(raw_sales)} 周, {len(raw_sales_json)} 字符")
     print(f"  RAW_PROFIT_DATA: {len(raw_profit)} 周, {len(raw_profit_json)} 字符")
 
@@ -290,6 +310,18 @@ def main():
 
     with open(HTML_PATH, 'w', encoding='utf-8') as f:
         f.write(new_html)
+
+    # 同步刷新本地预览用的线上版（与正式版完全一致，避免预览 stale）
+    online_html_path = os.path.join(SRC_DIR, "product-weekly-report-women-online.html")
+    if os.path.exists(online_html_path):
+        with open(online_html_path, 'r', encoding='utf-8') as f:
+            ohtml = f.read()
+        if start_marker in ohtml and sabc_start in ohtml:
+            with open(online_html_path, 'w', encoding='utf-8') as f:
+                f.write(new_html)
+            print(f"  同步: {online_html_path}")
+        else:
+            print(f"  [WARNING] 线上版结构不匹配，跳过同步")
 
     file_size = os.path.getsize(HTML_PATH)
     print(f"  输出: {HTML_PATH}")

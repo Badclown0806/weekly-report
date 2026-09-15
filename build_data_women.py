@@ -243,7 +243,10 @@ def read_lx_profit(weeks_iso):
 
     sku_count = 0
     for i, row in enumerate(ws_sku.iter_rows(min_row=2)):
-        if i > 40000:
+        # 安全护栏：原 40000 硬上限已逼近实际行数(≈37989)，会静默截断数据。
+        # 改为仅保留极高上限防异常文件，正常读取到 sheet 末尾。
+        if i > 2000000:
+            print(f"  [WARN] 分周SKU 读取超过 200 万行，强制停止 (i={i})")
             break
         vals = [cell.value for cell in row[:60]]
         week_end = vals[0]
