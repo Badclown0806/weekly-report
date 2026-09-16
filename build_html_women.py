@@ -308,6 +308,25 @@ def main():
 
     print("\n所有验证通过，写入输出文件...")
 
+    # ── 男/女装切换浮层（固定定位，避开数据块；重建自动带上，online 版同步）──
+    gender_switch = (
+        '<div id="genderSwitch" style="position:fixed;top:14px;right:14px;z-index:99999;'
+        'display:flex;align-items:center;gap:6px;padding:6px 8px;'
+        'background:rgba(22,24,28,0.92);border:1px solid rgba(255,255,255,0.14);'
+        'border-radius:12px;font:13px/1.2 system-ui,"Microsoft YaHei",sans-serif;'
+        'box-shadow:0 6px 20px rgba(0,0,0,0.35);">'
+        '<span style="color:#9aa0a6;padding:0 4px;">周报</span>'
+        '<a href="https://badclown0806.github.io/weekly-report/product-weekly-report.html" '
+        'style="padding:5px 14px;border-radius:8px;text-decoration:none;font-weight:700;'
+        'background:transparent;color:#e3e6ea;border:1px solid rgba(255,255,255,0.22);">男装</a>'
+        '<span style="padding:5px 14px;border-radius:8px;font-weight:700;'
+        'background:#ec4899;color:#fff;">女装</span>'
+        '</div>'
+    )
+    _idx_body = new_html.rfind('</body>')
+    if _idx_body >= 0:
+        new_html = new_html[:_idx_body] + gender_switch + '\n' + new_html[_idx_body:]
+
     with open(HTML_PATH, 'w', encoding='utf-8') as f:
         f.write(new_html)
 
