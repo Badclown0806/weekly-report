@@ -341,6 +341,10 @@ def main():
         'background:transparent;color:#e3e6ea;border:1px solid rgba(255,255,255,0.22);">女装</a>'
         '</div>'
     )
+    # 幂等清理：重建时先移除已存在的切换浮层，避免每次刷新重复累加
+    import re as _re
+    new_html = _re.sub(r'<div id="genderSwitch".*?</div>\s*', '', new_html, flags=_re.DOTALL)
+
     _idx_body = new_html.rfind('</body>')
     if _idx_body >= 0:
         new_html = new_html[:_idx_body] + gender_switch + '\n' + new_html[_idx_body:]
